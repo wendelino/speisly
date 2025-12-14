@@ -1,0 +1,61 @@
+{
+  "name": "speisly",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start_def": "next start",
+    "start": "bun src/_boot.ts",
+    "lint": "biome check",
+    "format": "biome format --write",
+    "db:generate": "drizzle-kit generate --config=src/lib/db/drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config=src/lib/db/drizzle.config.ts",
+    "db:push": "drizzle-kit push --config=src/lib/db/drizzle.config.ts"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cron": "^4.3.5",
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.0",
+    "jose": "^6.1.3",
+    "lucide-react": "^0.556.0",
+    "next": "^16.0.10",
+    "pg": "^8.16.3",
+    "react": "19.2.0",
+    "react-day-picker": "^9.12.0",
+    "react-dom": "19.2.0",
+    "react-hook-form": "^7.68.0",
+    "sharp": "^0.34.5",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.8",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/pg": "^8.15.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "1.0.0",
+    "drizzle-kit": "^0.31.8",
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1.4.0",
+    "typescript": "^5",
+    "ultracite": "6.3.10"
+  }
+}

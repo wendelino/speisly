@@ -1,0 +1,1 @@
+ALTER TABLE "mensa_meal" ADD COLUMN "meal_hash" varchar(32) NOT NULL;
