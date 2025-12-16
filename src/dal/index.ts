@@ -175,7 +175,6 @@ async function processMeal({
  */
 export async function handleSync(date: string | DateRange): Promise<void> {
   const start = performance.now();
-  // console.log("Cron job started");
   const { slug: dataSourceSlug } =
     await getOrCreateDataSource(DATA_SOURCE_NAME);
   const mensen = await getAllMensen();
@@ -200,11 +199,5 @@ export async function handleSync(date: string | DateRange): Promise<void> {
 
   const timeTaken = Math.round(performance.now() - start);
   const formattedTime = formatPerformanceTime(timeTaken);
-  console.log(`\n[DAL] Sync completed in ${formattedTime}\n`, date);
+  console.log(`\n[DAL] Sync completed in ${formattedTime}`);
 }
-// Only run main if this file is executed directly
-// if (require.main === module) {
-//   handleSync("2024-11-21").then(() => {
-//     process.exit(0);
-//   });
-// }

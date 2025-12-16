@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "bun --bun next dev",
     "build": "bun --bun next build",
-    "start_def": "next --bun start",
+    "start_def": "bun --bun next start",
     "start": "bun --bun src/_boot.ts",
     "lint": "biome check",
     "format": "biome format --write",

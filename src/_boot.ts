@@ -21,7 +21,6 @@ app.prepare().then(() => {
   );
 
   const handler = (fastRefresh?: boolean) => {
-    console.log(`[cron] ${fastRefresh ? "Cache refresh" : "Data sync"}`);
     const baseUrl = process.env.NEXT_PUBLIC_URL;
     if (!baseUrl) {
       console.error("NEXT_PUBLIC_URL is not set");
@@ -37,8 +36,6 @@ app.prepare().then(() => {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    }).then((res) => {
-      console.log("[cron] Api response:", res.statusText);
     });
   };
 
