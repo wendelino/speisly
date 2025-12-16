@@ -45,5 +45,5 @@ app.prepare().then(() => {
   console.log("[cron] Booting...");
   const TZ = "Europe/Berlin";
   new CronJob("17,47 6-16 * * 1-5", () => handler(true), null, true, TZ);
-  new CronJob("17 2 * * 0-4", () => handler(), null, true, TZ, undefined, true);
+  new CronJob("17 2 * * 0-4", () => handler(), null, true, TZ, undefined); //, true); // true for immediate execution
 });

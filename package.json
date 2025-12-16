@@ -6,10 +6,10 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start_def": "next start",
-    "start": "bun src/_boot.ts",
+    "dev": "bun --bun next dev",
+    "build": "bun --bun next build",
+    "start_def": "next --bun start",
+    "start": "bun --bun src/_boot.ts",
     "lint": "biome check",
     "format": "biome format --write",
     "db:generate": "drizzle-kit generate --config=src/lib/db/drizzle.config.ts",
