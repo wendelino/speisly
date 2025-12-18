@@ -194,5 +194,8 @@ export default async function getMealData({
   locations.push({ id: 20, name: "unbekannt" }); // API ist nicht korrekt und gibt keine Location für id 20 zurück
   const meals = await existingMeals(foodPlans, locations);
 
-  return { data: meals, length: foodPlans.data.length };
+  return {
+    data: meals,
+    length: meals.flatMap((meal) => meal.availability).length,
+  };
 }

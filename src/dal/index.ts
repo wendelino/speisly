@@ -6,6 +6,7 @@ import {
   getOrCreateDataSource,
   getOrCreateMeal,
   getOrCreateMensaMeal,
+  removeMeals,
 } from "./db";
 import getMealData from "./meine-mensa";
 import type {
@@ -61,12 +62,18 @@ function findExistingMensaMeal(
   date: string
 ): MensaMealRecord | undefined {
   const availabilityDate = new Date(date).toISOString();
-  return existingMensaMeals.find(
+  const out = existingMensaMeals.find(
     (mensaMeal) =>
       mensaMeal.mealId === mealId &&
       mensaMeal.mensaId === mensaId &&
       mensaMeal.date.toISOString() === availabilityDate
   );
+
+  if (out) {
+    existingMensaMeals.splice(existingMensaMeals.indexOf(out), 1);
+  }
+
+  return out;
 }
 
 /**
@@ -195,6 +202,11 @@ export async function handleSync(date: string | DateRange): Promise<void> {
       mensen,
       existingMensaMeals,
     });
+  }
+
+  if (existingMensaMeals.length > 0) {
+    console.warn("Meals in DB but not in API: ", existingMensaMeals.length);
+    await removeMeals(existingMensaMeals);
   }
 
   const timeTaken = Math.round(performance.now() - start);

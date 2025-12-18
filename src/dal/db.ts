@@ -1,4 +1,4 @@
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { logError } from "@/actions/error";
 import { db } from "@/lib/db";
 import { dataSource } from "@/lib/db/schema/dataSource";
@@ -307,4 +307,22 @@ export async function getExistingMensaMeals({
     );
 
   return existingMensaMeals;
+}
+export async function removeMeals(mensaMeals: MensaMealRecord[]) {
+  await db.delete(mensaMeal).where(
+    inArray(
+      mensaMeal.id,
+      mensaMeals.map((m) => m.id)
+    )
+  );
+
+  await db.insert(mealUpdate).values(
+    mensaMeals.map((m) => ({
+      id: genId(),
+      mealId: m.mealId,
+      prev: m.date.toISOString().split("T")[0],
+      new: "Entfernt",
+      key: "remove",
+    }))
+  );
 }
