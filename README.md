@@ -95,24 +95,56 @@ Die Anwendung ist nun unter [http://localhost:3000](http://localhost:3000) errei
 ## 📁 Projektstruktur
 
 ```
-speisly-app/
+speisly/
 ├── src/
+│   ├── _boot.ts           # Production Server mit Cron-Jobs
 │   ├── actions/           # Server Actions
+│   │   ├── contact.ts     # Kontaktformular
+│   │   ├── feedback.ts    # Feedback-Funktion
+│   │   ├── error.ts       # Error Logging
+│   │   ├── meal.ts        # Einzelnes Gericht
+│   │   ├── meals.ts       # Gerichte-Liste
+│   │   ├── mensa.ts       # Mensa-Informationen
+│   │   ├── rating.ts      # Bewertungen
+│   │   └── user.ts        # Benutzerverwaltung
 │   ├── app/               # Next.js App Router Seiten
+│   │   ├── (static)/      # Statische Seiten (Kontakt, Datenschutz, etc.)
+│   │   ├── api/           # API Routes
+│   │   ├── day/           # Tagesansicht
+│   │   ├── meal/          # Gerichtsdetails
+│   │   ├── layout.tsx     # Haupt-Layout
+│   │   └── page.tsx       # Startseite
 │   ├── components/        # React-Komponenten
+│   │   ├── layout/        # Layout-Komponenten
+│   │   ├── meal/          # Gericht-bezogene Komponenten
+│   │   └── ui/            # UI-Komponenten (shadcn/ui)
 │   ├── contexts/          # React Contexts
+│   │   └── filter-context.tsx
 │   ├── dal/               # Data Access Layer für externe APIs
+│   │   ├── db.ts          # Datenbank-Integration
 │   │   ├── index.ts       # Haupt-Export
 │   │   ├── meine-mensa.ts # Integration mit meine-mensa.de API
-│   │   └── types.ts       # TypeScript-Typen
+│   │   ├── types.ts       # TypeScript-Typen
+│   │   └── utils.ts       # Hilfsfunktionen
 │   ├── lib/               # Utility-Funktionen und Konfiguration
-│   │   ├── db/            # Datenbank-Konfiguration und Schema
 │   │   ├── cookie/        # Cookie-Consent Management
-│   │   └── telegram/      # Telegram-Integration
+│   │   ├── db/            # Datenbank-Konfiguration und Schema
+│   │   ├── jwt/           # JWT-Authentifizierung
+│   │   ├── telegram/      # Telegram-Integration
+│   │   ├── helpers.ts     # Allgemeine Hilfsfunktionen
+│   │   ├── types.d.ts     # TypeScript-Definitionen
+│   │   └── utils.ts       # Utility-Funktionen
 │   └── lnio/              # Shared Components & Hooks
+│       ├── components/    # Wiederverwendbare Komponenten
+│       ├── types/         # Type-Definitionen
+│       └── utils/         # Utility-Funktionen
 ├── drizzle/               # Datenbank-Migrationen
 ├── public/                # Statische Assets
-└── _boot.ts               # Production Server mit Cron-Jobs
+├── biome.jsonc            # Biome-Konfiguration
+├── components.json        # shadcn/ui-Konfiguration
+├── next.config.ts         # Next.js-Konfiguration
+├── package.json           # Dependencies
+└── tsconfig.json          # TypeScript-Konfiguration
 ```
 
 ## 🔌 API-Layer (`src/dal`)
