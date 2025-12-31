@@ -141,6 +141,7 @@ async function processMeal({
     await logError({
       message: "Price is 0",
       ctx: { mealData },
+      disableTelegram: true,
     });
     return;
   }

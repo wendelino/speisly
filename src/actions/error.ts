@@ -8,13 +8,17 @@ import { sendTelegramMessage } from "@/lib/telegram";
 export async function logError({
   message,
   ctx,
+  disableTelegram = false,
 }: {
   message: string;
   ctx: unknown;
+  disableTelegram?: boolean;
 }) {
   const ctxString = JSON.stringify(ctx);
   await db.insert(errorLog).values({ id: genId(), message, ctx: ctxString });
-  await sendTelegramMessage(`[logError] ${message}`);
+  if (!disableTelegram) {
+    await sendTelegramMessage(`[logError] ${message}`);
+  }
   console.error(
     "[logError] ",
     message,
