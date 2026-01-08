@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { submitContact } from "@/actions/contact";
 import { submitFeedback } from "@/actions/feedback";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -85,7 +86,11 @@ export function ContactForm({
         await onSubmit(data);
       } else {
         // Default submission to API
-        await submitFeedback(data);
+        if (variant === "contact") {
+          await submitContact(data as ContactFormValues);
+        } else {
+          await submitFeedback(data);
+        }
       }
 
       setSubmitSuccess(true);
