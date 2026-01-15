@@ -1,6 +1,7 @@
 "use server";
 
 import { type NextRequest, NextResponse } from "next/server";
+import { logError } from "@/actions/error";
 import { handleSync } from "@/dal";
 
 export async function GET(request: NextRequest) {
@@ -35,8 +36,16 @@ export async function GET(request: NextRequest) {
   const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
 
   if (refresh) {
-    await handleSync(date);
-    return NextResponse.json({ message: "Cache refreshed" }, { status: 200 });
+    try {
+      await handleSync(date);
+      return NextResponse.json({ message: "Cache refreshed" }, { status: 200 });
+    } catch (error) {
+      await logError({ message: "Error syncing data", ctx: error });
+      return NextResponse.json(
+        { error: "Error syncing data" },
+        { status: 500 }
+      );
+    }
   }
 
   const inOneWeek = new Date(Date.now() + ONE_WEEK_IN_MS)

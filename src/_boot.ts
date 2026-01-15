@@ -59,7 +59,7 @@ app.prepare().then(() => {
 
   console.log("[cron] Booting...");
   const TZ = "Europe/Berlin";
-  new CronJob("17,47 6-16 * * 1-5", () => handler(true), null, true, TZ);
+  new CronJob("17 7,10,17 * * 1-5", () => handler(true), null, true, TZ);
   new CronJob("17 2 * * 0-4", () => handler(), null, true, TZ, undefined); //, true); // true for immediate execution
   // Revalidate page at midnight (0:01) every day
   new CronJob("1 0 * * *", () => revalidatePage(), null, true, TZ);

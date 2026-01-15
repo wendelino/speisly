@@ -146,7 +146,7 @@ async function updateMeal(
   if (logs.length === 0) {
     return;
   }
-
+  await db.update(meal).set(updateFields).where(eq(meal.id, mealId));
   await db.insert(mealUpdate).values(
     logs.map((log) => ({
       id: genId(),
@@ -156,8 +156,6 @@ async function updateMeal(
       mealId,
     }))
   );
-
-  await db.update(meal).set(updateFields).where(eq(meal.id, mealId));
 }
 
 /**
@@ -217,7 +215,13 @@ export async function getOrCreateMeal({
 
   if (existingMeal) {
     const { logs, updateFields } = detectMealChanges(existingMeal, mealData);
-    await updateMeal(existingMeal.id, logs, updateFields);
+    try {
+      await updateMeal(existingMeal.id, logs, updateFields);
+    } catch (error) {
+      const ctx = { existingMeal, mealData, logs, updateFields, error };
+      await logError({ message: "Error updating meal", ctx });
+      return null;
+    }
 
     return {
       id: existingMeal.id,
