@@ -22,7 +22,13 @@ export default async function Page() {
 }
 
 async function Content() {
-  const date = new Date();
+  // Use Berlin timezone to determine the correct local date, regardless of server TZ
+  const now = new Date();
+  const berlinDateStr = now.toLocaleDateString("en-CA", {
+    timeZone: "Europe/Berlin",
+  }); // "YYYY-MM-DD"
+  const [year, month, day] = berlinDateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
   const meals = await getMealsForDate({ date });
   return <MealsList date={date} initialMeals={meals} />;
 }
