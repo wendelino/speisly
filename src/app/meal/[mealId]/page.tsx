@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { findMeal } from "@/actions/meal";
+import { getMealServingStats } from "@/actions/meal-serving-stats";
 import { MealDetail } from "@/components/meal/meal-detail";
+import { MealServingStatsWidget } from "@/components/meal/meal-serving-stats";
 
 export async function generateMetadata({
   params,
@@ -68,11 +70,19 @@ export default async function MealPage({
   const { mealId } = await params;
   const { mmid: mensaMealId } = await searchParams;
 
-  const mealData = await findMeal({ mealId, mensaMealId });
+  const [mealData, servingStats] = await Promise.all([
+    findMeal({ mealId, mensaMealId }),
+    getMealServingStats({ mealId }),
+  ]);
 
   if (!mealData) {
     notFound();
   }
 
-  return <MealDetail meal={mealData} mensaMealId={mensaMealId} />;
+  return (
+    <>
+      <MealDetail meal={mealData} mensaMealId={mensaMealId} />
+      <MealServingStatsWidget stats={servingStats} />
+    </>
+  );
 }
