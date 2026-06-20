@@ -32,7 +32,12 @@ export default function MensaFilter() {
   } = useFilters();
 
   useEffect(() => {
-    getAllMensen().then(setMensen);
+    getAllMensen().then((allMensen) => {
+      const visibleMensen = allMensen.filter(
+        (mensa) => mensa.name.trim().toLowerCase() !== "unbekannt"
+      );
+      setMensen(visibleMensen);
+    });
   }, []);
 
   const handlePreferenceToggle = (mensaId: string) => {
