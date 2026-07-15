@@ -6,7 +6,11 @@ import { MealLoadingState } from "@/components/meal/loading-state";
 import { MealsList } from "@/components/meal/meal-list";
 import MensaFilter from "@/components/mensa-filter";
 
-export const revalidate = 1800; // ISR: Regenerate every 30 minutes
+// Render per request so "today" is always the current date. A time-based
+// static cache (ISR) would bake the generation-time date into the page and
+// serve a stale day after the cache crosses midnight. Meal data itself is
+// still cached via unstable_cache in getMealsForDate (keyed by date).
+export const dynamic = "force-dynamic";
 
 export default async function Page() {
   return (
