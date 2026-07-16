@@ -31,11 +31,11 @@ export default function DaySelector({ initialDate }: { initialDate?: Date }) {
     }
     setSelectedDate(startOfDay(date));
     setOpen(false);
-    if (date.getTime() === today.getTime()) {
-      router.push("/#day-selector");
-    } else {
-      router.push(`/day/${format(date, "yyyy-MM-dd")}`);
-    }
+    // if (date.getTime() === today.getTime()) {
+    //   router.push("/#day-selector");
+    // } else {
+    router.push(`/day/${format(date, "yyyy-MM-dd")}`);
+    // }
   };
 
   const isToday = selectedDate.getTime() === today.getTime();
