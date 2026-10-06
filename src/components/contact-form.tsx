@@ -1,5 +1,6 @@
 "use client";
 
+import { actions } from "astro:actions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertCircle,
@@ -13,7 +14,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { submitFeedback } from "@/actions/feedback";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -26,23 +26,27 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { FEEDBACK_MESSAGE } from "@/lib/feedback";
+
+const messageSchema = z
+  .string()
+  .trim()
+  .min(FEEDBACK_MESSAGE.min, "Hey, mindestens 10 Zeichen bitte 😊")
+  .max(
+    FEEDBACK_MESSAGE.max,
+    "Wow, das ist ganz schön lang! Maximal 2000 Zeichen bitte"
+  );
 
 const feedbackSchema = z.object({
-  message: z
-    .string()
-    .min(10, "Hey, mindestens 10 Zeichen bitte 😊")
-    .max(2000, "Wow, das ist ganz schön lang! Maximal 2000 Zeichen bitte"),
+  message: messageSchema,
 });
 
 const contactSchema = z.object({
   email: z
     .string()
     .min(1, "E-Mail-Adresse fehlt noch")
-    .email("Hmm, das sieht nicht nach einer gültigen E-Mail aus 🤔"),
-  message: z
-    .string()
-    .min(10, "Hey, mindestens 10 Zeichen bitte 😊")
-    .max(2000, "Wow, das ist ganz schön lang! Maximal 2000 Zeichen bitte"),
+    .pipe(z.email("Hmm, das sieht nicht nach einer gültigen E-Mail aus 🤔")),
+  message: messageSchema,
   dsgvoConsent: z
     .boolean("Bitte stimme der Datenschutzerklärung zu")
     .refine((val) => val === true, {
@@ -84,8 +88,17 @@ export function ContactForm({
       if (onSubmit) {
         await onSubmit(data);
       } else {
-        // Default submission to API
-        await submitFeedback(data);
+        const { error } = await actions.feedback.submit({
+          message: data.message,
+          email: "email" in data ? data.email : undefined,
+        });
+        if (error) {
+          throw new Error(
+            error.code === "INTERNAL_SERVER_ERROR"
+              ? error.message
+              : "Ups, da ist etwas schiefgelaufen. Versuch's doch bitte nochmal! 😅"
+          );
+        }
       }
 
       setSubmitSuccess(true);

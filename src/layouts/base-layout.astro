@@ -1,9 +1,11 @@
 ---
+
 // Ersetzt src/app/layout.tsx (Metadaten 1:1 übernommen)
 
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
 import Footer from "@/components/layout/footer.astro";
+import ToastProvider from "@/lnio/components/toast/provider";
 import "@/styles/globals.css";
 
 type Props = {
@@ -16,6 +18,11 @@ type Props = {
     description?: string;
     images?: { url: string; width?: number; height?: number; alt?: string }[];
   };
+  /**
+   * Toaster (sonner) als Island einbinden. Nur auf Seiten, die Toasts zeigen,
+   * damit alle anderen Seiten ohne React-Runtime auskommen.
+   */
+  withToasts?: boolean;
 };
 
 const DEFAULT_DESCRIPTION =
@@ -24,7 +31,12 @@ const DEFAULT_OG_IMAGES = [
   { url: "/logo_512.png", width: 512, height: 512, alt: "Speisly Logo" },
 ];
 
-const { title, description = DEFAULT_DESCRIPTION, og = {} } = Astro.props;
+const {
+  title,
+  description = DEFAULT_DESCRIPTION,
+  og = {},
+  withToasts = false,
+} = Astro.props;
 const fullTitle = title ? `${title} | Speisly` : "Speisly";
 const ogTitle = og.title ?? "Speisly";
 const ogDescription = og.description ?? DEFAULT_DESCRIPTION;
@@ -39,7 +51,6 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <Font cssVariable="--font-geist-sans" preload/>
     <Font cssVariable="--font-geist-mono"/>
     <title>{fullTitle}</title>
     <meta name="description" content={description}>
@@ -89,5 +100,6 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <slot/>
     <div class="flex-1"></div>
     <Footer/>
+    {withToasts && <ToastProvider client:idle position="top-right" />}
   </body>
 </html>

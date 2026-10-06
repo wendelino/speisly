@@ -11,7 +11,8 @@
 | 0. Baseline | ✅ erledigt – [`docs/perf-baseline.md`](perf-baseline.md) |
 | 1. Scaffold | ✅ erledigt – siehe „Umsetzungsnotizen Phase 1“ unten |
 | 2. Datenschicht | ✅ erledigt – siehe „Umsetzungsnotizen Phase 2“ unten |
-| 3.–9. | offen |
+| 3. Statische Seiten | ✅ erledigt – siehe „Umsetzungsnotizen Phase 3“ unten |
+| 4.–9. | offen |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -375,7 +376,7 @@ Jede Phase endet mit einem lauffähigen Stand auf `astro`.
 Abweichungen und Entscheidungen gegenüber dem ursprünglichen Plan:
 
 - **`next` bleibt vorübergehend als devDependency.** Die noch nicht portierten Komponenten (`src/components/*`, `src/actions/*`, `src/lib/cookie/*`) importieren `next/link`, `next/image`, `next/headers` usw. Damit sie bis zu ihrer Portierung typchecken, bleibt `next` installiert. Es wird **nicht** gebaut oder ausgeliefert. Entfernt wird es, sobald die letzte Komponente portiert ist (spätestens Phase 5). Die alten Routen unter `src/app/` sind nur noch Referenz, aus `tsconfig.json` ausgeschlossen und werden pro Phase gelöscht.
-- **Schriften kommen lokal aus `@fontsource-variable/geist(-mono)`** über `fontProviders.local()`. Die Provider `google` und `npm` laden Dateien beim Build von Google bzw. jsDelivr. Das macht den Build netzabhängig und war in der Build-Umgebung blockiert. Es ist dieselbe Geist-Version wie bei `next/font` (Dateigröße ±0,5 %), Latin-Subset, Preload für die Sans-Variante, automatisch berechnete Fallback-Metriken.
+- **Schriften kommen lokal aus `@fontsource-variable/geist(-mono)`** über `fontProviders.local()` (Nachtrag Phase 3: Geist Sans entfällt, weil es in Next nie aktiv war – siehe dort). Die Provider `google` und `npm` laden Dateien beim Build von Google bzw. jsDelivr. Das macht den Build netzabhängig und war in der Build-Umgebung blockiert. Es ist dieselbe Geist-Version wie bei `next/font` (Dateigröße ±0,5 %), Latin-Subset, Preload für die Sans-Variante, automatisch berechnete Fallback-Metriken.
 - **Dateinamen in kebab-case** (`base-layout.astro`, `footer.astro`, …) gemäß Biome/Ultracite-Konvention des Projekts. Statische Astro-Varianten von UI-Bausteinen liegen in `src/components/astro/`.
 - **Footer und Hero sind reine `.astro`-Komponenten** (vorher `"use client"`). Icons kommen aus `@lucide/astro` und rendern als SVG ohne JS. Der Button-Stil kommt aus demselben `buttonVariants` (cva) wie in React.
 - **Logo ohne Bildoptimierung:** `logo_full.png` ist nur 20 KB groß. Es wird direkt mit festen `width`/`height` ausgeliefert, damit keine Bild-Transformation zur Laufzeit nötig ist.
@@ -436,3 +437,61 @@ Abweichungen und Entscheidungen gegenüber dem ursprünglichen Plan:
 - `tests/setup.ts` stellt `astro:env/*` als virtuelle Module bereit. Die Integrationstests brauchen `DATABASE_URL` in der Umgebung, weil `bun test` die `.env.local` nicht lädt. Ohne DB werden sie übersprungen.
 
 **Noch nicht migriert (bewusst):** Cookies, User und JWT (`src/actions/user.ts`, `rating.ts`, `src/lib/cookie/actions.ts`, `src/lib/jwt`) brauchen den Astro-Request-Kontext und werden mit den Bewertungs-Actions in Phase 5 umgebaut. Feedback (`src/actions/feedback.ts`) folgt in Phase 3 als Astro Action. `src/lib/db/index.ts` ist bis dahin ein Re-Export von `src/server/db.ts`, damit es nur **einen** Pool gibt.
+
+---
+
+## Umsetzungsnotizen Phase 3
+
+**Seiten (alle prerendered, als Dateien in `dist/client`):** `/datenschutz`, `/kontakt`, `/feedback`, `/404` sowie das Manifest. `src/layouts/back-layout.astro` ersetzt das `(static)`-Layout. Der Zurück-Button ist ein Link mit einem 10-Zeilen-Script (`history.back()`, sonst `href`). `/kontakt` und `/feedback` teilen sich `src/components/astro/form-page.astro`.
+
+**Islands pro Seite:**
+
+| Seite | Islands | Hydration |
+|---|---|---|
+| `/kontakt`, `/feedback` | Formular (`ContactForm`), Toaster | `client:idle` |
+| `/datenschutz` | „Cookie-Einstellungen ändern“, Toaster | `client:idle` |
+| `/404`, `/` | keine – 0 KB JS | – |
+
+Der Toaster ist jetzt eine eigene Island und wird über `<BaseLayout withToasts>` nur auf Seiten eingebunden, die Toasts zeigen. Der Cookie-Button war zuerst `client:visible`, aber ein Klick direkt nach dem Scrollen traf dann noch den statischen Button. Weil React für den Toaster ohnehin geladen wird, kostet `client:idle` nichts extra.
+
+**Feedback als Astro Action (`src/actions/index.ts` → `feedback.submit`):**
+- **Validierung jetzt auch serverseitig** (Zod: Nachricht getrimmt 10–2000 Zeichen, E-Mail optional und gültig). Die alte Server Action hat ungeprüft gespeichert.
+- **Telegram blockiert nicht mehr:** Die Benachrichtigung läuft im Hintergrund (`src/server/feedback.ts`). Sonderzeichen werden für Telegram-Markdown escaped. Vorher brach ein einzelnes `_` oder `*` im Feedback den Telegram-Aufruf ab, und der Nutzer sah einen Fehler, obwohl die Nachricht gespeichert war.
+- **CSRF:** Astros `checkOrigin` lehnt Cross-Origin-Formular-POSTs ab (getestet: 403). JSON-Requests brauchen ohnehin einen CORS-Preflight.
+- Spam-Schutz (Rate-Limit/Honeypot) gab es vorher nicht und gibt es weiterhin nicht. Das wäre ein eigenes Thema.
+
+**Schrift – wichtiger Befund:** In der Next-Version war **Geist Sans nie aktiv**. `--font-geist-sans` wurde per Klasse am `<body>` gesetzt, Tailwind liest `--font-sans` aber am `<html>` aus. Dadurch fiel die Seite immer auf `ui-sans-serif, system-ui, …` zurück. Next hat die zwei Geist-Dateien (≈ 52 KB) trotzdem auf jeder Seite vorgeladen. Damit die UI gleich bleibt, setzt `globals.css` jetzt explizit diesen System-Stack. Geist Sans wird nicht mehr geladen. Geist Mono bleibt für `font-mono` (Zutatenliste) und wird ohne Preload nur dort geladen, wo es gebraucht wird. Falls Geist Sans eigentlich gewollt war, reicht eine Zeile in `globals.css` und ein Eintrag in `astro.config.mjs`, aber das wäre eine sichtbare Änderung.
+
+**Biome formatiert keine `.astro`-Dateien mehr.** Der Formatter entfernt in Astro-Templates Leerzeichen um `{Ausdrücke}` und Inline-Elemente (reproduziert: „<b>fett</b> danach“ wird zu „<b>fett</b>danach“). Das hat im Footer aus „2026 Speisly“ „2026Speisly“ gemacht (aus Phase 1, jetzt behoben). Linting läuft weiterhin (`biome.jsonc`, Override).
+
+**Visueller Vergleich mit Next** (Element-Screenshots, mobil 390 px und Desktop 1280 px, Pixel mit Abweichung > 16/255):
+
+| Seite | Mobil | Desktop |
+|---|---|---|
+| `/datenschutz` (7 450 px hoch) | 0,000 % | 0,000 % |
+| `/kontakt` | 0,000 % | 0,000 % |
+| `/feedback` | 0,000 % | 0,000 % |
+| `/404` | 0,000 % | 0,000 % |
+| Footer | 0,001 % (Logo-Skalierung) | 0,000 % |
+
+**Messung `/datenschutz`** (Rohdaten: `docs/perf/phase3-astro.json`):
+
+| | Next 16 | Astro 7.3 |
+|---|---|---|
+| TTFB p50 / p95 | 7.9 / 12.8 ms | 1 / 2.7 ms |
+| Durchsatz (10 Verbindungen) | 956 req/s | 8194 req/s |
+| HTML roh / gzip | 60 / 9.7 KB | 27 / 7.9 KB |
+| JS-Dateien | 18 | 7 |
+| JS roh / gzip | 1156 / 334 KB | 295 / 95 KB |
+| Folge-Requests beim Seitenaufruf | 9 | 0 |
+| Lighthouse Score | 95 | 100 |
+| FCP / LCP | 1.38 / 2.81 s | 1.21 / 1.66 s |
+| TBT | 53 ms | 0 ms |
+
+JS gzip sinkt um 72 %, obwohl die Seite zwei React-Islands hat. Ein weiterer Hebel wäre, den Cookie-Dialog erst beim Klick nachzuladen. In Produktion kommt die Kompression vom Reverse Proxy, weil der Node-Adapter nicht komprimiert. Lighthouse bewertet hier unkomprimiertes JS und kommt trotzdem auf 100.
+
+**Tests:** Browser-E2E für Kontakt- und Feedback-Formular (Client-Validierung, Absenden, Toast, Erfolgsmeldung, DB-Eintrag), Cookie-Dialog (Consent-Cookie gesetzt) und Zurück-Button. Keine Konsolenfehler. Unit-/Integrationstests für Markdown-Escaping und `saveFeedback`.
+
+**Für das Deployment notiert:** `PUBLIC_COOKIE_CONSENT_NAME` muss denselben Wert haben wie das bisherige `NEXT_PUBLIC_COOKIE_CONSENT_NAME`. Sonst verlieren alle Nutzer ihre Cookie-Einwilligung.
+
+**Messskript:** neu `--pages` (nur ausgewählte Seiten). JS-Größen werden jetzt selbst ermittelt (roh und gzip), weil Playwrights Größenangaben bei komprimierten Antworten nicht verlässlich waren. Die Baseline wurde damit neu gemessen.

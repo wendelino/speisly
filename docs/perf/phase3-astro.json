@@ -1,0 +1,46 @@
+{
+  "label": "astro-phase3",
+  "base": "http://localhost:4321",
+  "date": "2026-10-06T11:03:15.093Z",
+  "concurrency": 10,
+  "durationS": 15,
+  "pages": {
+    "static": {
+      "path": "/datenschutz",
+      "server": {
+        "status": 200,
+        "htmlBytes": 26938,
+        "htmlGzipBytes": 7897,
+        "cacheControl": "public, max-age=0",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 122917,
+          "rps": 8194,
+          "ttfbP50": 1,
+          "ttfbP95": 2.7,
+          "ttfbP99": 5.9,
+          "statuses": {
+            "200": 122917
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 634,
+        "jsFiles": 7,
+        "jsBytes": 294858,
+        "jsGzipBytes": 94963,
+        "followUpRequests": [],
+        "dbQueriesPerPageView": 0,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 100,
+        "fcpMs": 1208,
+        "lcpMs": 1658,
+        "tbtMs": 0,
+        "cls": 0,
+        "scriptTransferBytes": 297094
+      }
+    }
+  }
+}

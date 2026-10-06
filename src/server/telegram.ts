@@ -1,10 +1,20 @@
 import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from "astro:env/server";
 import { format } from "date-fns";
 
+/**
+ * Escaped Sonderzeichen für Telegrams (Legacy-)Markdown. Ohne Escaping lehnt
+ * die API Nachrichten mit z. B. einem einzelnen `_` oder `*` ab.
+ */
+const MARKDOWN_SPECIAL = /([_*`[])/g;
+
+export function escapeMarkdown(text: string): string {
+  return text.replace(MARKDOWN_SPECIAL, "\\$1");
+}
+
 const template = (message: string) =>
   `*Speilsy Nachricht*
 *T:* ${format(new Date(), "dd.MM.yyyy - HH:mm")}\n
-${message}
+${escapeMarkdown(message)}
 `;
 
 export async function sendTelegramMessage(message: string): Promise<void> {

@@ -1,0 +1,22 @@
+---
+
+import { MessageSquareHeart } from "@lucide/astro";
+import FormPage from "@/components/astro/form-page.astro";
+import BackLayout from "@/layouts/back-layout.astro";
+---
+
+<BackLayout
+  description="Teilen Sie uns Ihr Feedback mit"
+  title="Feedback"
+  withToasts
+>
+  <FormPage
+    cardDescription="Helfe uns, Speisly kontinuierlich zu verbessern."
+    cardTitle="Dein Feedback"
+    heading="Feedback"
+    intro="Wir freuen uns über dein Feedback! Erzähl uns, was dir gefällt oder was wir besser machen können. Alles ist anonym :)"
+    variant="feedback"
+  >
+    <MessageSquareHeart class="h-8 w-8 text-primary" slot="icon" />
+  </FormPage>
+</BackLayout>

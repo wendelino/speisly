@@ -1,7 +1,7 @@
 "use client";
 
+import { PUBLIC_PRIVACY_POLICY_PATH } from "astro:env/client";
 import { Cookie } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,6 @@ type ConsentDialogProps = {
   onConsent: (accepted: boolean) => void;
   onEarlyExit: () => void;
 };
-
-const PRIVACY_POLICY_PATH =
-  process.env.NEXT_PUBLIC_PRIVACY_POLICY_PATH || "/datenschutz";
 
 export function ConsentDialog({ onConsent, onEarlyExit }: ConsentDialogProps) {
   const [open, setOpen] = useState(true);
@@ -61,12 +58,12 @@ export function ConsentDialog({ onConsent, onEarlyExit }: ConsentDialogProps) {
             <DialogDescription className="text-sm leading-relaxed">
               Wir nutzen Cookies, um deine Bewertungen zu speichern und dir eine
               bessere Erfahrung zu bieten. Mehr Infos findest du in unserer{" "}
-              <Link
+              <a
                 className="text-primary underline"
-                href={PRIVACY_POLICY_PATH}
+                href={PUBLIC_PRIVACY_POLICY_PATH}
               >
                 Datenschutzerklärung
-              </Link>
+              </a>
               .
             </DialogDescription>
           </div>

@@ -31,5 +31,14 @@
         "noUselessFragments": "info"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      // Der Formatter entfernt in .astro-Templates Leerzeichen um {Ausdrücke}
+      // und Inline-Elemente („<b>fett</b> danach“ → „<b>fett</b>danach“) und
+      // verändert so den gerenderten Text. Linting bleibt aktiv.
+      "includes": ["**/*.astro"],
+      "formatter": { "enabled": false }
+    }
+  ]
 }

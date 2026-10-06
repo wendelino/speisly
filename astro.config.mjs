@@ -18,27 +18,10 @@ export default defineConfig({
   image: {
     domains: ["meine-mensa.de"],
   },
-  // Geist wird aus node_modules (@fontsource-variable/*) self-hosted: der Build
-  // hängt so nicht von Google Fonts oder einem CDN ab. Latin-Subset wie bisher
-  // mit next/font (enthält Umlaute und €).
+  // Schrift wie bisher in Produktion: Fließtext in der Systemschrift (Geist Sans
+  // war in der Next-Version nie aktiv, siehe globals.css), Geist Mono nur für
+  // `font-mono`. Self-hosted aus node_modules, kein Netzwerk beim Build.
   fonts: [
-    {
-      provider: fontProviders.local(),
-      name: "Geist",
-      cssVariable: "--font-geist-sans",
-      fallbacks: ["sans-serif"],
-      options: {
-        variants: [
-          {
-            src: [
-              "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2",
-            ],
-            weight: "100 900",
-            style: "normal",
-          },
-        ],
-      },
-    },
     {
       provider: fontProviders.local(),
       name: "Geist Mono",

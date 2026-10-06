@@ -11,7 +11,8 @@
  *
  * Aufruf:
  *   DATABASE_URL=… bun scripts/perf/measure.ts --base http://localhost:3000 --label next \
- *     [--duration 15] [--concurrency 10] [--lighthouse] [--out docs/perf/next.json]
+ *     [--duration 15] [--concurrency 10] [--lighthouse] [--pages home,static]
+ *     [--out docs/perf/next.json]
  *
  * Voraussetzung: Datenbank mit `scripts/dev/seed.ts` befüllt, Server läuft,
  * Postgres mit `pg_stat_statements` (siehe docs/perf-baseline.md).
@@ -31,6 +32,8 @@ const { values: args } = parseArgs({
     duration: { type: "string", default: "15" },
     concurrency: { type: "string", default: "10" },
     lighthouse: { type: "boolean", default: false },
+    // Kommagetrennte Seitennamen (home,day-future,day-past,meal-detail,static)
+    pages: { type: "string" },
     out: { type: "string" },
     chromium: {
       type: "string",
@@ -179,7 +182,7 @@ async function browserMetrics(path: string) {
       : route.fulfill({ status: 204, body: "" })
   );
 
-  const scripts: { url: string; bytes: number }[] = [];
+  const scriptUrls = new Set<string>();
   const followUps: string[] = [];
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
@@ -188,13 +191,12 @@ async function browserMetrics(path: string) {
     }
   });
   page.on("pageerror", (err) => consoleErrors.push(err.message.slice(0, 200)));
-  page.on("requestfinished", async (req) => {
+  page.on("requestfinished", (req) => {
     if (!req.url().startsWith(origin)) {
       return;
     }
-    const sizes = await req.sizes().catch(() => null);
     if (req.resourceType() === "script") {
-      scripts.push({ url: req.url(), bytes: sizes?.responseBodySize ?? 0 });
+      scriptUrls.add(req.url());
     }
     if (req.resourceType() === "fetch" || req.resourceType() === "xhr") {
       followUps.push(`${req.method()} ${new URL(req.url()).pathname}`);
@@ -210,10 +212,21 @@ async function browserMetrics(path: string) {
   const after = await dbQueries();
   await browser.close();
 
+  // Skripte erneut laden und selbst messen: unabhängig davon, ob der Server
+  // komprimiert (Next: ja, @astrojs/node: nein, macht in Prod der Proxy)
+  let jsBytes = 0;
+  let jsGzipBytes = 0;
+  for (const url of scriptUrls) {
+    const body = new Uint8Array(await (await fetch(url)).arrayBuffer());
+    jsBytes += body.byteLength;
+    jsGzipBytes += gzipSync(body).byteLength;
+  }
+
   return {
     loadMs,
-    jsFiles: scripts.length,
-    jsBytes: scripts.reduce((sum, s) => sum + s.bytes, 0),
+    jsFiles: scriptUrls.size,
+    jsBytes,
+    jsGzipBytes,
     followUpRequests: followUps,
     dbQueriesPerPageView: after - before,
     consoleErrors,
@@ -254,7 +267,10 @@ async function lighthouse(path: string) {
   };
 }
 
-const urls = await discoverUrls();
+const selected = args.pages?.split(",");
+const urls = (await discoverUrls()).filter(
+  (u) => !selected || selected.includes(u.name)
+);
 const results: Record<string, unknown> = {
   label: args.label,
   base: BASE,

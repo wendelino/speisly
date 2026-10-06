@@ -1,0 +1,18 @@
+---
+
+import { Mail } from "@lucide/astro";
+import FormPage from "@/components/astro/form-page.astro";
+import BackLayout from "@/layouts/back-layout.astro";
+---
+
+<BackLayout description="Kontaktieren Sie uns" title="Kontakt" withToasts>
+  <FormPage
+    cardDescription="Füll einfach das Formular aus und wir melden uns schnellstmöglich bei dir zurück."
+    cardTitle="Schreib uns"
+    heading="Kontakt"
+    intro="Hast du Fragen oder Anliegen? Schreib uns einfach!"
+    variant="contact"
+  >
+    <Mail class="h-8 w-8 text-primary" slot="icon" />
+  </FormPage>
+</BackLayout>

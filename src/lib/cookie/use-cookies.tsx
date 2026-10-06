@@ -1,12 +1,10 @@
 "use client";
 
+import { PUBLIC_COOKIE_CONSENT_NAME as COOKIE_CONSENT_NAME } from "astro:env/client";
 import type {
   ConsentCookieData,
   SetCookieProps,
 } from "@/lnio/types/cookie-props";
-
-const COOKIE_CONSENT_NAME =
-  process.env.NEXT_PUBLIC_COOKIE_CONSENT_NAME || "cookie-consent";
 
 type UseCookieRes = {
   set: (c: SetCookieProps) => void;
