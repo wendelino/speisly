@@ -3,6 +3,7 @@
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
 import Footer from "@/components/layout/footer.astro";
+import { viewTransitionBoot } from "@/lib/view-transitions";
 import ToastProvider from "@/lnio/components/toast/provider";
 import "@/styles/globals.css";
 
@@ -36,6 +37,7 @@ const {
   withToasts = false,
 } = Astro.props;
 const fullTitle = title ? `${title} | Speisly` : "Speisly";
+const viewTransitionScript = `(${viewTransitionBoot.toString()})();`;
 const ogTitle = og.title ?? "Speisly";
 const ogDescription = og.description ?? DEFAULT_DESCRIPTION;
 const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
@@ -52,6 +54,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <Font cssVariable="--font-geist-mono"/>
     <title>{fullTitle}</title>
     <slot name="head" />
+    <script is:inline set:html={viewTransitionScript} />
     <meta name="description" content={description}>
     <meta name="author" content="Speisly">
     <link rel="manifest" href="/manifest.webmanifest">

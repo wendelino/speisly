@@ -8,6 +8,7 @@ type Props = ComponentProps<typeof BaseLayout>;
 ---
 
 <BaseLayout {...Astro.props}>
+  <slot name="head" slot="head" />
   <div class="container mx-auto max-w-4xl p-3 pt-6">
     <BackButton />
     <div class="space-y-4 p-3"><slot /></div>

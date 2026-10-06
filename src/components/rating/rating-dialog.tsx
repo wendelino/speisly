@@ -1,10 +1,8 @@
-"use client";
-
+import { actions } from "astro:actions";
 import { format } from "date-fns";
-import { Loader2, Star, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Loader2, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { deleteRating, getUserRating, submitRating } from "@/actions/rating";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,58 +18,65 @@ import { ConsentProvider } from "@/lib/cookie/consent-provider";
 import { confirm } from "@/lnio/components/alert";
 import LoadingButton from "@/lnio/components/loading-button";
 import { StarRating } from "@/lnio/components/star-rating";
+import { $ratingDialogOpen } from "@/stores/ui";
+import { useAtom } from "@/stores/use-atom";
 
-type MealRatingDialogProps = {
-  mealId: string;
-  mensaMealId: string;
+export type ExistingRating = {
+  value: number;
+  value_price: number | null;
+  value_quantity: number | null;
+  value_taste: number | null;
+  comment: string | null;
+  updatedAt: Date;
 };
 
-export function MealRatingDialog({
+export type RatingDialogProps = {
+  mealId: string;
+  mensaMealId: string;
+  existing: ExistingRating | null;
+  /** nach Speichern (neue Bewertung) bzw. Löschen (null) */
+  onChange: (rating: ExistingRating | null) => void;
+};
+
+/**
+ * Bewertungs-Dialog (Inhalt unverändert aus meal-rating.tsx). Der Trigger ist
+ * der statische Button aus rating-button.astro; die eigene Bewertung kommt von
+ * dort (wurde bereits geladen, falls Consent erteilt ist).
+ */
+export function RatingDialog({
   mealId,
   mensaMealId,
-}: MealRatingDialogProps) {
-  const [loading, setLoading] = useState(true);
+  existing,
+  onChange,
+}: RatingDialogProps) {
+  const open = useAtom($ratingDialogOpen, false);
   const [submitting, setSubmitting] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<number>(0);
-  const [valuePrice, setValuePrice] = useState<number | undefined>(undefined);
-  const [valueQuantity, setValueQuantity] = useState<number | undefined>(
-    undefined
+  const [value, setValue] = useState<number>(existing?.value ?? 0);
+  const [valuePrice, setValuePrice] = useState<number | undefined>(
+    existing?.value_price ?? undefined
   );
-  const [valueTaste, setValueTaste] = useState<number | undefined>(undefined);
-  const [comment, setComment] = useState("");
-  const [hasExistingRating, setHasExistingRating] = useState<Date | null>(null);
+  const [valueQuantity, setValueQuantity] = useState<number | undefined>(
+    existing?.value_quantity ?? undefined
+  );
+  const [valueTaste, setValueTaste] = useState<number | undefined>(
+    existing?.value_taste ?? undefined
+  );
+  const [comment, setComment] = useState(existing?.comment ?? "");
+  const [hasExistingRating, setHasExistingRating] = useState<Date | null>(
+    existing?.updatedAt ?? null
+  );
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    const loadExistingRating = async () => {
-      setLoading(true);
-      try {
-        const existingRating = await getUserRating(mealId);
-        if (existingRating) {
-          setValue(existingRating.value);
-          setValuePrice(existingRating.value_price ?? undefined);
-          setValueQuantity(existingRating.value_quantity ?? undefined);
-          setValueTaste(existingRating.value_taste ?? undefined);
-          setComment(existingRating.comment ?? "");
-          setHasExistingRating(existingRating.updatedAt);
-        } else {
-          // Reset form
-          setValue(0);
-          setValuePrice(undefined);
-          setValueQuantity(undefined);
-          setValueTaste(undefined);
-          setComment("");
-          setHasExistingRating(null);
-        }
-      } catch (error) {
-        console.error("Error loading rating:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadExistingRating();
-  }, [mealId]);
+  const setOpen = (next: boolean) => $ratingDialogOpen.set(next);
+
+  const resetForm = () => {
+    setValue(0);
+    setValuePrice(undefined);
+    setValueQuantity(undefined);
+    setValueTaste(undefined);
+    setComment("");
+    setHasExistingRating(null);
+  };
 
   const handleSubmit = async () => {
     if (value === 0) {
@@ -81,7 +85,7 @@ export function MealRatingDialog({
 
     setSubmitting(true);
     try {
-      const result = await submitRating({
+      const { data: result, error } = await actions.rating.submit({
         mealId,
         mensaMealId,
         value,
@@ -91,12 +95,25 @@ export function MealRatingDialog({
         comment,
       });
 
-      if (result.success) {
-        setHasExistingRating(result.updatedAt ?? null);
+      if (result?.success) {
+        const updatedAt = result.updatedAt ?? new Date();
+        setHasExistingRating(updatedAt);
         setOpen(false);
         toast.success(result.message || "Bewertung gespeichert");
+        onChange({
+          value,
+          value_price: valuePrice ?? null,
+          value_quantity: valueQuantity ?? null,
+          value_taste: valueTaste ?? null,
+          comment,
+          updatedAt,
+        });
       } else {
-        toast.error(result.message || "Fehler beim Speichern der Bewertung");
+        toast.error(
+          result?.message ||
+            error?.message ||
+            "Fehler beim Speichern der Bewertung"
+        );
       }
     } catch (error) {
       console.error("Error submitting rating:", error);
@@ -113,20 +130,19 @@ export function MealRatingDialog({
 
     setDeleting(true);
     try {
-      const result = await deleteRating(mealId);
+      const { data: result, error } = await actions.rating.delete({ mealId });
 
-      if (result.success) {
-        // Reset form
-        setValue(0);
-        setValuePrice(undefined);
-        setValueQuantity(undefined);
-        setValueTaste(undefined);
-        setComment("");
-        setHasExistingRating(null);
+      if (result?.success) {
+        resetForm();
         setOpen(false);
         toast.success(result.message || "Bewertung gelöscht");
+        onChange(null);
       } else {
-        toast.error(result.message || "Fehler beim Löschen der Bewertung");
+        toast.error(
+          result?.message ||
+            error?.message ||
+            "Fehler beim Löschen der Bewertung"
+        );
       }
     } catch (error) {
       console.error("Error deleting rating:", error);
@@ -138,17 +154,13 @@ export function MealRatingDialog({
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger asChild>
-        <LoadingButton
-          className="w-full flex-1 gap-2"
-          loading={loading}
-          variant={hasExistingRating ? "outline" : "default"}
-        >
-          <Star className="h-4 w-4" />
-          {hasExistingRating ? "Bewertung aktualisieren" : "Jetzt bewerten"}
-        </LoadingButton>
-      </DialogTrigger>
-      <DialogContent>
+      <DialogContent
+        onCloseAutoFocus={(event) => {
+          // kein Radix-Trigger vorhanden: Fokus zurück auf den Bewerten-Button
+          event.preventDefault();
+          document.querySelector<HTMLElement>("[data-rate-button]")?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Gericht bewerten</DialogTitle>
           <DialogDescription>
@@ -199,7 +211,7 @@ export function MealRatingDialog({
               <div className="flex items-center gap-2">
                 <Button
                   className="gap-2"
-                  disabled={deleting || submitting || loading}
+                  disabled={deleting || submitting}
                   onClick={handleDelete}
                   size="icon-sm"
                   variant="destructive"
@@ -225,7 +237,7 @@ export function MealRatingDialog({
               </Button>
               <LoadingButton
                 className="flex-1"
-                disabled={submitting || value === 0 || loading || deleting}
+                disabled={submitting || value === 0 || deleting}
                 loading={submitting}
                 loadingText="Wird gespeichert..."
                 onClick={handleSubmit}

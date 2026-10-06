@@ -13,7 +13,8 @@
 | 2. Datenschicht | ✅ erledigt – siehe „Umsetzungsnotizen Phase 2“ unten |
 | 3. Statische Seiten | ✅ erledigt – siehe „Umsetzungsnotizen Phase 3“ unten |
 | 4. Speiseplan | ✅ erledigt – siehe „Umsetzungsnotizen Phase 4“ unten |
-| 5.–9. | offen |
+| 5. Gericht-Detail | ✅ erledigt – siehe „Umsetzungsnotizen Phase 5“ unten |
+| 6.–9. | offen |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -242,7 +243,8 @@ export default defineConfig({
     provider: memoryCache({
       max: 2000, // ~2000 Einträge × ≤100 KB ≈ ≤200 MB RAM worst case
       // Achtung: `exclude` ERSETZT die Default-Liste, daher die wichtigsten Tracking-Parameter wieder aufnehmen
-      query: { exclude: ["mmid", "utm_*", "fbclid", "gclid", "ref"] },
+      // `mmid` bleibt im Cache-Key (eigene Seitenvariante je Ausgabe, siehe Phase 5)
+      query: { exclude: ["utm_*", "fbclid", "gclid", "ref"] },
     }),
   },
   routeRules: {
@@ -544,3 +546,46 @@ Initiales JS auf `/` und `/day/*`: **4,6 KB gzip** (Next: 248 KB). Der gemeinsam
 Die Serverseite ist ohne Cache noch nicht schneller: ~19 ms CPU pro Render, unter Last ~50 req/s. `/` war bei Next per ISR gecacht und ist darum vorerst sogar langsamer. Das ist der Auftrag für Phase 6.
 
 **Konsequenz für Phase 6 (wichtig):** Jede Tagesseite enthält „heute“-abhängige Inhalte: die Datumsangaben und Hervorhebung im Day-Selector, relative Labels („Gestern“, Wochentag) und den Leerzustand. Deshalb muss **jede** Tages- und die Startseite spätestens um Mitternacht (Berlin) aus dem Cache fallen: `maxAge = min(Regel, secondsUntilBerlinMidnight())`. Die im Plan vorgesehenen 30 Tage für vergangene Tage gelten damit nur bis Mitternacht. Bei ≤ 1 Render pro Seite und Tag ist das unkritisch. Die Alternative wäre, diese Teile clientseitig zu rendern. Das würde wieder JS kosten und das HTML zwischen Server und Client unterschiedlich machen.
+
+---
+
+## Umsetzungsnotizen Phase 5
+
+**`/meal/[mealId]`** ist on-demand gerendert. Unbekanntes Gericht oder eine `mmid`, die nicht zum Gericht gehört, ergibt 404 (wie bisher).
+
+**Abweichungen vom Plan (begründet):**
+- **`?mmid` bleibt Teil der Seite und damit des Cache-Keys.** Die Seite zeigt wie bisher die Zutaten und Beilagen der verlinkten Ausgabe und erlaubt nur dann das Bewerten. Damit ist die offene Frage aus §10 ohne UI-Änderung gelöst. Ohne `mmid` werden die Zutaten der neuesten Ausgabe gezeigt; Next nahm hier eine zufällige Zeile. **Für Phase 6: `mmid` NICHT aus dem Cache-Key ausschließen.** Pro Gericht entstehen nur so viele Varianten, wie Ausgaben tatsächlich verlinkt und aufgerufen werden.
+- **Die Bewertungsübersicht ist Teil der Seite, keine Server Island.** Sie steht mitten auf der Seite. Als nachgeladene Island würde alles darunter (Beilagen, Inhaltsstoffe) beim Laden springen (CLS). Sie kostet nur eine schnelle indizierte Query, und die Seite wird beim Bewerten gezielt über `ratings:<id>` invalidiert. Bewertungen sind selten.
+- **Server Island: „Angebotshistorie“** (`src/components/server-islands/serving-stats.astro`, `server:defer` mit Skeleton). Das ist die teuerste Aggregation, sie steht am Seitenende und ändert sich nur durch den Sync. Sie wird per `GET /_server-islands/ServingStats?e=…&p=…` nachgeladen und in Phase 6 eigenständig gecacht (`meal-stats:<id>`, `meals`).
+
+**Bewerten (Button + Dialog):**
+- **Der Button ist statisches HTML** in der gecachten Seite. Die eigene Bewertung (`actions.rating.mine`) wird **nur bei erteiltem Cookie-Consent** abgefragt. Ohne Consent gibt es keine einzige Anfrage; Next fragte bei jedem Seitenaufruf per Server Action.
+- **Dialog, Bestätigungsdialog und Toaster** (React) werden erst beim Klick geladen und bei Hover/Touch vorgeladen. Der Inhalt ist unverändert aus `meal-rating.tsx`, ebenso Consent-Abfrage und Meldungen.
+- **Aktualisierung ohne Reload:** Nach Speichern oder Löschen aktualisieren sich Button („Bewertung aktualisieren“, Outline-Variante) und Bewertungsübersicht sofort. Die Übersicht wird frisch vom Server geholt und ersetzt; Next machte das über `revalidatePath` und einen RSC-Refresh.
+- **Astro Actions `rating.mine/submit/delete`:** serverseitige Zod-Validierung (Sterne 1–5, Kommentar ≤ 500 Zeichen). **Neu:** Die `mensaMealId` muss zum Gericht gehören. Nach Änderungen wird `ratings:<id>` invalidiert (`src/server/cache.ts`; ohne konfigurierten Provider ein No-op).
+- **User-Erkennung** (`src/server/user.ts`, vorher `src/actions/user.ts` + `next/headers`): gleiches JWT-Cookie `speisly_user_id`, gleicher IP-Hash. Fallback ist jetzt die Socket-Adresse statt `"unknown"`, vorher teilten sich alle Anfragen ohne Proxy-Header einen Nutzer.
+
+**View Transitions** (vorher React `<ViewTransition>`): native Cross-Document View Transitions (`@view-transition` in `globals.css`, `prefers-reduced-motion` respektiert). Die Namen (`meal-image-<mmid>` usw.) vergibt `src/lib/view-transitions.ts` per `pageswap`/`pagereveal` **nur für das angeklickte Gericht**. Next setzte sie auf jede Karte, das hätte bei ~90 Karten bei jeder Navigation 90 Snapshots bedeutet. Das funktioniert in Chromium und Safari ≥ 18.2; Firefox navigiert ohne Animation.
+
+**Astro-7-Eigenheit:** `<script>`-Tags werden an der Stelle gerendert, an der sie stehen. Ein Script im Bewerten-Button war dadurch ein zusätzliches Kind der Box und hat den `space-y`-Abstand verändert (+12 px). Solche Scripts kommen jetzt über einen `head`-Slot (`rating-button-script.astro`).
+
+**Aufgeräumt:** Alle Next-Seiten und -Komponenten außer `src/app/api/*` (Sync/Revalidate, kommt in Phase 6) und `src/_boot.ts` (Phase 9). Entfernt sind die alten Server Actions, `lib/cookie/actions`, `lib/jwt`, `lib/telegram`, der DB-Shim, `meal-comp/meal-detail/rating-stats/...tsx` und `lnio/utils/format-date.ts`. **`next` ist keine Abhängigkeit mehr.**
+
+**Visueller Vergleich** (Detailseite: mit `mmid` inkl. Beilagen, mit vollständigen Teilbewertungen, ohne Bewertungen; mobil + Desktop):
+- Gleiche Abmessungen.
+- Abweichungen 0,2–1 %: Bei Mensen mit gleicher Anzahl Angebote ist die Reihenfolge in der Angebotshistorie jetzt alphabetisch (bei Next zufällig), dazu kommt Glyphen-Kantenglättung im Titel.
+- Ohne `mmid` unterscheidet sich der Inhalt erwartungsgemäß (neueste statt zufälliger Ausgabe).
+
+**Tests:** Browser-E2E für den gesamten Bewertungsablauf (ohne Consent keine Anfrage → Consent-Dialog → Bewerten → Button und Übersicht ohne Reload aktuell → Reload zeigt „Bewertung aktualisieren“ → Dialog vorbelegt → Löschen mit Bestätigung) sowie Navigation Liste → Detail → zurück; keine Konsolenfehler. Unit-/Integrationstests für Consent-Cookie und Bewertungen (32 Tests gesamt).
+
+**Messung aller Seiten nach Phase 5** (Browser über gzip-Proxy, noch **ohne** Route Cache; Rohdaten `docs/perf/phase5-astro.json`), Next → Astro:
+
+| Seite | JS gzip | DB-Queries / Seitenaufruf | Lighthouse | LCP | TBT | TTFB p95 | Req/s |
+|---|---|---|---|---|---|---|---|
+| `/` | 248 → **4.6 KB** | 11 → **1** | 93 → **100** | 3.16 → **1.54 s** | 62 → **0 ms** | 31.4 → 277.4 ms | 436 → 53 |
+| `/day/<morgen>` | 248 → **4.6 KB** | 13 → **1** | 89 → **100** | 3.64 → **1.54 s** | 93 → **0 ms** | 190.3 → 280.6 ms | 54 → 49 |
+| `/day/<vor 30 Tagen>` | 248 → **4.6 KB** | 13 → **1** | 93 → **100** | 3.19 → **1.54 s** | 51 → **0 ms** | 190.2 → 284.6 ms | 49 → 50 |
+| `/meal/<id>?mmid=…` | 264 → **6.6 KB** | 4 → **3** | 94 → **100** | 2.96 → **1.51 s** | 58 → **0 ms** | 71.6 → 34.1 ms | 96 → 441 |
+| `/datenschutz` | 334 → **98.1 KB** | 0 → **0** | 95 → **100** | 2.81 → **1.38 s** | 53 → **0 ms** | 12.8 → 3.1 ms | 956 → 7163 |
+
+Client-seitig sind alle Zielwerte aus §9 erreicht. Serverseitig fehlt noch der Cache: Die Listen-Seiten liegen ungecacht bei ~50 req/s, `/` war bei Next per ISR gecacht. Das ist Phase 6.

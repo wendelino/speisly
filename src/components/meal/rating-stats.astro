@@ -1,0 +1,79 @@
+---
+// Astro-Port von rating-stats.tsx. Teil der (gecachten) Seite; die Seite wird
+// beim Bewerten über den Tag ratings:<id> invalidiert.
+import { Star } from "@lucide/astro";
+import Title from "@/components/astro/title.astro";
+import { badgeVariants } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import RatingButton from "./rating-button.astro";
+
+type Props = {
+  mealId: string;
+  stats: MealRatingStats;
+  /** nur mit konkreter Ausgabe (`?mmid=`) kann bewertet werden */
+  mensaMealId?: string;
+};
+
+const { mealId, stats, mensaMealId } = Astro.props;
+const { ratingCount, avgRating } = stats;
+
+const items = [
+  { label: "Gesamtbewertung", value: avgRating.value },
+  { label: "Preis-Leistung", value: avgRating.value_price },
+  { label: "Menge", value: avgRating.value_quantity },
+  { label: "Geschmack", value: avgRating.value_taste },
+]
+  .filter((item): item is { label: string; value: number } => item.value !== null)
+  .map(({ label, value }) => ({
+    label,
+    display: value.toFixed(1).replace(".", ","),
+    full: Math.floor(value),
+    half: value % 1 >= 0.5 && value < 5,
+  }));
+---
+
+<Title class="flex items-center gap-2" variant="h2">
+  <Star class="size-4.5 fill-yellow-400 text-yellow-400" />
+  <span class="font-semibold">Bewertungsübersicht</span>
+</Title>
+<div class="relative space-y-3 rounded-lg border bg-muted p-5">
+  {
+      ratingCount === 0 ? (
+        <div class="p-4 text-center" data-rating-summary>
+          <p class="text-muted-foreground text-sm">Noch keine Bewertungen vorhanden</p>
+        </div>
+      ) : (
+        <div class="space-y-1" data-rating-summary>
+          <span
+            class={cn(badgeVariants({ variant: "default" }), "-top-2 -right-2 absolute font-semibold")}
+            data-slot="badge"
+          >{`${ratingCount} ${ratingCount === 1 ? "Bewertung" : "Bewertungen"}`}</span>
+          {items.map((item) => (
+            <div class="flex items-center justify-between gap-4 py-2">
+              <span class="font-medium text-muted-foreground text-sm">{item.label}</span>
+              <div class="flex items-center gap-2">
+                <div class="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) =>
+                    star <= item.full ? (
+                      <Star class="size-4 fill-yellow-400 text-yellow-400" />
+                    ) : star === item.full + 1 && item.half ? (
+                      <div class="relative size-4">
+                        <Star class="absolute size-4 fill-background text-muted-foreground" />
+                        <div class="absolute overflow-hidden" style="width:50%;height:100%">
+                          <Star class="size-4 fill-yellow-400 text-yellow-400" />
+                        </div>
+                      </div>
+                    ) : (
+                      <Star class="size-4 fill-background text-muted-foreground" />
+                    )
+                  )}
+                </div>
+                <span class="font-semibold text-sm tabular-nums">{item.display}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+  }
+  {mensaMealId && <RatingButton mealId={mealId} mensaMealId={mensaMealId} />}
+</div>

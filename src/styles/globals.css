@@ -125,3 +125,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Cross-Document View Transitions (Karte ↔ Detailseite, siehe lib/view-transitions.ts) */
+@view-transition {
+  navigation: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+}

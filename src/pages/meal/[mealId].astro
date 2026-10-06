@@ -1,0 +1,112 @@
+---
+// Detailseite eines Gerichts (ersetzt src/app/meal/[mealId]/page.tsx).
+// Mit ?mmid= zeigt sie die Zutaten dieser Ausgabe und erlaubt das Bewerten,
+// sonst die der neuesten Ausgabe. Die Angebotshistorie ist eine Server
+// Island und wird separat geladen und gecacht.
+import { UtensilsCrossed } from "@lucide/astro";
+import Title from "@/components/astro/title.astro";
+import IngredientBadge from "@/components/meal/ingredient-badge.astro";
+import IngredientsList from "@/components/meal/ingredients-list.astro";
+import MealImage from "@/components/meal/meal-image.astro";
+import MealPrice from "@/components/meal/meal-price.astro";
+import MealTitle from "@/components/meal/meal-title.astro";
+import RatingButtonScript from "@/components/meal/rating-button-script.astro";
+import RatingStats from "@/components/meal/rating-stats.astro";
+import ServingStatsSkeleton from "@/components/meal/serving-stats-skeleton.astro";
+import ServingStats from "@/components/server-islands/serving-stats.astro";
+import { badgeVariants } from "@/components/ui/badge";
+import BackLayout from "@/layouts/back-layout.astro";
+import { visibleIngredientTypes } from "@/lib/ingredients";
+import { cn } from "@/lib/utils";
+import { findMeal } from "@/server/queries/meal";
+import { getMealRatingStats } from "@/server/queries/ratings";
+
+export const prerender = false;
+
+const mealId = Astro.params.mealId as string;
+const mmid = Astro.url.searchParams.get("mmid") || undefined;
+
+const [meal, ratingStats] = await Promise.all([
+  findMeal(mealId, mmid),
+  getMealRatingStats(mealId),
+]);
+if (!meal) {
+  return new Response(null, { status: 404 });
+}
+
+// Beschreibung wie bisher (generateMetadata)
+const ratingText = ratingStats.avgRating.value
+  ? ` - ${ratingStats.avgRating.value}/5 ⭐ (${ratingStats.ratingCount} Bewertungen)`
+  : "";
+const ingredientsText =
+  meal.ingredients.length > 0
+    ? `Zutaten: ${meal.ingredients.slice(0, 3).join(", ")}. `
+    : "";
+const priceText = `Preise: Student ${(meal.priceStud / 100).toFixed(2)}€, Mitarbeiter ${(meal.priceWork / 100).toFixed(2)}€, Gast ${(meal.priceGuest / 100).toFixed(2)}€.`;
+const description = `${meal.name} in der Mensa. ${ingredientsText}${priceText}${ratingText}`;
+const images = meal.imgPath
+  ? [{ url: meal.imgPath, width: 1200, height: 630 }]
+  : [];
+---
+
+<BackLayout
+  description={description}
+  og={{ title: meal.name, description, images }}
+  title={meal.name}
+>
+  {mmid && <RatingButtonScript slot="head" />}
+  <div class="space-y-6">
+    <MealTitle h1 name={meal.name} subtitle={meal.subtitle} vtId={mmid} />
+    <div class="px-8 py-2">
+      <MealImage
+        alt={meal.name}
+        class="mx-auto w-full max-w-sm"
+        priority
+        sizes="(max-width: 768px) 100vw, 768px"
+        src={meal.imgPath}
+        view="detail"
+        vtId={mmid}
+      />
+    </div>
+    <div
+      class="flex flex-wrap gap-2"
+      data-vt={mmid ? `meal-ingredients-${mmid}` : undefined}
+    >
+      {visibleIngredientTypes(meal.flags).map((type) => <IngredientBadge type={type} />)}
+    </div>
+    <div class="border-t pt-4">
+      <MealPrice expanded meal={meal} vtId={mmid} />
+    </div>
+
+    <RatingStats mealId={meal.id} mensaMealId={mmid} stats={ratingStats} />
+
+    {
+      meal.extras.length > 0 && (
+        <>
+          <Title variant="h2">Beilagen</Title>
+          <ul class="flex flex-wrap gap-3">
+            {meal.extras.map((extra) => (
+              <li>
+                <span
+                  class={cn(badgeVariants({ variant: "secondary" }), "border border-primary bg-primary/10 px-4 py-1 font-medium text-sm")}
+                  data-slot="badge"
+                >{extra}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+
+    <Title variant="h2">Inhaltsstoffe</Title>
+    <IngredientsList ingredients={meal.ingredients} />
+  </div>
+
+  <Title class="flex items-center gap-2" variant="h2">
+    <UtensilsCrossed class="size-4.5" />
+    <span class="font-semibold">Angebotshistorie</span>
+  </Title>
+  <ServingStats mealId={meal.id} server:defer>
+    <ServingStatsSkeleton slot="fallback" />
+  </ServingStats>
+</BackLayout>
