@@ -1,0 +1,8 @@
+---
+// Wendet die Filter-Cookies vor dem ersten Paint an (siehe lib/filters/boot.ts)
+import { filterBoot } from "@/lib/filters/boot";
+
+const script = `(${filterBoot.toString()})();`;
+---
+
+<script is:inline set:html={script} />

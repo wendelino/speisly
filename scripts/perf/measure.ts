@@ -28,6 +28,9 @@ import { chromium } from "playwright-core";
 const { values: args } = parseArgs({
   options: {
     base: { type: "string", default: "http://localhost:3000" },
+    // optional: Browser und Lighthouse über diese URL (z. B. compress-proxy.ts),
+    // Server-Latenz wird weiterhin direkt gegen --base gemessen
+    "browser-base": { type: "string" },
     label: { type: "string", default: "run" },
     duration: { type: "string", default: "15" },
     concurrency: { type: "string", default: "10" },
@@ -43,6 +46,7 @@ const { values: args } = parseArgs({
 });
 
 const BASE = args.base.replace(/\/$/, "");
+const BROWSER_BASE = (args["browser-base"] ?? args.base).replace(/\/$/, "");
 const DURATION_MS = Number(args.duration) * 1000;
 const CONCURRENCY = Number(args.concurrency);
 const DB_NAME = new URL(process.env.DATABASE_URL ?? "").pathname.slice(1);
@@ -173,7 +177,7 @@ async function browserMetrics(path: string) {
     viewport: { width: 390, height: 844 },
   });
   const page = await context.newPage();
-  const origin = new URL(BASE).origin;
+  const origin = new URL(BROWSER_BASE).origin;
 
   // External requests (analytics, remote images) don't count and must not hang.
   await page.route("**/*", (route) =>
@@ -205,7 +209,7 @@ async function browserMetrics(path: string) {
 
   const before = await dbQueries();
   const start = performance.now();
-  await page.goto(BASE + path, { waitUntil: "networkidle" });
+  await page.goto(BROWSER_BASE + path, { waitUntil: "networkidle" });
   const loadMs = Math.round(performance.now() - start);
   // let late effects (prefetches, server actions in useEffect) finish
   await sleep(3000);
@@ -239,7 +243,7 @@ async function lighthouse(path: string) {
     [
       "-y",
       "lighthouse@12",
-      BASE + path,
+      BROWSER_BASE + path,
       "--quiet",
       "--output=json",
       "--only-categories=performance",
@@ -274,6 +278,7 @@ const urls = (await discoverUrls()).filter(
 const results: Record<string, unknown> = {
   label: args.label,
   base: BASE,
+  browserBase: BROWSER_BASE,
   date: new Date().toISOString(),
   concurrency: CONCURRENCY,
   durationS: DURATION_MS / 1000,

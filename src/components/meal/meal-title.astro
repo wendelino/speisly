@@ -1,0 +1,32 @@
+---
+// Astro-Port von MealTitle (meal-comp.tsx)
+import Title from "@/components/astro/title.astro";
+
+type Props = {
+  name: string;
+  subtitle: string;
+  h1?: boolean;
+  vtId?: string;
+};
+
+const { name, subtitle, h1 = false, vtId } = Astro.props;
+const text = `${name} ${subtitle}`;
+const vt = vtId ? `meal-title-${vtId}` : undefined;
+---
+
+{
+  h1 ? (
+    <Title class="mt-0" data-vt={vt} noBorder variant="h1">
+      {text}
+    </Title>
+  ) : (
+    <Title
+      class="my-0 line-clamp-2 text-sm transition-colors group-hover:text-primary"
+      data-vt={vt}
+      noBorder
+      variant="h4"
+    >
+      {text}
+    </Title>
+  )
+}

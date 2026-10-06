@@ -15,6 +15,9 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
+  // Prefetch nur bei Nutzerabsicht (Hover/Touch) für Links mit
+  // data-astro-prefetch – nicht wie bei Next alles im Viewport
+  prefetch: { prefetchAll: false, defaultStrategy: "hover" },
   image: {
     domains: ["meine-mensa.de"],
   },

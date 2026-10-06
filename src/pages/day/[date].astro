@@ -1,21 +1,26 @@
 ---
-// Startseite: Speiseplan von heute (Berlin). On-demand gerendert; das Caching
-// (Route Cache bis Mitternacht) folgt in Phase 6.
+// Speiseplan eines Tages. Nur gültige Daten im Fenster −365 … +14 Tage,
+// alles andere ist 404 (erzeugt so auch keine Cache-Einträge, siehe middleware).
 import DaySelector from "@/components/day-selector.astro";
 import FilterFab from "@/components/filter-fab.astro";
-import AppHero from "@/components/layout/app-hero.astro";
 import FilterHead from "@/components/meal/filter-head.astro";
 import MealList from "@/components/meal/meal-list.astro";
 import BaseLayout from "@/layouts/base-layout.astro";
-import { todayBerlin } from "@/server/dates";
+import { parseDayParam, todayBerlin } from "@/server/dates";
 import { getMealsForDate } from "@/server/queries/meals";
 import { getVisibleMensen } from "@/server/queries/mensen";
 
 export const prerender = false;
 
+// Ungültige Daten und /day/heute fängt src/middleware.ts ab
 const today = todayBerlin();
+const date = parseDayParam(Astro.params.date, today);
+if (!date) {
+  throw new Error(`invalid day param: ${Astro.params.date}`);
+}
+
 const [groups, mensen] = await Promise.all([
-  getMealsForDate(today),
+  getMealsForDate(date),
   getVisibleMensen(),
 ]);
 ---
@@ -23,9 +28,8 @@ const [groups, mensen] = await Promise.all([
 <BaseLayout>
   <FilterHead slot="head" />
   <main class="bg-primary/5">
-    <AppHero />
-    <DaySelector today={today} />
-    <MealList date={today} groups={groups} today={today} />
+    <DaySelector selected={date} today={today} />
+    <MealList date={date} groups={groups} today={today} />
     <FilterFab mensen={mensen} />
   </main>
 </BaseLayout>

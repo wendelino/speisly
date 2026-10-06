@@ -1,7 +1,5 @@
 ---
-
 // Ersetzt src/app/layout.tsx (Metadaten 1:1 übernommen)
-
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
 import Footer from "@/components/layout/footer.astro";
@@ -53,6 +51,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <Font cssVariable="--font-geist-mono"/>
     <title>{fullTitle}</title>
+    <slot name="head" />
     <meta name="description" content={description}>
     <meta name="author" content="Speisly">
     <link rel="manifest" href="/manifest.webmanifest">

@@ -36,9 +36,13 @@
     {
       // Der Formatter entfernt in .astro-Templates Leerzeichen um {Ausdrücke}
       // und Inline-Elemente („<b>fett</b> danach“ → „<b>fett</b>danach“) und
-      // verändert so den gerenderten Text. Linting bleibt aktiv.
+      // verändert so den gerenderten Text. Außerdem fügt jedes `check/lint
+      // --write` (auch fixAll beim Speichern im Editor) eine Leerzeile ins
+      // Frontmatter ein (Biome 2.3.8). Typprüfung übernimmt `astro check`.
       "includes": ["**/*.astro"],
-      "formatter": { "enabled": false }
+      "formatter": { "enabled": false },
+      "assist": { "enabled": false },
+      "linter": { "enabled": false }
     }
   ]
 }

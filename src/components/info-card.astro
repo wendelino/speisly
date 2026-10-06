@@ -1,0 +1,23 @@
+---
+import { CircleAlert, CircleCheck, Info, TriangleAlert } from "@lucide/astro";
+// Astro-Port von info-card.tsx
+import type { HTMLAttributes } from "astro/types";
+import { cn } from "@/lib/utils";
+
+type Props = HTMLAttributes<"div"> & {
+  description: string;
+  icon?: "info" | "warning" | "error" | "success";
+};
+
+const { description, icon = "info", class: className, ...rest } = Astro.props;
+---
+
+<div class={cn("", className)} {...rest}>
+  <div class="flex items-center gap-2">
+    {icon === "info" && <Info class="size-4.5 text-primary" />}
+    {icon === "warning" && <CircleAlert class="h-4 w-4" />}
+    {icon === "error" && <TriangleAlert class="h-4 w-4" />}
+    {icon === "success" && <CircleCheck class="h-4 w-4" />}
+    <p class="text-muted-foreground text-sm">{description}</p>
+  </div>
+</div>

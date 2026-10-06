@@ -1,0 +1,64 @@
+---
+// Astro-Port von meal-card.tsx – statisches HTML, kein JS.
+// data-meal/-veggie/-vegan steuern den CSS-Filter (siehe lib/filters/boot.ts).
+import { ArrowRight } from "@lucide/astro";
+import { visibleIngredientTypes } from "@/lib/ingredients";
+import { cn } from "@/lib/utils";
+import IngredientBadge from "./ingredient-badge.astro";
+import MealImage from "./meal-image.astro";
+import MealPrice from "./meal-price.astro";
+import MealTitle from "./meal-title.astro";
+
+type Props = {
+  meal: Meal;
+  priority?: boolean;
+};
+
+const { meal, priority = false } = Astro.props;
+const vtId = meal.mensaMealId;
+---
+
+<a
+  class="group block"
+  data-astro-prefetch
+  data-meal
+  data-vegan={meal.flags.isVegan ? "" : undefined}
+  data-veggie={meal.flags.isVeggie ? "" : undefined}
+  href={`/meal/${meal.id}?mmid=${meal.mensaMealId}`}
+>
+  <div
+    class={cn(
+      "flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm",
+      "grid grid-cols-3 gap-4 border-none p-4 shadow-sm"
+    )}
+    data-slot="card"
+  >
+    <MealImage
+      alt={meal.name}
+      class="h-full w-full rounded-lg object-contain p-1"
+      priority={priority}
+      src={meal.imgPath}
+      vtId={vtId}
+    />
+    <div
+      class={cn(
+        "px-6",
+        "col-span-2 flex h-full flex-col justify-between gap-3 p-0"
+      )}
+      data-slot="card-content"
+    >
+      <div class="flex flex-wrap gap-2" data-vt={`meal-ingredients-${vtId}`}>
+        {visibleIngredientTypes(meal.flags).map((type) => (
+          <IngredientBadge type={type} />
+        ))}
+      </div>
+      <MealTitle name={meal.name} subtitle={meal.subtitle} vtId={vtId} />
+      <div class="mt-auto flex items-center justify-between">
+        <MealPrice meal={meal} vtId={vtId} />
+        <ArrowRight
+          class="h-5 w-5 text-primary transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary"
+        />
+      </div>
+    </div>
+  </div>
+</a>

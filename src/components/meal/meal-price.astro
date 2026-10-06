@@ -1,0 +1,47 @@
+---
+// Astro-Port von MealPrice (meal-comp.tsx)
+type Props = {
+  meal: Pick<Meal, "priceStud" | "priceWork" | "priceGuest">;
+  expanded?: boolean;
+  vtId?: string;
+};
+
+const { meal, expanded = false, vtId } = Astro.props;
+
+const LABEL_CLASS =
+  "flex select-none items-center gap-2 font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 text-muted-foreground";
+
+const prices = [
+  { price: meal.priceStud, label: "Student*in" },
+  ...(expanded
+    ? [
+        { price: meal.priceWork, label: "Mitarbeiter*in" },
+        { price: meal.priceGuest, label: "Besucher*in" },
+      ]
+    : []),
+].map((p) => ({
+  ...p,
+  euros: Math.floor(p.price / 100),
+  cents: (p.price % 100).toString().padStart(2, "0"),
+}));
+---
+
+<div class="grid grid-cols-3 gap-2">
+  {
+    prices.map((p, index) => (
+      <div
+        class="flex flex-col items-center justify-center gap-1"
+        data-vt={index === 0 && vtId ? `meal-price-${vtId}` : undefined}
+      >
+        {expanded && (
+          <label class={LABEL_CLASS} data-slot="label">
+            {p.label}
+          </label>
+        )}
+        <span class="font-extrabold text-lg text-primary tabular-nums leading-tight tracking-tight">
+          {`${p.euros},`}<span class="text-base">{p.cents}</span><span class="ml-1 text-base text-primary/80">€</span>
+        </span>
+      </div>
+    ))
+  }
+</div>

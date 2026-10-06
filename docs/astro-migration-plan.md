@@ -12,7 +12,8 @@
 | 1. Scaffold | ✅ erledigt – siehe „Umsetzungsnotizen Phase 1“ unten |
 | 2. Datenschicht | ✅ erledigt – siehe „Umsetzungsnotizen Phase 2“ unten |
 | 3. Statische Seiten | ✅ erledigt – siehe „Umsetzungsnotizen Phase 3“ unten |
-| 4.–9. | offen |
+| 4. Speiseplan | ✅ erledigt – siehe „Umsetzungsnotizen Phase 4“ unten |
+| 5.–9. | offen |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -495,3 +496,51 @@ JS gzip sinkt um 72 %, obwohl die Seite zwei React-Islands hat. Ein weiterer Heb
 **Für das Deployment notiert:** `PUBLIC_COOKIE_CONSENT_NAME` muss denselben Wert haben wie das bisherige `NEXT_PUBLIC_COOKIE_CONSENT_NAME`. Sonst verlieren alle Nutzer ihre Cookie-Einwilligung.
 
 **Messskript:** neu `--pages` (nur ausgewählte Seiten). JS-Größen werden jetzt selbst ermittelt (roh und gzip), weil Playwrights Größenangaben bei komprimierten Antworten nicht verlässlich waren. Die Baseline wurde damit neu gemessen.
+
+---
+
+## Umsetzungsnotizen Phase 4
+
+**Seiten:** `/` und `/day/[date]` sind on-demand gerendert (`prerender = false`). Ungültige Daten und Daten außerhalb des Fensters (−365 … +14 Tage) beantwortet `src/middleware.ts` mit 404, bevor gerendert wird. `/day/heute` leitet per 301 auf `/` um.
+
+**Abweichung vom Plan, bewusst weitergehend: Kein React beim Seitenaufruf.** Geplant waren DaySelector und Filter-Dialog als hydrierte Islands. Das hätte die React-Runtime (56 KB gzip) und react-day-picker (34 KB) auf jede Seite gebracht, insgesamt 126 KB gzip. Umgesetzt ist:
+
+| Teil | Umsetzung | JS beim Laden |
+|---|---|---|
+| Gerichtsliste, Karten, Accordion „Weitere Gerichte“ | `.astro`. Accordion mit Radix-identischem Markup und ~30 Zeilen Vanilla-JS | – |
+| Day-Selector (Heute/Morgen/Kalender-Button) | `day-selector.astro`, Navigation + Prefetch per Mini-Script | ~0,6 KB |
+| Filter-Button und Chips („3 Mensen ×“, „Nur Vegan ×“) | `filter-fab.astro`. Chips werden per CSS vom Head-Script geschaltet | ~0,6 KB |
+| Kalender-Popover (react-day-picker) | React, **erst beim Öffnen** geladen, Vorladen bei Hover/Touch/Fokus (`calendar-popover.mount.tsx`) | – |
+| Filter-Dialog | React, **erst beim Öffnen** geladen (`filter-dialog.mount.tsx`) | – |
+
+Initiales JS auf `/` und `/day/*`: **4,6 KB gzip** (Next: 248 KB). Der gemeinsame Zustand liegt in `src/stores/filters.ts` (nanostores), React liest ihn über `useSyncExternalStore`.
+
+**Filter ohne Flackern und ohne Hydration-Fehler:** `src/lib/filters/boot.ts` läuft als Inline-Script im `<head>`. Es liest die bestehenden Filter-Cookies (gleiche Namen und gleiches Format wie bisher) und setzt `data-diet`/`data-filter-*` auf `<html>`. Für die Mensa-Auswahl und den Mensa-Chip erzeugt es CSS. Alles, was vom Ernährungsfilter abhängt (Hinweise „X Gerichte ausgeblendet“, Zähler im Accordion, komplett ausgeblendete Mensen, leere Bereiche), rendert der Server für jede Variante vor; CSS blendet die passende ein. Der Leerzustand „Keine Gerichte gefunden + Filter zurücksetzen“ bei leerer Mensa-Auswahl läuft über `:has()`. In Next gab es bei gesetzten Filtern einen Hydration-Mismatch (React #418, im Test reproduziert). Er tritt nicht mehr auf.
+
+**Weitere Details:**
+- **„Heute“ kommt vom Server** (`todayBerlin()`), nicht aus der Zeitzone von Server oder Browser. Relative Angaben („Heute“, „Morgen“, Wochentag) berechnet `src/lib/format-day.ts` auf Basis von ISO-Tagen.
+- **Icons:** `@lucide/astro` ist auf **0.556.0** gepinnt, dieselbe Icon-Version wie `lucide-react`. In 1.x wurden „Blatt“ (Vegan) und „Rind“ (Fleisch) neu gezeichnet. Alle 17 verwendeten Icons sind per SVG-Vergleich identisch.
+- **Prefetch:** nur bei Hover/Touch auf Karten und Heute/Morgen (`data-astro-prefetch`), nicht wie bei Next für alles im Viewport. Bis Phase 5 liefert der Prefetch der Detailseite noch 404.
+- **Mensen** erscheinen alphabetisch (Entscheidung aus Phase 2). Innerhalb einer Mensa ist die Reihenfolge identisch zu Next (geprüft).
+- **Kompression:** Der Node-Adapter komprimiert nicht. Ohne Kompression ist das HTML der Liste 312 KB statt 22 KB, Lighthouse fiel dabei auf 71–89. **In Produktion muss gzip/brotli vor dem Server sitzen** (Reverse Proxy oder der Start-Wrapper aus Phase 9). Zum Messen gibt es `scripts/perf/compress-proxy.ts` und im Messskript die Option `--browser-base`.
+- **Biome:** Für `.astro` sind jetzt auch Linter und Assist aus. Jedes `check/lint --write` (auch fixAll beim Speichern in VS Code) fügte eine Leerzeile ins Frontmatter ein, die sich bei jedem Lauf vermehrte. Die Typprüfung macht `astro check`.
+- **Aufgeräumt:** `meal-list.tsx`, `meal-card.tsx`, `empty-state.tsx`, `loading-state.tsx`, `mensa-header.tsx`, `info-card.tsx`, `filter-context.tsx`, `day-selector.tsx`, `mensa-filter.tsx`, `src/actions/mensa.ts` sowie `welcome-cta.tsx` (war schon vorher ungenutzt).
+
+**Visueller Vergleich mit Next** (`/day/<morgen>`, jede Mensa-Gruppe einzeln, mobil + Desktop, in 6 Zuständen: ohne Filter, vegetarisch, vegan, 2 Mensen gewählt, leere Auswahl, Accordion offen). Dazu kommen Day-Selector, Filter-Button mit Chips, Hero sowie der Leerzustand eines Samstags:
+- Alle 80 Ausschnitte haben **identische Abmessungen**. Day-Selector, Leerzustände, Filter-Button und Chips sind **pixelidentisch**.
+- In den Gruppen weichen höchstens 0,05 % der Pixel ab. Das ist Kantenglättung einzelner Glyphen, weil Next den Titel per `<!-- -->` in mehrere Textknoten zerlegt. Mit bloßem Auge ist das nicht sichtbar.
+
+**Messung** (Browser/Lighthouse über `compress-proxy.ts` wie in Produktion; Rohdaten `docs/perf/phase4-astro.json`):
+
+| Seite | | JS gzip | DB-Queries / Seitenaufruf | Folge-Requests | Lighthouse | FCP | LCP | TBT | TTFB p95 (ungecacht, 10 parallel) |
+|---|---|---|---|---|---|---|---|---|---|
+| `/` | Next | 248.2 KB | 11 | 3 | 93 | 1.53 s | 3.16 s | 62 ms | 31.4 ms |
+| `/` | Astro | 4.6 KB | 1 | 0 | 100 | 1.33 s | 1.53 s | 0 ms | 312.8 ms |
+| `/day/<morgen>` | Next | 248.2 KB | 13 | 3 | 89 | 1.53 s | 3.64 s | 93 ms | 190.3 ms |
+| `/day/<morgen>` | Astro | 4.6 KB | 1 | 0 | 100 | 1.28 s | 1.54 s | 0 ms | 277.3 ms |
+| `/day/<vor 30 Tagen>` | Next | 248.2 KB | 13 | 7 | 93 | 1.53 s | 3.19 s | 51 ms | 190.2 ms |
+| `/day/<vor 30 Tagen>` | Astro | 4.6 KB | 1 | 0 | 100 | 1.13 s | 1.53 s | 0 ms | 297 ms |
+
+Die Serverseite ist ohne Cache noch nicht schneller: ~19 ms CPU pro Render, unter Last ~50 req/s. `/` war bei Next per ISR gecacht und ist darum vorerst sogar langsamer. Das ist der Auftrag für Phase 6.
+
+**Konsequenz für Phase 6 (wichtig):** Jede Tagesseite enthält „heute“-abhängige Inhalte: die Datumsangaben und Hervorhebung im Day-Selector, relative Labels („Gestern“, Wochentag) und den Leerzustand. Deshalb muss **jede** Tages- und die Startseite spätestens um Mitternacht (Berlin) aus dem Cache fallen: `maxAge = min(Regel, secondsUntilBerlinMidnight())`. Die im Plan vorgesehenen 30 Tage für vergangene Tage gelten damit nur bis Mitternacht. Bei ≤ 1 Render pro Seite und Tag ist das unkritisch. Die Alternative wäre, diese Teile clientseitig zu rendern. Das würde wieder JS kosten und das HTML zwischen Server und Client unterschiedlich machen.

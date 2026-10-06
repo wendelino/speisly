@@ -89,6 +89,10 @@ bun scripts/dev/seed.ts
 # 3) Production-Build starten
 #    Astro: bun run build && bun run start   (Port 4321)
 
+#    Astro komprimiert nicht selbst; für realistische Browser-Werte gzip-Proxy davor:
+#    bun scripts/perf/compress-proxy.ts --upstream http://127.0.0.1:4321 --port 4322
+#    und beim Messen zusätzlich --browser-base http://localhost:4322
+
 # 4) Messen (ohne BUN_OPTIONS=--smol, falls in der Umgebung gesetzt)
 env -u BUN_OPTIONS bun scripts/perf/measure.ts --base http://localhost:3000 --label <name> \
   --lighthouse --out docs/perf/<name>.json

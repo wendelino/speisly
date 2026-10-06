@@ -1,0 +1,97 @@
+---
+// Astro-Port des Filter-Buttons aus mensa-filter.tsx. Die Chips erscheinen per
+// CSS (lib/filters/boot.ts setzt die Attribute vor dem ersten Paint), der
+// Dialog wird erst bei Bedarf geladen (filter-dialog.mount.tsx).
+import { Funnel, X } from "@lucide/astro";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  INGREDIENT_BADGE_BASE,
+  INGREDIENT_STYLES,
+} from "@/lib/ingredients";
+import { cn } from "@/lib/utils";
+
+type Props = { mensen: Mensa[] };
+const { mensen } = Astro.props;
+
+const CHIP_FILTER =
+  "cursor-pointer border px-3 py-2 font-bold shadow-lg hover:bg-accent hover:text-accent-foreground";
+const dietChips = (["vegan", "veggie"] as const).map((type) => ({
+  type,
+  label: INGREDIENT_STYLES[type].label,
+  class: cn(INGREDIENT_BADGE_BASE, INGREDIENT_STYLES[type].tailwind, CHIP_FILTER),
+}));
+---
+
+<div class="fixed right-0 bottom-0 z-50 flex flex-col items-end gap-2 p-3 pb-5">
+  <button
+    class={cn(
+      "inline-flex items-center gap-1.5 rounded-full bg-background/50 px-2.5 py-1 font-semibold text-xs backdrop-blur-sm",
+      CHIP_FILTER
+    )}
+    data-chip="mensen"
+    type="button"
+  ><span data-chip-label></span><X class="ml-1 size-4" /></button>
+  {
+    dietChips.map((chip) => (
+      <button class={chip.class} data-chip={chip.type} type="button"> Nur  {chip.label} <X class="ml-1 size-4" /></button>
+    ))
+  }
+  <button
+    class={cn(
+      buttonVariants({
+        size: "lg",
+        className: "relative h-14 w-14 rounded-full shadow-lg",
+      })
+    )}
+    data-filter-fab
+    data-slot="button"
+  ><Funnel class="size-5" /> <span class="sr-only">Filter</span></button>
+</div>
+<script
+  data-filter-mensen
+  set:html={JSON.stringify(mensen)}
+  type="application/json"
+/>
+
+<style is:global>
+  [data-chip] {
+    display: none;
+  }
+  html[data-filter-vegan] [data-chip="vegan"],
+  html[data-filter-veggie] [data-chip="veggie"] {
+    display: inline-flex;
+  }
+</style>
+
+<script>
+  import {
+    setSelectedMensen,
+    setShowVegan,
+    setShowVeggie,
+  } from "@/stores/filters";
+
+  const loadDialog = () => import("./filter-dialog.mount");
+  const fab = document.querySelector<HTMLElement>("[data-filter-fab]");
+  const mensen = JSON.parse(
+    document.querySelector("[data-filter-mensen]")?.textContent ?? "[]"
+  ) as Mensa[];
+
+  if (fab) {
+    for (const event of ["pointerenter", "touchstart", "focus"]) {
+      fab.addEventListener(event, loadDialog, { once: true, passive: true });
+    }
+    fab.addEventListener("click", async () => {
+      const { openFilterDialog } = await loadDialog();
+      openFilterDialog(mensen);
+    });
+  }
+
+  const chipActions: Record<string, () => void> = {
+    mensen: () => setSelectedMensen([]),
+    vegan: () => setShowVegan(false),
+    veggie: () => setShowVeggie(false),
+  };
+  for (const chip of document.querySelectorAll<HTMLElement>("[data-chip]")) {
+    chip.addEventListener("click", () => chipActions[chip.dataset.chip ?? ""]?.());
+  }
+</script>

@@ -1,0 +1,158 @@
+{
+  "label": "astro-phase4",
+  "base": "http://localhost:4321",
+  "browserBase": "http://localhost:4322",
+  "date": "2026-10-06T11:42:33.024Z",
+  "concurrency": 10,
+  "durationS": 15,
+  "pages": {
+    "home": {
+      "path": "/",
+      "server": {
+        "status": 200,
+        "htmlBytes": 309573,
+        "htmlGzipBytes": 19501,
+        "cacheControl": null,
+        "dbQueriesPerRequest": 1,
+        "load": {
+          "requests": 712,
+          "rps": 47,
+          "ttfbP50": 207.6,
+          "ttfbP95": 312.8,
+          "ttfbP99": 353.5,
+          "statuses": {
+            "200": 712
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 663,
+        "jsFiles": 9,
+        "jsBytes": 8380,
+        "jsGzipBytes": 4586,
+        "followUpRequests": [],
+        "dbQueriesPerPageView": 1,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 100,
+        "fcpMs": 1330,
+        "lcpMs": 1533,
+        "tbtMs": 0,
+        "cls": 0,
+        "scriptTransferBytes": 7568
+      }
+    },
+    "day-future": {
+      "path": "/day/2026-10-07",
+      "server": {
+        "status": 200,
+        "htmlBytes": 309996,
+        "htmlGzipBytes": 19928,
+        "cacheControl": null,
+        "dbQueriesPerRequest": 1,
+        "load": {
+          "requests": 798,
+          "rps": 53,
+          "ttfbP50": 185.5,
+          "ttfbP95": 277.3,
+          "ttfbP99": 321.8,
+          "statuses": {
+            "200": 798
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 648,
+        "jsFiles": 9,
+        "jsBytes": 8380,
+        "jsGzipBytes": 4586,
+        "followUpRequests": [],
+        "dbQueriesPerPageView": 1,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 100,
+        "fcpMs": 1277,
+        "lcpMs": 1536,
+        "tbtMs": 0,
+        "cls": 0,
+        "scriptTransferBytes": 7568
+      }
+    },
+    "day-past": {
+      "path": "/day/2026-09-04",
+      "server": {
+        "status": 200,
+        "htmlBytes": 308932,
+        "htmlGzipBytes": 20011,
+        "cacheControl": null,
+        "dbQueriesPerRequest": 1,
+        "load": {
+          "requests": 724,
+          "rps": 48,
+          "ttfbP50": 205.5,
+          "ttfbP95": 297,
+          "ttfbP99": 339.6,
+          "statuses": {
+            "200": 724
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 673,
+        "jsFiles": 9,
+        "jsBytes": 8380,
+        "jsGzipBytes": 4586,
+        "followUpRequests": [],
+        "dbQueriesPerPageView": 1,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 100,
+        "fcpMs": 1134,
+        "lcpMs": 1534,
+        "tbtMs": 0,
+        "cls": 0,
+        "scriptTransferBytes": 7568
+      }
+    },
+    "static": {
+      "path": "/datenschutz",
+      "server": {
+        "status": 200,
+        "htmlBytes": 26943,
+        "htmlGzipBytes": 7905,
+        "cacheControl": "public, max-age=0",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 119405,
+          "rps": 7960,
+          "ttfbP50": 1,
+          "ttfbP95": 2.6,
+          "ttfbP99": 5.9,
+          "statuses": {
+            "200": 119405
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 646,
+        "jsFiles": 14,
+        "jsBytes": 298310,
+        "jsGzipBytes": 97641,
+        "followUpRequests": [],
+        "dbQueriesPerPageView": 0,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 100,
+        "fcpMs": 1029,
+        "lcpMs": 1383,
+        "tbtMs": 0,
+        "cls": 0,
+        "scriptTransferBytes": 102309
+      }
+    }
+  }
+}
