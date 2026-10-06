@@ -100,18 +100,17 @@ speisly-app/
 └── _boot.ts               # Production Server mit Cron-Jobs
 ```
 
-## 🔌 API-Layer (`src/dal`)
+## 🔌 Datensync (`src/server/sync`)
 
-Die Anwendung nutzt einen Data Access Layer (DAL) im `src/dal` Verzeichnis, der die Kommunikation mit externen APIs abstrahiert. Aktuell wird die API von [meine-mensa.de](https://meine-mensa.de) verwendet, um Speiseplandaten abzurufen.
+Der Sync in `src/server/sync` kapselt die Kommunikation mit externen APIs. Aktuell wird die API von [meine-mensa.de](https://meine-mensa.de) verwendet, um Speiseplandaten abzurufen.
 
 ### Verwendung
 
 ```typescript
-import { getFoodPlans } from "@/dal/meine-mensa";
+import getMealData from "@/server/sync/meine-mensa";
 
-const foodPlans = await getFoodPlans({
-  dateFrom: "2025-01-01",
-  dateTo: "2025-01-31",
+const { data } = await getMealData({
+  date: { from: "2025-01-01", to: "2025-01-31" },
   locationId: "1", // Optional
 });
 ```
@@ -161,6 +160,7 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 - `bun run build` – Erstellt einen Production Build
 - `bun run start` – Startet den Production Server (Bun; `start:node` für Node)
 - `bun run check` – Typecheck (`astro check`)
+- `bun run test` – Tests (Integrationstests brauchen `DATABASE_URL` + Seed-Daten)
 - `bun lint` – Führt Biome Linting aus
 - `bun format` – Formatiert Code mit Biome
 - `bun db:generate` – Generiert Drizzle-Migrationen

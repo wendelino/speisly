@@ -1,4 +1,4 @@
-import { logError } from "@/actions/error";
+import { logError } from "../log";
 import type {
   GetMealDataParams,
   GetMealDataResult,
@@ -85,7 +85,7 @@ function createMealDataFromFood(
 /**
  * Adds availability information to a meal
  */
-async function addAvailabilityToMeal(
+function addAvailabilityToMeal(
   mealData: MealData,
   item: MeineMensaFoodPlanItem,
   locations: Location[],
@@ -97,7 +97,7 @@ async function addAvailabilityToMeal(
 
   if (!mensaInfo) {
     const { food: _unused, ...rest } = item;
-    await logError({
+    logError({
       message: "Mensa not found",
       ctx: rest,
     });
@@ -127,10 +127,10 @@ async function addAvailabilityToMeal(
 /**
  * Maps API response to internal meal data format
  */
-async function existingMeals(
+function existingMeals(
   foodPlans: MeineMensaResponse,
   locations: Location[]
-): Promise<MealData[]> {
+): MealData[] {
   const mealMap = new Map<number, MealData>();
 
   for (const item of foodPlans.data) {
@@ -141,7 +141,7 @@ async function existingMeals(
     }
 
     const mealData = mealMap.get(foodId)!;
-    await addAvailabilityToMeal(mealData, item, locations, foodPlans.meta);
+    addAvailabilityToMeal(mealData, item, locations, foodPlans.meta);
   }
 
   return Array.from(mealMap.values());
@@ -182,7 +182,7 @@ export default async function getMealData({
   const validation = validateFoodPlans(foodPlans);
   if (!validation.isValid) {
     if (validation.error === "Too many food plans found") {
-      await logError({
+      logError({
         message: validation.error,
         ctx: { dateFrom, dateTo, locationId },
       });
@@ -192,7 +192,7 @@ export default async function getMealData({
 
   const locations = await getLocations();
   locations.push({ id: 20, name: "unbekannt" }); // API ist nicht korrekt und gibt keine Location für id 20 zurück
-  const meals = await existingMeals(foodPlans, locations);
+  const meals = existingMeals(foodPlans, locations);
 
   return {
     data: meals,

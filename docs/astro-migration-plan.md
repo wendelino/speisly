@@ -10,7 +10,8 @@
 |---|---|
 | 0. Baseline | ✅ erledigt – [`docs/perf-baseline.md`](perf-baseline.md) |
 | 1. Scaffold | ✅ erledigt – siehe „Umsetzungsnotizen Phase 1“ unten |
-| 2.–9. | offen |
+| 2. Datenschicht | ✅ erledigt – siehe „Umsetzungsnotizen Phase 2“ unten |
+| 3.–9. | offen |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -393,3 +394,45 @@ Abweichungen und Entscheidungen gegenüber dem ursprünglichen Plan:
 | Layout/Footer/Hero pixelgleich | ✅ gleiche Abmessungen (Mobil + Desktop), Abweichungen nur durch 1-px-Rundung und Glyph-Antialiasing. Der Filter-Button (fixed) fehlt bewusst, er kommt in Phase 4. |
 | Client-JS auf `/` | 0 Bytes (nur das Umami-Script in Produktion) |
 | Bun-Runtime | ✅ identische Antworten wie Node; Lasttest (autocannon, 10 Verbindungen): `/api/health` 4 737 vs. 2 787 req/s, statische Seite 11 676 vs. 5 975 req/s, 0 Fehler |
+
+---
+
+## Umsetzungsnotizen Phase 2
+
+**Neue Struktur `src/server/`** (nur serverseitig; `astro:env/server` lässt den Build fehlschlagen, falls etwas davon im Client landet):
+
+| Modul | Inhalt |
+|---|---|
+| `db.ts` | Pool-Singleton (`max: 10`, Idle-/Connect-Timeouts, HMR-sicher über `globalThis`), Fehler-Handler für idle Clients |
+| `dates.ts` | `todayBerlin`, `parseDayParam` (strikt `YYYY-MM-DD`, Fenster −365 … +14 Tage), `toUtcDate`/`toIsoDay`, `addDays`/`diffDays`, `berlinMidnight`, `secondsUntilBerlinMidnight` |
+| `cache-tags.ts` | Tag-Schema aus §2.3 |
+| `log.ts`, `telegram.ts` | `logError` als Fire-and-forget (blockiert keinen Request, wirft nie, serialisiert `Error` lesbar) |
+| `memo.ts` | In-Process-Memo mit TTL (geteiltes Promise, Fehler werden nicht gecacht) |
+| `queries/meals.ts` | `getMealsForDate(isoDay, mensaId?)` |
+| `queries/meal.ts` | `findMeal(mealId, mensaMealId?)`: **eine** Query; ohne `mensaMealId` die neueste Ausgabe |
+| `queries/serving-stats.ts` | `getMealServingStats` (Datumsangaben als `YYYY-MM-DD`) |
+| `queries/ratings.ts` | `getMealRatingStats` (öffentlich, für das Island) |
+| `queries/mensen.ts` | `getVisibleMensen` (1 h Memo, ohne „unbekannt“), `listMensen`/`createMensa` für den Sync |
+| `sync/` | bisher `src/dal`. Nur verschoben und auf die neuen Module umgestellt, Logik unverändert (Batch-Umbau in Phase 8) |
+
+**Entscheidungen und Befunde:**
+- **Queries werfen bei DB-Fehlern**, statt wie bisher still `[]` bzw. Nullwerte zurückzugeben. Mit Route Cache würde sonst eine leere Seite stundenlang ausgeliefert. Der Fehler wird geloggt, und die Seite antwortet mit 500 (wird nicht gecacht).
+- **Mensen sind jetzt alphabetisch sortiert.** Vorher fehlte ein `ORDER BY`, die Reihenfolge hing also vom Query-Plan ab. Innerhalb einer Mensa sortiert die Liste wie bisher nach Preis (in der Komponente).
+- **Sommer-/Winterzeit:** `secondsUntilBerlinMidnight` rechnet über den echten Berlin-Offset. Ein naives `86400 − vergangene Sekunden` hätte am Tag der Umstellung auf Sommerzeit die Startseite bis 01:00 Uhr mit dem Vortag ausgeliefert.
+- **Zeitzone des Servers spielt keine Rolle:** Drizzle schreibt und liest `timestamp`-Spalten als UTC. Die Tests laufen unter `TZ=UTC`, `Europe/Berlin`, `America/New_York` und `Pacific/Kiritimati` grün.
+- **Indizes (Migration `drizzle/0005_lean_namorita.sql`):**
+
+  | Index | Wirkung (Seed-DB, 20k Ausgaben) |
+  |---|---|
+  | `mensa_meal (meal_id, date)` | `findMeal`: Seq Scan 2,7 ms → Index Scan 0,14 ms (wächst nicht mehr mit der Tabelle); Angebotshistorie nutzt ihn ebenfalls |
+  | `user (ip_hash)` | User-Lookup bei Bewertungen: Seq Scan → Index Scan |
+
+  `CREATE INDEX` sperrt die Tabelle beim Anlegen kurz für Schreibzugriffe. Bei der Tabellengröße dauert das Millisekunden, also das Deployment nicht in einen laufenden Sync legen.
+
+**Tests** (`bun run test`, neu):
+- `dates.test.ts`: Grenzfälle um Mitternacht, Sommer-/Winterzeit, ungültige Daten, Fenster
+- `queries.test.ts`: alle Queries gegen die Seed-DB, gegengeprüft mit direkten SQL-Aggregaten
+- `sync.test.ts`: Sync mit gestubbter meine-mensa-API (Anlegen, ausgeschlossene Locations, Idempotenz, Preisänderung + `meal_update`, Entfernen). Er räumt hinterher auf und dient als Regressionstest für Phase 8.
+- `tests/setup.ts` stellt `astro:env/*` als virtuelle Module bereit. Die Integrationstests brauchen `DATABASE_URL` in der Umgebung, weil `bun test` die `.env.local` nicht lädt. Ohne DB werden sie übersprungen.
+
+**Noch nicht migriert (bewusst):** Cookies, User und JWT (`src/actions/user.ts`, `rating.ts`, `src/lib/cookie/actions.ts`, `src/lib/jwt`) brauchen den Astro-Request-Kontext und werden mit den Bewertungs-Actions in Phase 5 umgebaut. Feedback (`src/actions/feedback.ts`) folgt in Phase 3 als Astro Action. `src/lib/db/index.ts` ist bis dahin ein Re-Export von `src/server/db.ts`, damit es nur **einen** Pool gibt.

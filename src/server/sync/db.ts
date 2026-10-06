@@ -1,9 +1,9 @@
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
-import { logError } from "@/actions/error";
-import { db } from "@/lib/db";
 import { dataSource } from "@/lib/db/schema/dataSource";
 import { meal, mealUpdate, mensaMeal } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
+import { db } from "../db";
+import { logError } from "../log";
 import type {
   DataSourceRecord,
   GetExistingMensaMealsParams,
@@ -192,7 +192,7 @@ async function createMeal(
 
     return newMeal[0];
   } catch (error) {
-    await logError({
+    logError({
       message: "Error creating meal",
       ctx: { mealData, error },
     });
@@ -219,7 +219,7 @@ export async function getOrCreateMeal({
       await updateMeal(existingMeal.id, logs, updateFields);
     } catch (error) {
       const ctx = { existingMeal, mealData, logs, updateFields, error };
-      await logError({ message: "Error updating meal", ctx });
+      logError({ message: "Error updating meal", ctx });
       return null;
     }
 
@@ -329,4 +329,23 @@ export async function removeMeals(mensaMeals: MensaMealRecord[]) {
       key: "remove",
     }))
   );
+}
+
+/**
+ * Lädt bestehende Gerichte zu den Quell-IDs der API (nur für den Sync)
+ */
+export function getMealsBySrcIds(srcIds: string[]) {
+  return db
+    .select({
+      name: meal.name,
+      id: meal.id,
+      imgPath: meal.imgPath,
+      priceStud: meal.priceStud,
+      priceWork: meal.priceWork,
+      priceGuest: meal.priceGuest,
+      subtitle: meal.subtitle,
+      srcId: meal.srcId,
+    })
+    .from(meal)
+    .where(inArray(meal.srcId, srcIds));
 }

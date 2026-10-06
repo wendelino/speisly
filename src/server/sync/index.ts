@@ -1,8 +1,8 @@
-import { logError } from "@/actions/error";
-import { getMealsBySrcIDs } from "@/actions/meals";
-import { createMensa, getAllMensen } from "@/actions/mensa";
+import { logError } from "../log";
+import { createMensa, listMensen } from "../queries/mensen";
 import {
   getExistingMensaMeals,
+  getMealsBySrcIds,
   getOrCreateDataSource,
   getOrCreateMeal,
   getOrCreateMensaMeal,
@@ -138,7 +138,7 @@ async function processMeal({
   existingMensaMeals: MensaMealRecord[];
 }): Promise<void> {
   if (!hasValidPrices(mealData)) {
-    await logError({
+    logError({
       message: "Price is 0",
       ctx: { mealData },
       disableTelegram: true,
@@ -185,11 +185,11 @@ export async function handleSync(date: string | DateRange): Promise<void> {
   const start = performance.now();
   const { slug: dataSourceSlug } =
     await getOrCreateDataSource(DATA_SOURCE_NAME);
-  const mensen = await getAllMensen();
+  const mensen = await listMensen();
   const { data, length: _l } = await getMealData({ date });
 
   const srcIds = data.map((item) => item.src_id);
-  const meals = await getMealsBySrcIDs({ srcIds });
+  const meals = await getMealsBySrcIds(srcIds);
   const existingMensaMeals = await getExistingMensaMeals({ date });
 
   // console.log("Amount API: ", _l);
