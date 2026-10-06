@@ -1,0 +1,216 @@
+{
+  "label": "next-16.2.7",
+  "base": "http://localhost:3000",
+  "date": "2026-10-06T08:00:01.887Z",
+  "concurrency": 10,
+  "durationS": 15,
+  "pages": {
+    "home": {
+      "path": "/",
+      "server": {
+        "status": 200,
+        "htmlBytes": 331156,
+        "htmlGzipBytes": 23446,
+        "cacheControl": "s-maxage=1800, stale-while-revalidate=31534200",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 6903,
+          "rps": 460,
+          "ttfbP50": 17.8,
+          "ttfbP95": 27.7,
+          "ttfbP99": 37.5,
+          "statuses": {
+            "200": 6903
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 902,
+        "jsFiles": 14,
+        "jsBytes": 248507,
+        "followUpRequests": [
+          "POST /",
+          "GET /meal/meal_0000000000000000000000000ls",
+          "GET /meal/meal_0000000000000000000000000wn"
+        ],
+        "dbQueriesPerPageView": 11,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 92,
+        "fcpMs": 1533,
+        "lcpMs": 3162,
+        "tbtMs": 74,
+        "cls": 0,
+        "scriptTransferBytes": 253816
+      }
+    },
+    "day-future": {
+      "path": "/day/2026-10-07",
+      "server": {
+        "status": 200,
+        "htmlBytes": 327990,
+        "htmlGzipBytes": 22845,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 909,
+          "rps": 60,
+          "ttfbP50": 68.8,
+          "ttfbP95": 160.5,
+          "ttfbP99": 178.8,
+          "statuses": {
+            "200": 909
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 877,
+        "jsFiles": 14,
+        "jsBytes": 248507,
+        "followUpRequests": [
+          "POST /day/2026-10-07",
+          "GET /meal/meal_0000000000000000000000000nf",
+          "GET /meal/meal_0000000000000000000000000el"
+        ],
+        "dbQueriesPerPageView": 13,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 93,
+        "fcpMs": 1535,
+        "lcpMs": 3199,
+        "tbtMs": 54,
+        "cls": 0,
+        "scriptTransferBytes": 253816
+      }
+    },
+    "day-past": {
+      "path": "/day/2026-09-04",
+      "server": {
+        "status": 200,
+        "htmlBytes": 327350,
+        "htmlGzipBytes": 22926,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 881,
+          "rps": 59,
+          "ttfbP50": 73.8,
+          "ttfbP95": 165.9,
+          "ttfbP99": 192.1,
+          "statuses": {
+            "200": 881
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 1078,
+        "jsFiles": 14,
+        "jsBytes": 248507,
+        "followUpRequests": [
+          "POST /day/2026-09-04",
+          "GET /meal/meal_0000000000000000000000000ia",
+          "GET /meal/meal_0000000000000000000000000ux"
+        ],
+        "dbQueriesPerPageView": 13,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 89,
+        "fcpMs": 1533,
+        "lcpMs": 3638,
+        "tbtMs": 77,
+        "cls": 0,
+        "scriptTransferBytes": 253816
+      }
+    },
+    "meal-detail": {
+      "path": "/meal/meal_0000000000000000000000000sk?mmid=mm_00000000000000000000000000ev0",
+      "server": {
+        "status": 200,
+        "htmlBytes": 84161,
+        "htmlGzipBytes": 9579,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "dbQueriesPerRequest": 4,
+        "load": {
+          "requests": 1689,
+          "rps": 112,
+          "ttfbP50": 35.4,
+          "ttfbP95": 63.8,
+          "ttfbP99": 81.7,
+          "statuses": {
+            "200": 1689
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 762,
+        "jsFiles": 16,
+        "jsBytes": 264522,
+        "followUpRequests": [
+          "GET /",
+          "GET /",
+          "GET /",
+          "GET /"
+        ],
+        "dbQueriesPerPageView": 4,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 94,
+        "fcpMs": 1533,
+        "lcpMs": 2961,
+        "tbtMs": 39,
+        "cls": 0,
+        "scriptTransferBytes": 270588
+      }
+    },
+    "static": {
+      "path": "/datenschutz",
+      "server": {
+        "status": 200,
+        "htmlBytes": 60452,
+        "htmlGzipBytes": 9709,
+        "cacheControl": "s-maxage=31536000",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 16211,
+          "rps": 1080,
+          "ttfbP50": 7,
+          "ttfbP95": 12,
+          "ttfbP99": 20.9,
+          "statuses": {
+            "200": 16211
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 734,
+        "jsFiles": 18,
+        "jsBytes": 334105,
+        "followUpRequests": [
+          "GET /kontakt",
+          "GET /",
+          "GET /kontakt",
+          "GET /kontakt",
+          "GET /kontakt",
+          "GET /kontakt",
+          "GET /kontakt",
+          "GET /",
+          "GET /"
+        ],
+        "dbQueriesPerPageView": 0,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 96,
+        "fcpMs": 1383,
+        "lcpMs": 2740,
+        "tbtMs": 29,
+        "cls": 0,
+        "scriptTransferBytes": 340928
+      }
+    }
+  }
+}
