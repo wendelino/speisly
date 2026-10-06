@@ -13,7 +13,11 @@
 # testing
 /coverage
 
-# next.js
+# astro
+/dist/
+/.astro/
+
+# next.js (bis Migration abgeschlossen)
 /.next/
 /out/
 
@@ -34,6 +38,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel

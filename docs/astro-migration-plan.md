@@ -4,6 +4,14 @@
 > Kernidee: So viel wie möglich wird **einmal gerendert und danach nur noch aus dem Cache bzw. statisch ausgeliefert**. Interaktivität gibt es nur noch dort, wo sie wirklich gebraucht wird (Islands).
 > Branch: `astro`
 
+## Status
+
+| Phase | Stand |
+|---|---|
+| 0. Baseline | ✅ erledigt – [`docs/perf-baseline.md`](perf-baseline.md) |
+| 1. Scaffold | ✅ erledigt – siehe „Umsetzungsnotizen Phase 1“ unten |
+| 2.–9. | offen |
+
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
 | Paket | Version | Hinweis |
@@ -308,7 +316,7 @@ Die Bilder kommen von `meine-mensa.de/mediathek/**`. Optionen:
 ## 8. Betrieb: Server, Cron, Deploy
 
 - Build: `astro build` erzeugt `dist/client` (statisch) und `dist/server/entry.mjs`.
-- Start: `node ./dist/server/entry.mjs` (Node 22 LTS oder 24). **Bun als Paketmanager bleibt.** Ob Bun als Runtime für den Adapter stabil läuft, wird in Phase 1 geprüft. Sonst läuft die Produktion auf Node, was für den Adapter der Referenzpfad ist.
+- Start: `bun ./dist/server/entry.mjs` (`bun run start`). In Phase 1 geprüft: Der Node-Adapter läuft unter Bun fehlerfrei und war im Lasttest ~1,7–2× schneller als Node 22 (siehe Umsetzungsnotizen). Fallback: `bun run start:node`. Abschließend wird das in Phase 9 mit echten DB-Seiten nochmal verglichen.
 - `_boot.ts` wird durch einen schlanken Start-Wrapper `server.mjs` ersetzt. Er importiert `./dist/server/entry.mjs` (der Standalone-Server startet beim Import) und registriert danach die Cron-Jobs aus `src/server/cron.ts` im selben Prozess:
   - Der Cron ruft `POST http://127.0.0.1:$PORT/api/sync` mit Bearer auf, **nicht** die öffentliche URL.
   - Die Invalidierung muss im Server-Prozess passieren, weil dort der Memory-Cache lebt. Deshalb bleibt der Sync ein Endpoint, der `context.cache.invalidate({ tags })` aufruft.
@@ -358,3 +366,30 @@ Jede Phase endet mit einem lauffähigen Stand auf `astro`.
 | Island-URLs aus Browser-gecachtem HTML nach Key-Wechsel | `ASTRO_KEY` stabil halten, HTML-Browser-Cache nur 60 s |
 | Filter per CSS: Zähler „ausgeblendet“ und Empty States | Kleines Vanilla-Script plus `:has()`-Fallback. Wird in Phase 4 mit allen Filterkombinationen getestet. |
 | SEO und Metadaten (`generateMetadata`) | Werden in Astro im `<head>` des Layouts gesetzt (OG, Twitter, Title-Template „%s \| Speisly“) – Inhalte identisch |
+
+---
+
+## Umsetzungsnotizen Phase 1
+
+Abweichungen und Entscheidungen gegenüber dem ursprünglichen Plan:
+
+- **`next` bleibt vorübergehend als devDependency.** Die noch nicht portierten Komponenten (`src/components/*`, `src/actions/*`, `src/lib/cookie/*`) importieren `next/link`, `next/image`, `next/headers` usw. Damit sie bis zu ihrer Portierung typchecken, bleibt `next` installiert. Es wird **nicht** gebaut oder ausgeliefert. Entfernt wird es, sobald die letzte Komponente portiert ist (spätestens Phase 5). Die alten Routen unter `src/app/` sind nur noch Referenz, aus `tsconfig.json` ausgeschlossen und werden pro Phase gelöscht.
+- **Schriften kommen lokal aus `@fontsource-variable/geist(-mono)`** über `fontProviders.local()`. Die Provider `google` und `npm` laden Dateien beim Build von Google bzw. jsDelivr. Das macht den Build netzabhängig und war in der Build-Umgebung blockiert. Es ist dieselbe Geist-Version wie bei `next/font` (Dateigröße ±0,5 %), Latin-Subset, Preload für die Sans-Variante, automatisch berechnete Fallback-Metriken.
+- **Dateinamen in kebab-case** (`base-layout.astro`, `footer.astro`, …) gemäß Biome/Ultracite-Konvention des Projekts. Statische Astro-Varianten von UI-Bausteinen liegen in `src/components/astro/`.
+- **Footer und Hero sind reine `.astro`-Komponenten** (vorher `"use client"`). Icons kommen aus `@lucide/astro` und rendern als SVG ohne JS. Der Button-Stil kommt aus demselben `buttonVariants` (cva) wie in React.
+- **Logo ohne Bildoptimierung:** `logo_full.png` ist nur 20 KB groß. Es wird direkt mit festen `width`/`height` ausgeliefert, damit keine Bild-Transformation zur Laufzeit nötig ist.
+- **Neu: `/api/health`** (on-demand, `no-store`) für Deploy-Healthchecks. Es meldet auch die Runtime.
+- **Env:** `astro:env`-Schema in `astro.config.mjs`. `NEXT_PUBLIC_*` heißt jetzt `PUBLIC_*`. Die Vorlage liegt in `.env.example`. Die noch nicht portierten Module lesen weiterhin `process.env` und werden in Phase 2 umgestellt.
+- **Kompression:** Der Node-Adapter komprimiert nicht (Next tat das). In Produktion muss gzip/brotli vom Reverse Proxy kommen. Das ist für Phase 9 notiert.
+- **Bun-Log:** Unter Bun meldet der Adapter fälschlich `https://…` in der Startzeile. Das ist rein kosmetisch, ausgeliefert wird HTTP.
+
+### Abnahme Phase 1
+
+| Kriterium | Ergebnis |
+|---|---|
+| `astro build` | ✅ 1,8 s (Next: 17 s) |
+| `astro check` | ✅ 0 Fehler |
+| Biome (neue Dateien) | ✅ sauber |
+| Layout/Footer/Hero pixelgleich | ✅ gleiche Abmessungen (Mobil + Desktop), Abweichungen nur durch 1-px-Rundung und Glyph-Antialiasing. Der Filter-Button (fixed) fehlt bewusst, er kommt in Phase 4. |
+| Client-JS auf `/` | 0 Bytes (nur das Umami-Script in Produktion) |
+| Bun-Runtime | ✅ identische Antworten wie Node; Lasttest (autocannon, 10 Verbindungen): `/api/health` 4 737 vs. 2 787 req/s, statische Seite 11 676 vs. 5 975 req/s, 0 Fehler |

@@ -1,0 +1,68 @@
+---
+// Astro-Port von footer.tsx: identisches Markup, kein Client-JS
+import { Copyright, MessageCircle } from "@lucide/astro";
+import Separator from "@/components/astro/separator.astro";
+import { buttonVariants } from "@/components/ui/button";
+---
+
+<footer class="border-t bg-primary/15">
+  <div
+    class="container mx-auto flex flex-col items-center justify-center gap-8 px-4 py-12"
+  >
+    <a class="transition-opacity hover:opacity-80" href="/">
+      <img
+        alt="Speisly Logo"
+        class="h-auto w-32 rounded-xl shadow-md"
+        decoding="async"
+        height="80"
+        loading="eager"
+        src="/logo_full.png"
+        width="200"
+      >
+    </a>
+
+    <nav class="flex flex-wrap items-center justify-center gap-4 pt-2">
+      <a
+        class="flex items-center gap-2 text-primary transition-colors hover:text-primary/80"
+        href="/"
+      >
+        <span class="font-medium text-sm">Startseite</span>
+      </a>
+      <Separator class="h-4" orientation="vertical"/>
+      <a
+        class="flex items-center gap-2 text-primary transition-colors hover:text-primary/80"
+        href="/kontakt"
+      >
+        <span class="font-medium text-sm">Kontakt</span>
+      </a>
+      <Separator class="h-4" orientation="vertical"/>
+      <a
+        class="font-medium text-primary text-sm transition-colors hover:text-primary/80"
+        href="/datenschutz"
+      >
+        Datenschutz
+      </a>
+    </nav>
+
+    <p
+      class="max-w-2xl px-4 text-center text-muted-foreground text-sm leading-relaxed"
+    >
+      Dieses Projekt befindet sich noch in der Entwicklung. Es wird ständig
+      verbessert und erweitert. Wir freuen uns über Feedback :)
+    </p>
+
+    <a
+      class={`${buttonVariants({ variant: "ghost" })} flex items-center gap-2 text-primary`}
+      data-slot="button"
+      href="/feedback"
+    >
+      <MessageCircle class="h-4 w-4"/>
+      <span>Hilf uns, Speisly zu verbessern!</span>
+    </a>
+
+    <div class="flex items-center gap-2 text-muted-foreground">
+      <Copyright class="size-4"/>
+      <span class="text-sm">{new Date().getFullYear()}Speisly</span>
+    </div>
+  </div>
+</footer>

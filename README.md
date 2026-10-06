@@ -19,9 +19,9 @@ Speisly wurde entwickelt, um Studierenden der MLU Halle einen einfachen und schn
 
 ## 🛠️ Tech Stack
 
-- **[Next.js 16](https://nextjs.org)** – React Framework mit App Router
+- **[Astro 7](https://astro.build)** – Web-Framework (Migration von Next.js läuft, siehe [`docs/astro-migration-plan.md`](docs/astro-migration-plan.md))
 - **[TypeScript](https://www.typescriptlang.org/)** – Typsichere Entwicklung
-- **[React 19](https://react.dev/)** – UI-Bibliothek
+- **[React 19](https://react.dev/)** – für interaktive Islands
 - **[Tailwind CSS](https://tailwindcss.com/)** – Utility-first CSS Framework
 - **[Drizzle ORM](https://orm.drizzle.team/)** – TypeScript ORM für Datenbankzugriffe
 - **[PostgreSQL](https://www.postgresql.org/)** – Datenbank
@@ -30,7 +30,7 @@ Speisly wurde entwickelt, um Studierenden der MLU Halle einen einfachen und schn
 
 ## 📋 Voraussetzungen
 
-- **Node.js** >= 20.9.0
+- **Node.js** >= 22.12.0
 - **Bun** – Package Manager und Runtime
 - **PostgreSQL** Datenbank (für Produktion)
 
@@ -51,31 +51,10 @@ bun install
 
 ### 3. Umgebungsvariablen konfigurieren
 
-Erstelle eine `.env.local` Datei im Root-Verzeichnis:
+Erstelle eine `.env` Datei im Root-Verzeichnis (Vorlage: `.env.example`):
 
-```env
-# Datenbank
-DATABASE_URL=postgresql://user:password@localhost:5432/speisly
-
-# Cookie & Privacy
-NEXT_PUBLIC_COOKIE_CONSENT_NAME=speisly-cookie-consent
-NEXT_PUBLIC_PRIVACY_POLICY_PATH=/datenschutz
-
-# API & Sync (für Production)
-API_BEARER_TOKEN=your-secret-bearer-token
-NEXT_PUBLIC_URL=https://speisly.de
-
-# JWT (für Authentifizierung)
-JWT_SECRET=your-jwt-secret-key
-JWT_ALGORITHM=HS256
-
-# Telegram (optional, für Feedback-Benachrichtigungen)
-TELEGRAM_BOT_TOKEN=your-telegram-bot-token
-TELEGRAM_CHAT_ID=your-telegram-chat-id
-
-# Server
-PORT=3000
-NODE_ENV=development
+```bash
+cp .env.example .env
 ```
 
 ### 4. Datenbank migrieren
@@ -90,7 +69,13 @@ bun db:push
 bun dev
 ```
 
-Die Anwendung ist nun unter [http://localhost:3000](http://localhost:3000) erreichbar.
+Die Anwendung ist nun unter [http://localhost:4321](http://localhost:4321) erreichbar.
+
+Für lokale Testdaten (ohne Zugriff auf die meine-mensa.de API):
+
+```bash
+bun scripts/dev/seed.ts
+```
 
 ## 📁 Projektstruktur
 
@@ -146,13 +131,11 @@ bun build
 
 ### Production Server starten
 
-Der Production Server wird mit Bun gestartet und enthält automatische Cron-Jobs für die Datensynchronisation:
-
 ```bash
-bun start
+bun run start
 ```
 
-Dies startet den Server mit `_boot.ts`, der automatisch Cron-Jobs für die Synchronisation der Speiseplandaten ausführt.
+Startet den Standalone-Server von `@astrojs/node` (Port über `PORT`, Default 4321). Hinweis: Während der Migration enthält dieser Branch **noch keine Cron-Jobs** für die Datensynchronisation (bisher `src/_boot.ts`). Sie kommen in Phase 9 des Migrationsplans zurück.
 
 ## 🤝 Beitragen
 
@@ -175,8 +158,9 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 ## 📝 Scripts
 
 - `bun dev` – Startet den Development Server
-- `bun build` – Erstellt einen Production Build
-- `bun start` – Startet den Production Server (mit Cron-Jobs)
+- `bun run build` – Erstellt einen Production Build
+- `bun run start` – Startet den Production Server (Bun; `start:node` für Node)
+- `bun run check` – Typecheck (`astro check`)
 - `bun lint` – Führt Biome Linting aus
 - `bun format` – Formatiert Code mit Biome
 - `bun db:generate` – Generiert Drizzle-Migrationen
