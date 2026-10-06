@@ -1,7 +1,7 @@
 {
   "label": "next-16.2.7",
   "base": "http://localhost:3000",
-  "date": "2026-10-06T08:00:01.887Z",
+  "date": "2026-10-06T08:14:44.524Z",
   "concurrency": 10,
   "durationS": 15,
   "pages": {
@@ -14,33 +14,32 @@
         "cacheControl": "s-maxage=1800, stale-while-revalidate=31534200",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 6903,
-          "rps": 460,
-          "ttfbP50": 17.8,
-          "ttfbP95": 27.7,
-          "ttfbP99": 37.5,
+          "requests": 6477,
+          "rps": 431,
+          "ttfbP50": 18.3,
+          "ttfbP95": 29.9,
+          "ttfbP99": 37.2,
           "statuses": {
-            "200": 6903
+            "200": 6477
           }
         }
       },
       "browser": {
-        "loadMs": 902,
+        "loadMs": 1172,
         "jsFiles": 14,
         "jsBytes": 248507,
         "followUpRequests": [
           "POST /",
-          "GET /meal/meal_0000000000000000000000000ls",
-          "GET /meal/meal_0000000000000000000000000wn"
+          "GET /meal/meal_0000000000000000000000000ls"
         ],
         "dbQueriesPerPageView": 11,
         "consoleErrors": []
       },
       "lighthouse": {
-        "score": 92,
-        "fcpMs": 1533,
-        "lcpMs": 3162,
-        "tbtMs": 74,
+        "score": 95,
+        "fcpMs": 1536,
+        "lcpMs": 2757,
+        "tbtMs": 86,
         "cls": 0,
         "scriptTransferBytes": 253816
       }
@@ -54,33 +53,33 @@
         "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 909,
-          "rps": 60,
-          "ttfbP50": 68.8,
-          "ttfbP95": 160.5,
-          "ttfbP99": 178.8,
+          "requests": 820,
+          "rps": 54,
+          "ttfbP50": 73.2,
+          "ttfbP95": 185.6,
+          "ttfbP99": 211.7,
           "statuses": {
-            "200": 909
+            "200": 820
           }
         }
       },
       "browser": {
-        "loadMs": 877,
+        "loadMs": 1096,
         "jsFiles": 14,
         "jsBytes": 248507,
         "followUpRequests": [
           "POST /day/2026-10-07",
           "GET /meal/meal_0000000000000000000000000nf",
-          "GET /meal/meal_0000000000000000000000000el"
+          "GET /meal/meal_0000000000000000000000000fs"
         ],
         "dbQueriesPerPageView": 13,
         "consoleErrors": []
       },
       "lighthouse": {
-        "score": 93,
-        "fcpMs": 1535,
-        "lcpMs": 3199,
-        "tbtMs": 54,
+        "score": 90,
+        "fcpMs": 1533,
+        "lcpMs": 3639,
+        "tbtMs": 65,
         "cls": 0,
         "scriptTransferBytes": 253816
       }
@@ -94,23 +93,21 @@
         "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 881,
-          "rps": 59,
-          "ttfbP50": 73.8,
-          "ttfbP95": 165.9,
+          "requests": 829,
+          "rps": 55,
+          "ttfbP50": 76.7,
+          "ttfbP95": 169.2,
           "ttfbP99": 192.1,
           "statuses": {
-            "200": 881
+            "200": 829
           }
         }
       },
       "browser": {
-        "loadMs": 1078,
+        "loadMs": 1051,
         "jsFiles": 14,
         "jsBytes": 248507,
         "followUpRequests": [
-          "POST /day/2026-09-04",
-          "GET /meal/meal_0000000000000000000000000ia",
           "GET /meal/meal_0000000000000000000000000ux"
         ],
         "dbQueriesPerPageView": 13,
@@ -118,9 +115,9 @@
       },
       "lighthouse": {
         "score": 89,
-        "fcpMs": 1533,
-        "lcpMs": 3638,
-        "tbtMs": 77,
+        "fcpMs": 1534,
+        "lcpMs": 3641,
+        "tbtMs": 78,
         "cls": 0,
         "scriptTransferBytes": 253816
       }
@@ -130,22 +127,22 @@
       "server": {
         "status": 200,
         "htmlBytes": 84161,
-        "htmlGzipBytes": 9579,
+        "htmlGzipBytes": 9605,
         "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
         "dbQueriesPerRequest": 4,
         "load": {
-          "requests": 1689,
-          "rps": 112,
-          "ttfbP50": 35.4,
-          "ttfbP95": 63.8,
-          "ttfbP99": 81.7,
+          "requests": 1554,
+          "rps": 103,
+          "ttfbP50": 39.2,
+          "ttfbP95": 74.6,
+          "ttfbP99": 98.5,
           "statuses": {
-            "200": 1689
+            "200": 1554
           }
         }
       },
       "browser": {
-        "loadMs": 762,
+        "loadMs": 755,
         "jsFiles": 16,
         "jsBytes": 264522,
         "followUpRequests": [
@@ -158,10 +155,10 @@
         "consoleErrors": []
       },
       "lighthouse": {
-        "score": 94,
-        "fcpMs": 1533,
-        "lcpMs": 2961,
-        "tbtMs": 39,
+        "score": 95,
+        "fcpMs": 1534,
+        "lcpMs": 2860,
+        "tbtMs": 34,
         "cls": 0,
         "scriptTransferBytes": 270588
       }
@@ -175,18 +172,18 @@
         "cacheControl": "s-maxage=31536000",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 16211,
-          "rps": 1080,
-          "ttfbP50": 7,
-          "ttfbP95": 12,
-          "ttfbP99": 20.9,
+          "requests": 14429,
+          "rps": 962,
+          "ttfbP50": 7.9,
+          "ttfbP95": 13.2,
+          "ttfbP99": 22.4,
           "statuses": {
-            "200": 16211
+            "200": 14429
           }
         }
       },
       "browser": {
-        "loadMs": 734,
+        "loadMs": 748,
         "jsFiles": 18,
         "jsBytes": 334105,
         "followUpRequests": [
@@ -196,18 +193,18 @@
           "GET /kontakt",
           "GET /kontakt",
           "GET /kontakt",
-          "GET /kontakt",
           "GET /",
-          "GET /"
+          "GET /",
+          "GET /kontakt"
         ],
         "dbQueriesPerPageView": 0,
         "consoleErrors": []
       },
       "lighthouse": {
-        "score": 96,
-        "fcpMs": 1383,
-        "lcpMs": 2740,
-        "tbtMs": 29,
+        "score": 98,
+        "fcpMs": 1384,
+        "lcpMs": 2263,
+        "tbtMs": 64,
         "cls": 0,
         "scriptTransferBytes": 340928
       }
