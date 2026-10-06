@@ -6,6 +6,7 @@ import FilterFab from "@/components/filter-fab.astro";
 import FilterHead from "@/components/meal/filter-head.astro";
 import MealList from "@/components/meal/meal-list.astro";
 import BaseLayout from "@/layouts/base-layout.astro";
+import { dayPolicy } from "@/server/cache-policy";
 import { parseDayParam, todayBerlin } from "@/server/dates";
 import { getMealsForDate } from "@/server/queries/meals";
 import { getVisibleMensen } from "@/server/queries/mensen";
@@ -23,6 +24,7 @@ const [groups, mensen] = await Promise.all([
   getMealsForDate(date),
   getVisibleMensen(),
 ]);
+Astro.cache.set(dayPolicy(date, today));
 ---
 
 <BaseLayout>

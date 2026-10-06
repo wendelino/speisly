@@ -122,7 +122,9 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
       item(3, DAY_2, 1, food(SRC_IDS[1], 2.5)),
       item(4, DAY_1, 7, food(SRC_IDS[2], 4)),
     ]);
-    await handleSync({ from: DAY_1, to: DAY_2 });
+    const result = await handleSync({ from: DAY_1, to: DAY_2 });
+    expect(result.changedDates).toEqual([DAY_1, DAY_2]);
+    expect(result.changedMealIds).toHaveLength(2);
 
     const rows = await servingsInRange();
     expect(rows.map((r) => [r.src_id, r.slug, r.day])).toEqual([
@@ -136,8 +138,9 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
 
   test("is idempotent", async () => {
     const before = await servingsInRange();
-    await handleSync({ from: DAY_1, to: DAY_2 });
+    const result = await handleSync({ from: DAY_1, to: DAY_2 });
     expect(await servingsInRange()).toEqual(before);
+    expect(result).toEqual({ changedDates: [], changedMealIds: [] });
   });
 
   test("updates prices and removes servings missing from the API", async () => {
@@ -145,7 +148,11 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
       item(1, DAY_1, 1, food(SRC_IDS[0], 3.5)),
       item(3, DAY_2, 1, food(SRC_IDS[1], 2.5)),
     ]);
-    await handleSync({ from: DAY_1, to: DAY_2 });
+    const result = await handleSync({ from: DAY_1, to: DAY_2 });
+    // Preis von Gericht 1 geändert + Ausgabe in der Weinbergmensa entfernt –
+    // beides nur DAY_1; Gericht 2 (DAY_2) ist unverändert
+    expect(result.changedDates).toEqual([DAY_1]);
+    expect(result.changedMealIds).toHaveLength(1);
 
     const rows = await servingsInRange();
     expect(rows.map((r) => [r.src_id, r.slug, r.day, r.price_stud])).toEqual([

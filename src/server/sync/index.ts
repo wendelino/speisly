@@ -1,3 +1,4 @@
+import { toIsoDay } from "../dates";
 import { logError } from "../log";
 import { createMensa, listMensen } from "../queries/mensen";
 import {
@@ -18,6 +19,16 @@ import type {
 } from "./types";
 import { DATA_SOURCE_NAME } from "./types";
 import { formatPerformanceTime } from "./utils";
+
+/** Was ein Sync geändert hat – Grundlage für die gezielte Cache-Invalidierung */
+export type SyncResult = {
+  /** Tage (`YYYY-MM-DD`), deren Speiseplan sich geändert hat */
+  changedDates: string[];
+  /** Gerichte mit neuen/entfernten Ausgaben oder geänderten Daten */
+  changedMealIds: string[];
+};
+
+type SyncChanges = { dates: Set<string>; mealIds: Set<string> };
 
 /**
  * Validates meal prices are not zero
@@ -79,12 +90,19 @@ function findExistingMensaMeal(
 /**
  * Processes a single meal's availability entries
  */
-async function processMealAvailability(
-  mealRecord: { id: string },
-  availability: MealAvailability[],
-  mensen: MensaRecord[],
-  existingMensaMeals: MensaMealRecord[]
-): Promise<void> {
+async function processMealAvailability({
+  mealRecord,
+  availability,
+  mensen,
+  existingMensaMeals,
+  changes,
+}: {
+  mealRecord: { id: string };
+  availability: MealAvailability[];
+  mensen: MensaRecord[];
+  existingMensaMeals: MensaMealRecord[];
+  changes: SyncChanges;
+}): Promise<void> {
   for (const avail of availability) {
     const mensaRecord = await getOrCreateMensa(
       avail.mensaSlug,
@@ -99,7 +117,7 @@ async function processMealAvailability(
       avail.date
     );
 
-    await getOrCreateMensaMeal({
+    const created = await getOrCreateMensaMeal({
       mensaRecord,
       mealRecord,
       availability: {
@@ -109,6 +127,10 @@ async function processMealAvailability(
       },
       existing: existingMensaMeal,
     });
+    if (created) {
+      changes.dates.add(toIsoDay(new Date(avail.date)));
+      changes.mealIds.add(mealRecord.id);
+    }
   }
 }
 
@@ -121,6 +143,7 @@ async function processMeal({
   existingMeals,
   mensen,
   existingMensaMeals,
+  changes,
 }: {
   mealData: MealData;
   dataSourceSlug: string;
@@ -136,6 +159,7 @@ async function processMeal({
   }>;
   mensen: MensaRecord[];
   existingMensaMeals: MensaMealRecord[];
+  changes: SyncChanges;
 }): Promise<void> {
   if (!hasValidPrices(mealData)) {
     logError({
@@ -150,39 +174,52 @@ async function processMeal({
     (meal) => meal.srcId === mealData.src_id
   );
 
-  const mealRecord = await getOrCreateMeal({
-    mealData,
-    dataSourceSlug,
-    initialMeal: initialMeal
-      ? {
-          id: initialMeal.id,
-          name: initialMeal.name,
-          imgPath: initialMeal.imgPath,
-          priceStud: initialMeal.priceStud,
-          priceWork: initialMeal.priceWork,
-          priceGuest: initialMeal.priceGuest,
-          subtitle: initialMeal.subtitle,
-        }
-      : undefined,
-  });
+  const mealRecord = await getOrCreateMeal(
+    {
+      mealData,
+      dataSourceSlug,
+      initialMeal: initialMeal
+        ? {
+            id: initialMeal.id,
+            name: initialMeal.name,
+            imgPath: initialMeal.imgPath,
+            priceStud: initialMeal.priceStud,
+            priceWork: initialMeal.priceWork,
+            priceGuest: initialMeal.priceGuest,
+            subtitle: initialMeal.subtitle,
+          }
+        : undefined,
+    },
+    (mealId) => {
+      // Name/Preis/Bild geändert: alle Tage dieses Syncs mit dem Gericht
+      changes.mealIds.add(mealId);
+      for (const avail of mealData.availability) {
+        changes.dates.add(toIsoDay(new Date(avail.date)));
+      }
+    }
+  );
 
   if (!mealRecord) {
     return;
   }
 
-  await processMealAvailability(
+  await processMealAvailability({
     mealRecord,
-    mealData.availability,
+    availability: mealData.availability,
     mensen,
-    existingMensaMeals
-  );
+    existingMensaMeals,
+    changes,
+  });
 }
 
 /**
  * Executes the cron job to sync meal data
  */
-export async function handleSync(date: string | DateRange): Promise<void> {
+export async function handleSync(
+  date: string | DateRange
+): Promise<SyncResult> {
   const start = performance.now();
+  const changes: SyncChanges = { dates: new Set(), mealIds: new Set() };
   const { slug: dataSourceSlug } =
     await getOrCreateDataSource(DATA_SOURCE_NAME);
   const mensen = await listMensen();
@@ -202,15 +239,25 @@ export async function handleSync(date: string | DateRange): Promise<void> {
       existingMeals: meals,
       mensen,
       existingMensaMeals,
+      changes,
     });
   }
 
   if (existingMensaMeals.length > 0) {
     console.warn("Meals in DB but not in API: ", existingMensaMeals.length);
     await removeMeals(existingMensaMeals);
+    for (const removed of existingMensaMeals) {
+      changes.dates.add(toIsoDay(removed.date));
+      changes.mealIds.add(removed.mealId);
+    }
   }
 
   const timeTaken = Math.round(performance.now() - start);
   const formattedTime = formatPerformanceTime(timeTaken);
   console.log(`\n[DAL] Sync completed in ${formattedTime}`);
+
+  return {
+    changedDates: [...changes.dates].sort(),
+    changedMealIds: [...changes.mealIds].sort(),
+  };
 }

@@ -18,6 +18,7 @@ import { badgeVariants } from "@/components/ui/badge";
 import BackLayout from "@/layouts/back-layout.astro";
 import { visibleIngredientTypes } from "@/lib/ingredients";
 import { cn } from "@/lib/utils";
+import { mealPolicy } from "@/server/cache-policy";
 import { findMeal } from "@/server/queries/meal";
 import { getMealRatingStats } from "@/server/queries/ratings";
 
@@ -33,6 +34,7 @@ const [meal, ratingStats] = await Promise.all([
 if (!meal) {
   return new Response(null, { status: 404 });
 }
+Astro.cache.set(mealPolicy(meal.id));
 
 // Beschreibung wie bisher (generateMetadata)
 const ratingText = ratingStats.avgRating.value

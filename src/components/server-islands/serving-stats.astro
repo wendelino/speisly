@@ -2,12 +2,14 @@
 // Server Island „Angebotshistorie“: wird nach der Seite separat geladen
 // (GET /_server-islands/…) und unabhängig von der Seite gecacht (Phase 6).
 import MealServingStats from "@/components/meal/meal-serving-stats.astro";
+import { servingStatsPolicy } from "@/server/cache-policy";
 import { getMealServingStats } from "@/server/queries/serving-stats";
 
 type Props = { mealId: string };
 const { mealId } = Astro.props;
 
 const stats = await getMealServingStats(mealId);
+Astro.cache.set(servingStatsPolicy(mealId));
 ---
 
 <MealServingStats stats={stats} />

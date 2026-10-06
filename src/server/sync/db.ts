@@ -203,11 +203,11 @@ async function createMeal(
 /**
  * Gets an existing meal or creates a new one, updating if necessary
  */
-export async function getOrCreateMeal({
-  mealData,
-  dataSourceSlug,
-  initialMeal,
-}: GetOrCreateMealParams): Promise<Pick<
+export async function getOrCreateMeal(
+  { mealData, dataSourceSlug, initialMeal }: GetOrCreateMealParams,
+  /** wird aufgerufen, wenn sich Daten eines bestehenden Gerichts geändert haben */
+  onChange?: (mealId: string) => void
+): Promise<Pick<
   MealRecord,
   "id" | "imgPath" | "priceStud" | "priceWork" | "priceGuest"
 > | null> {
@@ -217,6 +217,9 @@ export async function getOrCreateMeal({
     const { logs, updateFields } = detectMealChanges(existingMeal, mealData);
     try {
       await updateMeal(existingMeal.id, logs, updateFields);
+      if (logs.length > 0) {
+        onChange?.(existingMeal.id);
+      }
     } catch (error) {
       const ctx = { existingMeal, mealData, logs, updateFields, error };
       logError({ message: "Error updating meal", ctx });
@@ -268,14 +271,15 @@ async function createMensaMeal(
 }
 
 /**
- * Gets an existing mensa meal or creates a new one
+ * Gets an existing mensa meal or creates a new one.
+ * Returns true if a new entry was created.
  */
 export async function getOrCreateMensaMeal({
   mensaRecord,
   mealRecord,
   availability,
   existing,
-}: GetOrCreateMensaMealParams): Promise<void> {
+}: GetOrCreateMensaMealParams): Promise<boolean> {
   const availabilityDate = new Date(availability.date);
   const existingMensaMeal =
     existing ??
@@ -290,7 +294,9 @@ export async function getOrCreateMensaMeal({
       ingredients: availability.ingredients,
       extras: availability.extras,
     });
+    return true;
   }
+  return false;
 }
 
 /**

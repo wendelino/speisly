@@ -14,7 +14,8 @@
 | 3. Statische Seiten | ✅ erledigt – siehe „Umsetzungsnotizen Phase 3“ unten |
 | 4. Speiseplan | ✅ erledigt – siehe „Umsetzungsnotizen Phase 4“ unten |
 | 5. Gericht-Detail | ✅ erledigt – siehe „Umsetzungsnotizen Phase 5“ unten |
-| 6.–9. | offen |
+| 6. Caching | ✅ erledigt – siehe „Umsetzungsnotizen Phase 6“ unten |
+| 7.–9. | offen |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -589,3 +590,52 @@ Die Serverseite ist ohne Cache noch nicht schneller: ~19 ms CPU pro Render, unte
 | `/datenschutz` | 334 → **98.1 KB** | 0 → **0** | 95 → **100** | 2.81 → **1.38 s** | 53 → **0 ms** | 12.8 → 3.1 ms | 956 → 7163 |
 
 Client-seitig sind alle Zielwerte aus §9 erreicht. Serverseitig fehlt noch der Cache: Die Listen-Seiten liegen ungecacht bei ~50 req/s, `/` war bei Next per ISR gecacht. Das ist Phase 6.
+
+---
+
+## Umsetzungsnotizen Phase 6
+
+**Route Cache:** `memoryCache({ max: 2000 })` in `astro.config.mjs`. Query-Parameter gehören zum Key (`?mmid=` ergibt eine eigene Variante), Tracking-Parameter (`utm_*`, `fbclid`, …) nicht (Astro-Default). TTLs und Tags setzen die Seiten selbst mit `Astro.cache.set()`. Alle Regeln liegen zentral in `src/server/cache-policy.ts`:
+
+| Route | maxAge | swr | Tags |
+|---|---|---|---|
+| `/` | bis Mitternacht (Berlin) | – | `meals`, `home`, `day:<heute>` |
+| `/day/<vergangen>` | 30 Tage, **gekappt auf Mitternacht** | – | `day:<datum>` |
+| `/day/<heute/Zukunft>` | 6 h, gekappt auf Mitternacht | 1 h, gekappt | `meals`, `day:<datum>` |
+| `/meal/<id>` (+ `?mmid`) | 1 Tag | 7 Tage | `meal:<id>`, `ratings:<id>` |
+| Server Island Angebotshistorie | 6 h | 1 Tag | `meal-stats:<id>` |
+| 404, Redirects, `/api/*`, `/_actions/*` | nicht gecacht | | |
+
+`untilMidnight()` sorgt dafür, dass weder `maxAge` noch `swr` über Mitternacht hinausreichen. Der Day-Selector und die relativen Datumsangaben sind „heute“-abhängig (siehe Phase 4), und mit `swr` würde nach Mitternacht kurz noch der Vortag ausgeliefert. Getestet ist das inklusive der Kappung um 23:30 Uhr.
+
+**Invalidierung:**
+- **Sync:** `handleSync()` gibt jetzt `{ changedDates, changedMealIds }` zurück. Erfasst werden neue Ausgaben, entfernte Ausgaben und geänderte Gerichtsdaten (Name, Untertitel, Bild, Preise); die Logik selbst ist unverändert. Invalidiert werden **nur** `day:<datum>` für geänderte Tage sowie `meal:<id>` und `meal-stats:<id>` für geänderte Gerichte. Die Startseite hängt am Tag `day:<heute>`.
+- **Bewertungen:** `ratings:<id>` (Actions `rating.submit/delete`). Im Browser getestet: Seite gecacht → bewerten → Übersicht sofort aktuell.
+- **Mitternacht:** Alle „heute“-abhängigen Seiten laufen über `maxAge` von selbst ab. `scope=midnight` invalidiert zusätzlich `home` als Sicherheitsnetz und wärmt vor.
+
+**`POST /api/sync?scope=today|week|midnight`** (`src/pages/api/sync.ts`, Logik in `src/server/sync-endpoint.ts`) ersetzt `src/app/api/sync` und `/api/revalidate`:
+- Authentifizierung per `Authorization: Bearer <API_BEARER_TOKEN>`, timing-sicher verglichen; unbekannter Scope ergibt 400. Ein fehlgeschlagener Sync lässt den Cache unangetastet (500).
+- Danach läuft im Hintergrund ein **Pre-Warm** (`src/server/prewarm.ts`): `/` und `/day/<heute…+7>` werden lokal über `127.0.0.1:$PORT` abgerufen, nicht über die öffentliche URL.
+- **Wichtig für den Cron (Phase 9):** Der Aufruf braucht `Content-Type: application/json`. Ohne Content-Type und ohne `Origin` lehnt Astros CSRF-Schutz (`checkOrigin`) den POST mit 403 ab. Das ist gewollt und bleibt aktiv.
+- Neue Zeitpläne für Phase 9: `scope=today` um 7:17, 10:17 und 17:17 (Mo–Fr), `scope=week` um 2:17 (So–Do), `scope=midnight` um 0:01. Das entspricht den bisherigen Cron-Zeiten.
+
+**Browser-Header** (`src/middleware.ts`): On-demand-HTML und Islands bekommen `public, max-age=0, must-revalidate`. Der Browser fragt also immer neu, und ein Cache-HIT kostet auf dem Server ~1–5 ms; dadurch sind neue Bewertungen sofort für alle sichtbar. `/api/*` und Actions bekommen `no-store`. Hashed Assets (`/_astro/*`) liefert der Node-Adapter mit `immutable` aus.
+
+**Messung mit warmem Cache** (10 parallele Verbindungen, 15 s; Rohdaten `docs/perf/phase6-astro.json`), Next → Astro:
+
+| Seite | TTFB p50 | TTFB p95 | Req/s | DB-Queries / Request |
+|---|---|---|---|---|
+| `/` | 18 → **4.8 ms** | 31.4 → **13.7 ms** | 436 → **1612** | 0 → **0** |
+| `/day/<morgen>` | 79.9 → **4.8 ms** | 190.3 → **13.1 ms** | 54 → **1656** | 0 → **0** |
+| `/day/<vor 30 Tagen>` | 80.1 → **4.5 ms** | 190.2 → **13.2 ms** | 49 → **1685** | 0 → **0** |
+| `/meal/<id>?mmid=…` | 38.4 → **1.5 ms** | 71.6 → **5.3 ms** | 96 → **4565** | 4 → **0** |
+| `/datenschutz` (prerendered) | 7.9 → **0.8 ms** | 12.8 → **2.3 ms** | 956 → **9318** | 0 → **0** |
+
+- **Zielwerte aus §9:** TTFB p95 im Cache < 30 ms erreicht (5–14 ms). Ein Seitenaufruf bei warmem Cache verursacht 0 DB-Queries.
+- **Server Island:** Einzige Ausnahme ist der erste Abruf der Island nach einem neuen Seiten-Render, danach ist auch sie gecacht.
+- **Browser-Werte:** Lighthouse 100, JS 4,6–6,6 KB, unverändert gegenüber Phase 5.
+- **Durchsatz:** Mit Cache bedienen die Speiseplan-Seiten ~30× so viele Anfragen wie Next (1.600–1.700 statt ~50 req/s).
+
+**Messhinweis:** Der Host gehört zum Cache-Key. Über `compress-proxy.ts` (der `127.0.0.1` aufruft) landet der Browser deshalb in anderen Einträgen als der Lasttest (`localhost`), was dort einen MISS ergibt. In Produktion ist der Host konstant.
+
+**Grenzen des Memory-Caches:** pro Prozess, nach Neustart leer (Pre-Warm beim Start kommt mit Phase 9). Bei mehreren Instanzen bräuchte man einen gemeinsamen Provider; die `Astro.cache`-Aufrufe bleiben dabei gleich.

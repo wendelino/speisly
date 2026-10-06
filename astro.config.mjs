@@ -2,16 +2,28 @@
 import node from "@astrojs/node";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig, envField, fontProviders } from "astro/config";
+import {
+  defineConfig,
+  envField,
+  fontProviders,
+  memoryCache,
+} from "astro/config";
 
 // Migrationsplan: docs/astro-migration-plan.md
-// Caching (cache provider + routeRules) folgt in Phase 6.
 export default defineConfig({
   site: "https://speisly.de",
   // Default `output: "static"`: alles wird prerendered, außer Seiten mit
   // `export const prerender = false` (die laufen über den Node-Adapter).
   adapter: node({ mode: "standalone" }),
   integrations: [react()],
+  // Route Cache: gerenderte Seiten und Server Islands liegen im Speicher des
+  // Server-Prozesses (Cache-HIT = kein Render, keine DB). TTLs und Tags setzen
+  // die Seiten selbst (src/server/cache-policy.ts); invalidiert wird gezielt
+  // nach dem Sync (src/pages/api/sync.ts) und bei Bewertungen.
+  // Query-Parameter zählen zum Key (z. B. ?mmid=), Tracking-Parameter nicht.
+  cache: {
+    provider: memoryCache({ max: 2000 }),
+  },
   vite: {
     plugins: [tailwindcss()],
   },

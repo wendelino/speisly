@@ -134,7 +134,15 @@ bun build
 bun run start
 ```
 
-Startet den Standalone-Server von `@astrojs/node` (Port über `PORT`, Default 4321). Hinweis: Während der Migration enthält dieser Branch **noch keine Cron-Jobs** für die Datensynchronisation (bisher `src/_boot.ts`). Sie kommen in Phase 9 des Migrationsplans zurück.
+Startet den Standalone-Server von `@astrojs/node` (Port über `PORT`, Default 4321). Hinweis: Während der Migration enthält dieser Branch **noch keine Cron-Jobs** für die Datensynchronisation (bisher `src/_boot.ts`). Sie kommen in Phase 9 des Migrationsplans zurück. Bis dahin lässt sich der Sync manuell auslösen:
+
+```bash
+curl -X POST -H "Authorization: Bearer $API_BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  "http://localhost:4321/api/sync?scope=week"   # today | week | midnight
+```
+
+Seiten werden im Speicher des Servers gecacht (Route Cache) und nach dem Sync gezielt invalidiert, siehe `src/server/cache-policy.ts`.
 
 ## 🤝 Beitragen
 
