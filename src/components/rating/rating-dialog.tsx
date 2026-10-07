@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import LoadingButton from "@/components/ui/loading-button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { $ratingDialogOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
 
@@ -39,9 +39,9 @@ export type RatingDialogProps = {
 };
 
 /**
- * Bewertungs-Dialog (Inhalt unverändert aus meal-rating.tsx). Der Trigger ist
- * der statische Button aus rating-button.astro; die eigene Bewertung kommt von
- * dort (wurde bereits geladen, falls Consent erteilt ist).
+ * Bewertungs-Dialog. Der Trigger ist der statische Button aus
+ * rating-button.astro; die eigene Bewertung kommt von dort (wurde bereits
+ * geladen, falls Consent erteilt ist).
  */
 export function RatingDialog({
   mealId,
@@ -164,37 +164,36 @@ export function RatingDialog({
         <DialogHeader>
           <DialogTitle>Gericht bewerten</DialogTitle>
           <DialogDescription>
-            Teile deine Meinung zu diesem Gericht mit uns.
+            Wie hat’s dir geschmeckt? Deine Sterne helfen allen beim Aussuchen.
           </DialogDescription>
         </DialogHeader>
 
         <ConsentProvider disableStyling>
-          <div className="flex w-full flex-col items-center gap-2 space-y-6 py-4 sm:items-start">
+          <div className="space-y-4">
             <StarRating
+              featured
               label="Gesamtbewertung *"
               onChange={setValue}
               value={value}
             />
-
-            <StarRating
-              label="Preis-Leistung"
-              onChange={setValuePrice}
-              value={valuePrice}
-            />
-
-            <StarRating
-              label="Menge"
-              onChange={setValueQuantity}
-              value={valueQuantity}
-            />
-
-            <StarRating
-              label="Geschmack"
-              onChange={setValueTaste}
-              value={valueTaste}
-            />
-
-            <div className="w-full space-y-2">
+            <div className="space-y-3">
+              <StarRating
+                label="Preis-Leistung"
+                onChange={setValuePrice}
+                value={valuePrice}
+              />
+              <StarRating
+                label="Menge"
+                onChange={setValueQuantity}
+                value={valueQuantity}
+              />
+              <StarRating
+                label="Geschmack"
+                onChange={setValueTaste}
+                value={valueTaste}
+              />
+            </div>
+            <div className="space-y-2 pt-1">
               <Label htmlFor="comment">Kommentar (optional)</Label>
               <Input
                 id="comment"
@@ -206,25 +205,25 @@ export function RatingDialog({
             </div>
           </div>
 
-          <DialogFooter className="flex-col">
+          <DialogFooter className="flex-col gap-3 sm:flex-col">
             {hasExistingRating ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 rounded-2xl bg-muted/60 py-1.5 pr-1.5 pl-4">
+                <p className="text-muted-foreground text-sm">
+                  Deine Bewertung vom {format(hasExistingRating, "dd.MM.yyyy")}
+                </p>
                 <Button
-                  className="gap-2"
+                  aria-label="Bewertung löschen"
                   disabled={deleting || submitting}
                   onClick={handleDelete}
                   size="icon-sm"
                   variant="destructive"
                 >
                   {deleting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="size-4" />
                   )}
                 </Button>
-                <p className="text-muted-foreground text-sm">
-                  Bewertung vom {format(hasExistingRating, "dd.MM.yyyy")}
-                </p>
               </div>
             ) : null}
             <div className="flex w-full gap-2">
@@ -237,7 +236,7 @@ export function RatingDialog({
               </Button>
               <LoadingButton
                 className="flex-1"
-                disabled={submitting || value === 0 || deleting}
+                disabled={value === 0 || deleting}
                 loading={submitting}
                 loadingText="Wird gespeichert..."
                 onClick={handleSubmit}

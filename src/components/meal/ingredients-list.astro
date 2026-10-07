@@ -1,34 +1,40 @@
 ---
-// Astro-Port von ingredients-list.tsx
-import { badgeVariants } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+// Inhaltsstoffe und Allergene als Kennzeichnung (Code) + Bezeichnung
+import { ArrowUpRight } from "@lucide/astro";
 
 type Props = { ingredients: string[] | null | undefined };
 const { ingredients } = Astro.props;
+const INFO_URL =
+  "https://studentenwerk-halle.de/mensen-cafebars/kennzeichnungspflichtige-zusatzstoffe-und-allergene/#c639";
 ---
 
 {
-  ingredients && ingredients.length > 0 && (
-    <div>
-      <ul class="w-full space-y-2">
-        {ingredients.map((ingredient) => {
-          const [code, name] = ingredient.split(":");
-          return (
-            <li class="flex items-center gap-1">
-              <span
-                class={cn(badgeVariants({ variant: "outline" }), "min-w-10 text-center font-mono font-semibold")}
-                data-slot="badge"
-              >{code}</span>
-              <p class="text-sm">{name}</p>
-            </li>
-          );
-        })}
-      </ul>
-      <a
-        class="flex items-center gap-1 pt-4 text-primary text-sm underline"
-        href="https://studentenwerk-halle.de/mensen-cafebars/kennzeichnungspflichtige-zusatzstoffe-und-allergene/#c639"
-        target="_blank"
-      >Weitere Informationen über die Inhaltsstoffe</a>
-    </div>
+  ingredients && ingredients.length > 0 ? (
+    <ul class="grid gap-2 sm:grid-cols-2">
+      {ingredients.map((ingredient) => {
+        const [code, name] = ingredient.split(":");
+        return (
+          <li class="flex items-center gap-3 rounded-2xl bg-muted/60 py-1.5 pr-3 pl-1.5">
+            <span class="inline-flex h-7 min-w-9 items-center justify-center rounded-xl bg-card px-1.5 font-bold font-display text-xs shadow-soft">
+              {code}
+            </span>
+            <span class="text-sm">{name}</span>
+          </li>
+        );
+      })}
+    </ul>
+  ) : (
+    <p class="rounded-2xl bg-muted/60 p-4 text-center text-muted-foreground text-sm">
+      Keine Angaben zu Inhaltsstoffen.
+    </p>
   )
 }
+<a
+  class="mt-4 inline-flex items-center gap-1 font-semibold text-primary text-sm underline-offset-4 hover:underline"
+  href={INFO_URL}
+  rel="noopener noreferrer"
+  target="_blank"
+>
+  Mehr über Zusatzstoffe und Allergene
+  <ArrowUpRight class="size-4" />
+</a>

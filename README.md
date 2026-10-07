@@ -84,7 +84,8 @@ speisly/
 ├── server/                # Produktionsstart: HTTP-Server, Komprimierung, Cron
 ├── src/
 │   ├── actions/           # Astro Actions (Bewertungen, Feedback)
-│   ├── components/        # Astro-Komponenten, React nur für Dialoge
+│   ├── components/        # Astro-Komponenten (nach Bereich: day, filter, meal, rating, …), React nur für Dialoge
+│   │   └── ui/            # wiederverwendbare Bausteine (Design-System)
 │   ├── layouts/
 │   ├── middleware.ts      # Tages-Routen, Browser-Cache-Header
 │   ├── pages/             # Routen (/, /day/[date], /meal/[mealId], /api/*, /img/*)
@@ -98,6 +99,14 @@ speisly/
 ├── tests/                 # Tests außerhalb von src/
 └── public/                # Statische Assets
 ```
+
+## 🎨 UI & Design-System
+
+- **Tokens** (Farben, Radien, Schatten, Animationen) in `src/styles/globals.css`: warme Creme-Flächen, die Marken-Beere als Primärfarbe und verspielte Akzente (`sun`, `mint`, `sky`, `peach`, `rose`).
+- **Schrift:** Fließtext in der Systemschrift, Überschriften und Preise in [Bricolage Grotesque](https://fontsource.org/fonts/bricolage-grotesque) (self-hosted, `astro.config.mjs`).
+- **Bausteine** in `src/components/ui/`: Astro-Komponenten ohne JS (`button`, `badge`, `card`, `chip`, `stat`, `stars`, `meter`, `note`, `empty-state`, `icon-blob`, `section-heading`, `prose`, `skeleton`) und die React-Primitives für Dialoge (shadcn/Radix). Button- und Badge-Stile kommen für beide aus `ui/variants.ts`.
+- **Gerichtskarten** nutzen kurze Klassen aus `src/styles/meal.css` (die Karte steht ~90× auf einer Seite, das hält das HTML klein).
+- Dialoge sind auf dem Handy Bottom-Sheets, ab `sm` zentriert. Animationen respektieren `prefers-reduced-motion`.
 
 ## 🔌 Datensync (`src/server/sync`)
 

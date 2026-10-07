@@ -1,13 +1,13 @@
 ---
-import { SearchX } from "@lucide/astro";
-// Astro-Port von empty-state.tsx. Der „Filter zurücksetzen“-Button wird
-// über data-filter-reset vom Filter-Script angebunden.
-import type { HTMLAttributes } from "astro/types";
-import { buttonVariants } from "@/components/ui/button";
+// Leerer Speiseplan: keine Gerichte an diesem Tag oder keine nach dem Filter.
+// Der Button „Filter zurücksetzen“ wird über data-filter-reset angebunden
+// (meal-list.astro).
+import { CalendarX2, SearchX } from "@lucide/astro";
+import Button from "@/components/ui/button.astro";
+import EmptyState from "@/components/ui/empty-state.astro";
 import { formatIsoDay } from "@/lib/format-day";
-import { cn } from "@/lib/utils";
 
-type Props = HTMLAttributes<"div"> & {
+type Props = {
   type?: "date" | "filter";
   /** `YYYY-MM-DD` (nur für type="date") */
   date?: string;
@@ -15,51 +15,29 @@ type Props = HTMLAttributes<"div"> & {
   today?: string;
 };
 
-const { type = "date", date, today, class: className, ...rest } = Astro.props;
+const { type = "date", date, today } = Astro.props;
 
-const title = "Keine Gerichte gefunden";
-let description: string;
-if (type === "filter") {
-  description =
-    "Es wurden keine Gerichte gefunden, die den aktuellen Filtern entsprechen.";
-} else if (date && today) {
-  description = `Keine Gerichte für ${formatIsoDay(date, today, "EEEE, dd.MM.yy")} verfügbar.`;
-} else {
-  description = "Keine Gerichte verfügbar.";
-}
+const day = date && today ? formatIsoDay(date, today, "EEEE, dd.MM.yy") : null;
+const isFilter = type === "filter";
+const title = isFilter ? "Nichts gefunden" : "Die Küche bleibt kalt";
+const description = isFilter
+  ? "Keine Gerichte passen zu deinen Filtern. Probier’s mit einer anderen Auswahl!"
+  : `Für ${day ?? "diesen Tag"} gibt es keine Gerichte. Schau doch an einem anderen Tag vorbei.`;
 ---
 
-<div
-  class={cn(
-    "flex min-h-[75vh] flex-col items-center justify-center px-4 py-32",
-    className
-  )}
-  {...rest}
->
-  <div class="relative mb-6">
-    <div
-      class="absolute inset-0 animate-pulse rounded-full bg-muted opacity-50 blur-2xl"
-    >
-    </div>
-    <div class="relative rounded-full border border-border/50 bg-muted/50 p-3">
-      <SearchX class="h-12 w-12 text-primary" />
-    </div>
-  </div>
-
-  <div class="max-w-md space-y-3 text-center">
-    <h3 class="font-semibold text-2xl text-foreground">{title}</h3>
-    <p class="text-base text-muted-foreground leading-relaxed">{description}</p>
+<div class="container-page">
+  <EmptyState
+    description={description}
+    title={title}
+    tone={isFilter ? "sky" : "peach"}
+  >
+    {isFilter ? <SearchX slot="icon" /> : <CalendarX2 slot="icon" />}
     {
-      type === "filter" && (
-        <button
-          class={cn(buttonVariants({ variant: "outline" }))}
-          data-filter-reset
-          data-slot="button"
-          type="button"
-        >
+      isFilter && (
+        <Button data-filter-reset variant="outline">
           Filter zurücksetzen
-        </button>
+        </Button>
       )
     }
-  </div>
+  </EmptyState>
 </div>

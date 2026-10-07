@@ -1,10 +1,10 @@
 ---
-// Ersetzt src/app/layout.tsx (Metadaten 1:1 übernommen)
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
 import IconSprite from "@/components/icons/icon-sprite.astro";
 import type { SpriteIconName } from "@/components/icons/sprite-icons";
 import Footer from "@/components/layout/footer.astro";
+import SiteHeader from "@/components/layout/site-header.astro";
 import { mealImageBoot } from "@/lib/meal-assets";
 import { viewTransitionBoot } from "@/lib/view-transitions";
 import { Toaster } from "@/components/ui/toaster";
@@ -26,8 +26,8 @@ type Props = {
    */
   withToasts?: boolean;
   /**
-   * Seiten mit Gerichten (Speiseplan, Detail): SVG-Sprite für
-   * components/icons/icon.astro und Load-Listener für die Gerichtsbilder.
+   * SVG-Sprite für components/icons/icon.astro. Seiten mit Gerichten
+   * bekommen außerdem den Load-Listener für die Gerichtsbilder.
    * `true` = alle Sprite-Icons, sonst nur die übergebenen.
    */
   mealAssets?: boolean | readonly SpriteIconName[];
@@ -62,7 +62,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <Font cssVariable="--font-geist-mono"/>
+    <Font cssVariable="--font-bricolage" preload />
     <title>{fullTitle}</title>
     <slot name="head" />
     <script is:inline set:html={viewTransitionScript} />
@@ -77,6 +77,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Speisly">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#fcf9f4">
     <meta property="og:title" content={ogTitle}>
     <meta property="og:description" content={ogDescription}>
     {
@@ -111,12 +112,12 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
       )
     }
   </head>
-  <body class="relative flex min-h-screen flex-col antialiased">
+  <body class="relative flex min-h-screen flex-col overflow-x-clip antialiased">
     {mealAssets && (
       <IconSprite icons={mealAssets === true ? undefined : mealAssets} />
     )}
-    <slot/>
-    <div class="flex-1"></div>
+    <SiteHeader />
+    <div class="flex-1"><slot/></div>
     <Footer/>
     {withToasts && <Toaster client:idle position="top-right" />}
   </body>

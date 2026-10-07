@@ -1,0 +1,124 @@
+---
+// Tagesauswahl: heute und die nächsten Werktage als Links, dahinter der
+// Kalender (react-day-picker, wird erst beim Öffnen geladen:
+// calendar-popover.mount.tsx). Ein Tag außerhalb der Leiste steht im
+// Kalender-Button.
+import { CalendarDays } from "@lucide/astro";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+import { isoDayToLocalDate } from "@/lib/format-day";
+import { cn } from "@/lib/utils";
+import { addDays } from "@/server/dates";
+
+type Props = {
+  /** heute in Berlin (`YYYY-MM-DD`) */
+  today: string;
+  /** ausgewählter Tag (`YYYY-MM-DD`), Default: heute */
+  selected?: string;
+};
+
+const DAYS_IN_STRIP = 5;
+const { today, selected = today } = Astro.props;
+
+const isWeekend = (isoDay: string) =>
+  [0, 6].includes(isoDayToLocalDate(isoDay).getDay());
+const days = [today];
+for (let d = addDays(today, 1); days.length < DAYS_IN_STRIP; d = addDays(d, 1)) {
+  if (!isWeekend(d)) {
+    days.push(d);
+  }
+}
+const tomorrow = addDays(today, 1);
+const label = (day: string) => {
+  if (day === today) {
+    return "Heute";
+  }
+  if (day === tomorrow) {
+    return "Morgen";
+  }
+  return format(isoDayToLocalDate(day), "EEEEEE", { locale: de });
+};
+const isCustomDate = !days.includes(selected);
+const selectedDate = isoDayToLocalDate(selected);
+
+const PILL =
+  "flex h-[4.25rem] min-w-0 flex-col items-center justify-center rounded-2xl leading-tight outline-none ring-1 transition-[background-color,color,box-shadow,translate,rotate] duration-300 focus-visible:ring-[3px] focus-visible:ring-ring sm:w-[4.5rem]";
+const pillState = (active: boolean) =>
+  active
+    ? "-rotate-3 bg-primary text-primary-foreground shadow-pop ring-primary"
+    : "bg-card shadow-soft ring-border/70 hover:-translate-y-0.5 hover:ring-primary/30";
+---
+
+<nav
+  aria-label="Tag wählen"
+  class="container-page pb-1"
+  data-selected={selected}
+  id="day-selector"
+>
+  <ul class="grid grid-cols-6 gap-2 sm:flex">
+    {
+      days.map((day) => {
+        const active = day === selected;
+        const date = isoDayToLocalDate(day);
+        return (
+          <li>
+            <a
+              aria-current={active ? "date" : undefined}
+              class={cn(PILL, pillState(active))}
+              data-astro-prefetch
+              data-day
+              href={day === today ? "/" : `/day/${day}`}
+            >
+              <span class="font-semibold text-[0.65rem] uppercase tracking-wide opacity-80">{label(day)}</span>
+              <span class="font-bold font-display text-xl tabular-nums">{format(date, "dd")}</span>
+              <span class="text-[0.65rem] opacity-70">{format(date, "MMM", { locale: de })}</span>
+            </a>
+          </li>
+        );
+      })
+    }
+    <li class="sm:ml-1">
+      <button
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label={isCustomDate ? `Kalender, gewählt: ${format(selectedDate, "EEEE, dd.MM.", { locale: de })}` : "Anderen Tag im Kalender wählen"}
+        class={cn(PILL, "w-full", pillState(isCustomDate), !isCustomDate && "border-2 border-border border-dashed bg-transparent shadow-none ring-0")}
+        data-calendar-trigger
+        type="button"
+      >
+        {
+          isCustomDate ? (
+            <>
+              <span class="font-semibold text-[0.65rem] uppercase tracking-wide opacity-80">{format(selectedDate, "EEEEEE", { locale: de })}</span>
+              <span class="font-bold font-display text-xl tabular-nums">{format(selectedDate, "dd")}</span>
+              <span class="text-[0.65rem] opacity-70">{format(selectedDate, "MMM", { locale: de })}</span>
+            </>
+          ) : (
+            <>
+              <CalendarDays class="size-5 text-primary" />
+              <span class="mt-1 font-semibold text-[0.65rem] text-muted-foreground">Mehr</span>
+            </>
+          )
+        }
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<script>
+  const section = document.getElementById("day-selector");
+  const trigger = section?.querySelector<HTMLElement>("[data-calendar-trigger]");
+  const loadCalendar = () => import("./calendar-popover.mount");
+
+  if (section && trigger) {
+    // React + Kalender bei Nutzerabsicht vorladen, beim Klick öffnen
+    for (const event of ["pointerenter", "touchstart", "focus"]) {
+      trigger.addEventListener(event, loadCalendar, { once: true, passive: true });
+    }
+    trigger.addEventListener("click", async () => {
+      const { openCalendar } = await loadCalendar();
+      trigger.setAttribute("aria-expanded", "true");
+      openCalendar(trigger, section.dataset.selected as string);
+    });
+  }
+</script>

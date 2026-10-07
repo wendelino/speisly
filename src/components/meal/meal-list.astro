@@ -1,20 +1,20 @@
 ---
 /**
- * Astro-Port von meal-list.tsx. Statisches HTML für alle Besucher (cachebar);
- * die Filter wirken rein per CSS (lib/filters/boot.ts):
+ * Speiseplan eines Tages, gruppiert nach Mensa. Statisches HTML für alle
+ * Besucher (cachebar); die Filter wirken rein per CSS (lib/filters/boot.ts):
  *  - Mensa-Auswahl: generiertes CSS auf [data-mensa-id]
  *  - vegetarisch/vegan: html[data-diet] blendet [data-meal] ohne Flag aus.
  * Alles, was vom Ernährungsfilter abhängt (Hinweise „X Gerichte ausgeblendet“,
  * Zähler, leere Bereiche), wird hier für jede Variante vorberechnet und über
- * data-only-diet / data-hide-diet umgeschaltet. So bleibt das Markup identisch
- * zur React-Version, ohne JS und ohne Flackern.
+ * data-only-diet / data-hide-diet umgeschaltet – ohne JS und ohne Flackern.
  */
 import Icon from "@/components/icons/icon.astro";
-import InfoCard from "@/components/info-card.astro";
+import { TONES, toneAt } from "@/components/ui/tones";
+import Note from "@/components/ui/note.astro";
 import { cn } from "@/lib/utils";
 import EmptyState from "./empty-state.astro";
 import MealCard from "./meal-card.astro";
-import MensaHeader from "./mensa-header.astro";
+import MensaNav from "./mensa-nav.astro";
 
 type Props = {
   groups: MensaMealGroup[];
@@ -36,7 +36,7 @@ const hiddenText = (n: number) =>
 const dietList = (pred: (d: Diet) => boolean) =>
   DIETS.filter(pred).join(" ") || undefined;
 
-const prepared = groups.map((group, groupIndex) => {
+const prepared = groups.map((group, index) => {
   const regular = group.meals
     .filter((m) => !m.flags.isSmall)
     .sort((a, b) => b.priceStud - a.priceStud);
@@ -47,28 +47,19 @@ const prepared = groups.map((group, groupIndex) => {
       return [
         diet,
         {
+          kept,
           hidden: group.meals.length - kept,
-          allHidden: kept === 0,
           regular: regular.filter((m) => keeps(m, diet)).length,
           portion: portion.filter((m) => keeps(m, diet)).length,
         },
       ];
     })
-  ) as Record<Diet, { hidden: number; allHidden: boolean; regular: number; portion: number }>;
-  return {
-    group,
-    regular,
-    portion,
-    stats,
-    triggerId: `mensa-${groupIndex}-portions-trigger`,
-    contentId: `mensa-${groupIndex}-portions-content`,
-  };
+  ) as Record<
+    Diet,
+    { kept: number; hidden: number; regular: number; portion: number }
+  >;
+  return { group, regular, portion, stats, tone: TONES[toneAt(index)] };
 });
-
-const triggerClass = cn(
-  "flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left font-medium text-sm outline-none transition-all hover:underline focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
-  "group rounded-lg px-4 py-3 transition-all duration-200 hover:no-underline"
-);
 ---
 
 {
@@ -76,105 +67,75 @@ const triggerClass = cn(
     <EmptyState date={date} today={today} type="date" />
   ) : (
     <>
-      <section class="container mx-auto pb-8" id="mealslist">
-        {prepared.map(({ group, regular, portion, stats, triggerId, contentId }) => (
-          <div data-mensa-group data-mensa-id={group.id}>
-            <MensaHeader mensa={group} />
-            {DIETS.filter((d) => stats[d].allHidden).map((d) => (
-              <div class="py-4 pb-8" data-only-diet={d}>
-                <InfoCard
-                  class="mx-4 mt-4"
-                  description={hiddenText(stats[d].hidden)}
-                  icon="info"
-                />
-              </div>
-            ))}
-            <div class="contents" data-hide-diet={dietList((d) => stats[d].allHidden)}>
-              {DIETS.filter((d) => stats[d].hidden > 0 && !stats[d].allHidden).map((d) => (
-                <InfoCard
-                  class="mx-4 mt-4"
-                  data-only-diet={d}
-                  description={hiddenText(stats[d].hidden)}
-                  icon="info"
-                />
+      <MensaNav mensen={groups} />
+      <div class="container-page space-y-8 pb-8" id="mealslist">
+        {prepared.map(({ group, regular, portion, stats, tone }) => (
+          <section
+            aria-labelledby={`mensa-${group.slug}-title`}
+            class="scroll-mt-2"
+            data-mensa-group
+            data-mensa-id={group.id}
+            id={`mensa-${group.slug}`}
+          >
+            <div class="m-head">
+              <span class={cn("size-3 shrink-0 rounded-full", tone.solid)} />
+              <h2 class="truncate font-bold text-xl sm:text-2xl" id={`mensa-${group.slug}-title`}>
+                {group.name}
+              </h2>
+              <span class="m-count">
+                <span data-hide-diet="veggie vegan">{group.meals.length}</span>
+                {DIETS.map((d) => (
+                  <span data-only-diet={d}>{stats[d].kept}</span>
+                ))}
+                <span class="sr-only"> Gerichte</span>
+              </span>
+            </div>
+            <div class="flex flex-col gap-4">
+              {DIETS.filter((d) => stats[d].hidden > 0).map((d) => (
+                <Note data-only-diet={d}>{hiddenText(stats[d].hidden)}</Note>
               ))}
-              <div class="space-y-4 pt-4 pb-4 sm:pb-16">
-                {regular.length > 0 && (
-                  <div
-                    class="grid gap-4 px-4 md:grid-cols-2 lg:grid-cols-3"
-                    data-hide-diet={dietList((d) => stats[d].regular === 0)}
-                    data-last-when={
-                      portion.length > 0
-                        ? dietList((d) => stats[d].portion === 0)
-                        : undefined
-                    }
-                  >
-                    {regular.map((meal, index) => (
-                      <MealCard meal={meal} priority={index < 3} />
+              {regular.length > 0 && (
+                <div
+                  class="m-grid"
+                  data-hide-diet={dietList((d) => stats[d].regular === 0)}
+                >
+                  {regular.map((meal, index) => (
+                    <MealCard meal={meal} priority={index < 3} />
+                  ))}
+                </div>
+              )}
+              {portion.length > 0 && (
+                <details
+                  class="m-more"
+                  data-hide-diet={dietList((d) => stats[d].portion === 0)}
+                >
+                  <summary>
+                    <span>Weitere Gerichte</span>
+                    <span class="m-count bg-card">
+                      <span data-hide-diet="veggie vegan">{portion.length}</span>
+                      {DIETS.map((d) => (
+                        <span data-only-diet={d}>{stats[d].portion}</span>
+                      ))}
+                    </span>
+                    <span class="hidden font-normal font-sans text-muted-foreground text-xs sm:inline">
+                      Buffet &amp; kleine Portionen
+                    </span>
+                    <Icon
+                      class="m-chev ml-auto size-4 text-muted-foreground transition-transform duration-300"
+                      name="chevron-down"
+                    />
+                  </summary>
+                  <div class="m-grid p-1.5 pt-2">
+                    {portion.map((meal) => (
+                      <MealCard meal={meal} />
                     ))}
                   </div>
-                )}
-                {portion.length > 0 && (
-                  <div class=" " data-hide-diet={dietList((d) => stats[d].portion === 0)}>
-                    <div class="w-full" data-orientation="vertical" data-slot="accordion">
-                      <div
-                        class={cn("border-b last:border-b-0", "border-none")}
-                        data-orientation="vertical"
-                        data-slot="accordion-item"
-                        data-state="closed"
-                      >
-                        <h3 class="flex" data-orientation="vertical" data-state="closed">
-                          <button
-                            aria-controls={contentId}
-                            aria-expanded="false"
-                            class={triggerClass}
-                            data-orientation="vertical"
-                            data-slot="accordion-trigger"
-                            data-state="closed"
-                            id={triggerId}
-                            type="button"
-                          >
-                            <div class="flex items-center gap-3">
-                              <span class="font-semibold text-base text-foreground">
-                                Weitere Gerichte
-                              </span>
-                              <span class="inline-flex size-6 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm">
-                                <span data-hide-diet="veggie vegan">{portion.length}</span>
-                                {DIETS.map((d) => (
-                                  <span data-only-diet={d}>{stats[d].portion}</span>
-                                ))}
-                              </span>
-                            </div>
-                            <Icon name="chevron-down" class="pointer-events-none size-4 shrink-0 translate-y-0.5 text-muted-foreground transition-transform duration-200" />
-                          </button>
-                        </h3>
-                        <div
-                          aria-labelledby={triggerId}
-                          class="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
-                          data-orientation="vertical"
-                          data-slot="accordion-content"
-                          data-state="closed"
-                          hidden
-                          id={contentId}
-                          role="region"
-                        >
-                          <div class={cn("pt-0 pb-4", "px-4 py-2")}>
-                            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                              {portion.map((meal) => (
-                                <MealCard meal={meal} />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </details>
+              )}
             </div>
-          </div>
+          </section>
         ))}
-      </section>
+      </div>
       <div data-filter-empty>
         <EmptyState type="filter" />
       </div>
@@ -193,68 +154,18 @@ const triggerClass = cn(
   [data-filter-empty] {
     display: none;
   }
+  /* revert-layer: zurück auf die Utility-Klassen des Elements (z. B. flex) */
   html[data-diet="veggie"] [data-only-diet="veggie"],
   html[data-diet="vegan"] [data-only-diet="vegan"] {
-    display: block;
-  }
-  /* space-y-4 setzt Abstände per :not(:last-child) – ein ausgeblendetes
-     Accordion zählt noch als letztes Kind, daher hier korrigieren */
-  html[data-diet="veggie"] [data-last-when~="veggie"],
-  html[data-diet="vegan"] [data-last-when~="vegan"] {
-    margin-block-end: 0 !important;
+    display: revert-layer;
   }
 </style>
 
 <script>
   import { setSelectedMensen } from "@/stores/filters";
 
-  // Accordion „Weitere Gerichte“ (Verhalten wie Radix, ohne React)
-  function toggle(trigger: HTMLElement) {
-    const item = trigger.closest<HTMLElement>('[data-slot="accordion-item"]');
-    const content = item?.querySelector<HTMLElement>(
-      '[data-slot="accordion-content"]'
-    );
-    if (!(item && content)) {
-      return;
-    }
-    const open = trigger.dataset.state !== "open";
-    const state = open ? "open" : "closed";
-    if (open) {
-      content.hidden = false;
-    }
-    content.style.setProperty(
-      "--radix-accordion-content-height",
-      `${content.scrollHeight}px`
-    );
-    for (const el of [item, item.querySelector("h3"), trigger, content]) {
-      if (el) {
-        (el as HTMLElement).dataset.state = state;
-      }
-    }
-    trigger.setAttribute("aria-expanded", String(open));
-    if (!open) {
-      content.addEventListener(
-        "animationend",
-        () => {
-          if (content.dataset.state === "closed") {
-            content.hidden = true;
-          }
-        },
-        { once: true }
-      );
-    }
-  }
-
   document.addEventListener("click", (event) => {
-    const target = event.target as HTMLElement;
-    const trigger = target.closest<HTMLElement>(
-      '[data-slot="accordion-trigger"]'
-    );
-    if (trigger) {
-      toggle(trigger);
-      return;
-    }
-    if (target.closest("[data-filter-reset]")) {
+    if ((event.target as HTMLElement).closest("[data-filter-reset]")) {
       setSelectedMensen([]);
     }
   });

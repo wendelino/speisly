@@ -55,7 +55,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         onOpenChange={(open) => !open && close(false)}
         open={pending !== null}
       >
-        <DialogContent className="max-w-80" showCloseButton={false}>
+        <DialogContent className="sm:max-w-sm" showCloseButton={false}>
           <DialogHeader>
             <DialogTitle className={options?.title ? "" : "sr-only"}>
               {options?.title ?? "Bestätigung"}

@@ -39,44 +39,32 @@ export function ConsentDialog({ onConsent, onEarlyExit }: ConsentDialogProps) {
   return (
     <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader className="space-y-4">
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl" />
-              <div className="relative rounded-full bg-primary/10 p-4">
-                <Cookie className="h-12 w-12 text-primary" />
-              </div>
-            </div>
+        <DialogHeader className="items-center gap-3 text-center sm:text-center">
+          <div className="-rotate-6 inline-flex size-20 animate-float items-center justify-center rounded-[42%_58%_63%_37%/41%_44%_56%_59%] bg-sun-soft text-sun">
+            <Cookie className="size-10" />
           </div>
-          <div className="space-y-2 text-center">
-            <DialogTitle className="font-bold text-2xl">
-              Cookie-Einstellungen
-            </DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed">
-              Wir nutzen Cookies, um deine Bewertungen zu speichern und dir eine
-              bessere Erfahrung zu bieten. Mehr Infos findest du in unserer{" "}
-              <a
-                className="text-primary underline"
-                href={PUBLIC_PRIVACY_POLICY_PATH}
-              >
-                Datenschutzerklärung
-              </a>
-              .
-            </DialogDescription>
-          </div>
+          <DialogTitle className="text-2xl">Kekse gefällig?</DialogTitle>
+          <DialogDescription className="leading-relaxed">
+            Wir nutzen Cookies, um deine Bewertungen zu speichern und dir eine
+            bessere Erfahrung zu bieten. Mehr Infos findest du in unserer{" "}
+            <a
+              className="font-semibold text-primary underline-offset-4 hover:underline"
+              href={PUBLIC_PRIVACY_POLICY_PATH}
+            >
+              Datenschutzerklärung
+            </a>
+            .
+          </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-3 sm:gap-2">
+        <DialogFooter className="flex-row gap-2 sm:justify-center">
           <Button
-            className="flex-1 sm:flex-initial"
+            className="flex-1"
             onClick={() => handleConsent(false)}
             variant="outline"
           >
             Ablehnen
           </Button>
-          <Button
-            className="flex-1 sm:flex-initial"
-            onClick={() => handleConsent(true)}
-          >
+          <Button className="flex-1" onClick={() => handleConsent(true)}>
             Akzeptieren
           </Button>
         </DialogFooter>

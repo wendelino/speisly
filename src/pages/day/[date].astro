@@ -1,11 +1,15 @@
 ---
 // Speiseplan eines Tages. Nur gültige Daten im Fenster −365 … +14 Tage,
 // alles andere ist 404 (erzeugt so auch keine Cache-Einträge, siehe middleware).
-import DaySelector from "@/components/day-selector.astro";
-import FilterFab from "@/components/filter-fab.astro";
-import FilterHead from "@/components/meal/filter-head.astro";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+import DayHero from "@/components/day/day-hero.astro";
+import DaySelector from "@/components/day/day-selector.astro";
+import FilterFab from "@/components/filter/filter-fab.astro";
+import FilterHead from "@/components/filter/filter-head.astro";
 import MealList from "@/components/meal/meal-list.astro";
 import BaseLayout from "@/layouts/base-layout.astro";
+import { isoDayToLocalDate } from "@/lib/format-day";
 import { dayPolicy } from "@/server/cache-policy";
 import { parseDayParam, todayBerlin } from "@/server/dates";
 import { getMealsForDate } from "@/server/queries/meals";
@@ -27,9 +31,13 @@ const [groups, mensen] = await Promise.all([
 Astro.cache.set(dayPolicy(date, today));
 ---
 
-<BaseLayout mealAssets>
+<BaseLayout
+  mealAssets
+  title={`Speiseplan ${format(isoDayToLocalDate(date), "EEEE, dd.MM.yyyy", { locale: de })}`}
+>
   <FilterHead slot="head" />
-  <main class="bg-primary/5">
+  <main>
+    <DayHero date={date} today={today} />
     <DaySelector selected={date} today={today} />
     <MealList date={date} groups={groups} today={today} />
     <FilterFab mensen={mensen} />

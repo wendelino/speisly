@@ -1,0 +1,33 @@
+---
+// Fläche für Inhaltsblöcke. `soft` = getönt ohne Schatten, `plain` = nur Rahmen
+import type { HTMLAttributes } from "astro/types";
+import { cn } from "@/lib/utils";
+
+type Props = HTMLAttributes<"div"> & {
+  as?: "div" | "section" | "article" | "aside";
+  variant?: "default" | "soft" | "plain";
+  padding?: "none" | "sm" | "md" | "lg";
+};
+
+const {
+  as: Tag = "div",
+  variant = "default",
+  padding = "md",
+  class: className,
+  ...rest
+} = Astro.props;
+
+const VARIANTS = {
+  default: "bg-card shadow-soft ring-1 ring-border/70",
+  soft: "bg-muted/70",
+  plain: "bg-card ring-1 ring-border",
+};
+const PADDING = { none: "", sm: "p-3", md: "p-5 sm:p-6", lg: "p-6 sm:p-8" };
+---
+
+<Tag
+  class={cn("rounded-3xl", VARIANTS[variant], PADDING[padding], className)}
+  {...rest}
+>
+  <slot />
+</Tag>

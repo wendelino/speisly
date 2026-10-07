@@ -1,0 +1,37 @@
+---
+// Sterne (0–5, halbe Sterne ab x,5) aus dem Icon-Sprite. Die Seite braucht
+// das Sprite-Icon "star".
+import Icon from "@/components/icons/icon.astro";
+import { cn } from "@/lib/utils";
+
+type Props = { value: number; class?: string; size?: "sm" | "md" };
+const { value, class: className, size = "sm" } = Astro.props;
+const full = Math.floor(value);
+const half = value % 1 >= 0.5 && value < 5;
+const SIZE = { sm: "size-4", md: "size-5" }[size];
+const ON = `${SIZE} fill-gold text-gold`;
+const OFF = `${SIZE} fill-muted text-border`;
+---
+
+<span
+  aria-label={`${value.toFixed(1).replace(".", ",")} von 5 Sternen`}
+  class={cn("inline-flex gap-0.5", className)}
+  role="img"
+>
+  {
+    [1, 2, 3, 4, 5].map((star) =>
+      star <= full ? (
+        <Icon class={ON} name="star" />
+      ) : star === full + 1 && half ? (
+        <span class={cn("relative", SIZE)}>
+          <Icon class={cn(OFF, "absolute")} name="star" />
+          <span class="absolute inset-y-0 left-0 w-1/2 overflow-hidden">
+            <Icon class={ON} name="star" />
+          </span>
+        </span>
+      ) : (
+        <Icon class={OFF} name="star" />
+      )
+    )
+  }
+</span>

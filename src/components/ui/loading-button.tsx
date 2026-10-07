@@ -1,37 +1,29 @@
-import type { VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
-import { Button, type buttonVariants } from "@/components/ui/button";
+import type { ComponentProps } from "react";
+import { Button } from "./button";
 
-export default function LoadingButton({
-  className,
-  variant,
-  size,
+type LoadingButtonProps = ComponentProps<typeof Button> & {
+  loading: boolean;
+  loadingText?: string;
+};
+
+/** Button mit Ladezustand (Spinner + Text, deaktiviert) */
+export function LoadingButton({
   loading,
-  asChild = false,
   loadingText = "Laden...",
+  disabled,
+  children,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-    loading: boolean;
-    loadingText?: string;
-  }) {
+}: LoadingButtonProps) {
   return (
-    <Button
-      asChild={asChild}
-      className={className}
-      disabled={loading}
-      size={size}
-      variant={variant}
-      {...props}
-    >
+    <Button disabled={loading || disabled} {...props}>
       {loading ? (
         <>
           <Loader2 className="size-4 animate-spin" />
           {loadingText}
         </>
       ) : (
-        props.children
+        children
       )}
     </Button>
   );

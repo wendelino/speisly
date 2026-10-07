@@ -1,8 +1,11 @@
 ---
-// Prerendered (Astro-Default). Ersetzt src/app/(static)/datenschutz/page.tsx
-import Title from "@/components/astro/title.astro";
-import BackLayout from "@/layouts/back-layout.astro";
+// Prerendered (Astro-Default)
+import { ShieldCheck } from "@lucide/astro";
 import { CookiePreferencesButton } from "@/components/consent/cookie-preferences-button";
+import PageHeader from "@/components/layout/page-header.astro";
+import Card from "@/components/ui/card.astro";
+import Prose from "@/components/ui/prose.astro";
+import BackLayout from "@/layouts/back-layout.astro";
 ---
 
 <BackLayout
@@ -10,45 +13,35 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
   title="Datenschutzerklärung"
   withToasts
 >
-  <div>
-    <div class="mb-8">
-      <Title noBorder variant="h1">
-        Datenschutzerklärung
-      </Title>
-      <p class="text-muted-foreground">
-        Stand:{" "}
-        {new Date().toLocaleDateString("de-DE", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
-      </p>
-    </div>
-
-    <div class="prose prose-slate max-w-none space-y-8">
+  <PageHeader
+    intro={`Stand: ${new Date().toLocaleDateString("de-DE", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })}`}
+    title="Datenschutzerklärung"
+    tone="mint"
+  >
+    <ShieldCheck slot="icon" />
+  </PageHeader>
+  <Card padding="lg">
+    <Prose>
       <section>
-        <Title noBorder variant="h2">
-          1. Verantwortlicher
-        </Title>
-        <p class="mb-4">
+        <h2>1. Verantwortlicher</h2>
+        <p>
           Verantwortlich für die Datenverarbeitung auf dieser Website ist:
         </p>
-        <p class="mb-4 font-semibold">Speisly</p>
-        <p class="text-muted-foreground text-sm">
+        <p><strong>Speisly</strong></p>
+        <p class="muted">
           Bei Fragen zum Datenschutz können Sie uns jederzeit über unser{" "}
-          <a
-            class="text-primary underline hover:text-primary/80"
-            href="/kontakt"
-          >Kontaktformular</a>{" "}
+          <a href="/kontakt">Kontaktformular</a>{" "}
           erreichen.
         </p>
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          2. Allgemeine Hinweise zur Datenverarbeitung
-        </Title>
-        <p class="mb-4">
+        <h2>2. Allgemeine Hinweise zur Datenverarbeitung</h2>
+        <p>
           Diese Datenschutzerklärung informiert Sie über die Art, den Umfang
           und Zweck der Verarbeitung von personenbezogenen Daten auf unserer
           Website Speisly. Speisly ist eine Anwendung zur Anzeige von
@@ -63,22 +56,16 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          3. Cookies
-        </Title>
-        <p class="mb-6">
+        <h2>3. Cookies</h2>
+        <p>
           Unsere Website verwendet Cookies. Cookies sind kleine Textdateien,
           die auf Ihrem Endgerät gespeichert werden und bestimmte
           Informationen enthalten. Wir unterscheiden zwischen technisch
           notwendigen Cookies und Cookies, die eine Einwilligung erfordern.
         </p>
 
-        <div class="space-y-6">
-          <div>
-            <Title noBorder variant="h3">
-              3.1 Technisch notwendige Cookies
-            </Title>
-            <p class="mb-4">
+            <h3>3.1 Technisch notwendige Cookies</h3>
+            <p>
               Diese Cookies sind für die Grundfunktionen der Website
               erforderlich und können nicht deaktiviert werden. Sie werden in
               der Regel nur als Reaktion auf von Ihnen durchgeführte Aktionen
@@ -86,12 +73,8 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
               Setzen Ihrer Datenschutzeinstellungen, das Anmelden oder das
               Ausfüllen von Formularen).
             </p>
-            <div class="space-y-4">
-              <div>
-                <Title noBorder variant="h4">
-                  Filter-Präferenzen (Essenspräferenzen)
-                </Title>
-                <ul class="ml-4 list-inside list-disc space-y-1 text-sm">
+                <h4>Filter-Präferenzen (Essenspräferenzen)</h4>
+                <ul>
                   <li>
                     <strong>Cookie-Name:</strong> speisly_mensa_preferences
                   </li>
@@ -108,12 +91,8 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
                     der Website)
                   </li>
                 </ul>
-              </div>
-              <div>
-                <Title noBorder variant="h4">
-                  Vegetarischer Filter
-                </Title>
-                <ul class="ml-4 list-inside list-disc space-y-1 text-sm">
+                <h4>Vegetarischer Filter</h4>
+                <ul>
                   <li>
                     <strong>Cookie-Name:</strong> speisly_veggie_filter
                   </li>
@@ -130,12 +109,8 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
                     der Website)
                   </li>
                 </ul>
-              </div>
-              <div>
-                <Title noBorder variant="h4">
-                  Veganer Filter
-                </Title>
-                <ul class="ml-4 list-inside list-disc space-y-1 text-sm">
+                <h4>Veganer Filter</h4>
+                <ul>
                   <li>
                     <strong>Cookie-Name:</strong> speisly_vegan_filter
                   </li>
@@ -152,24 +127,14 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
                     der Website)
                   </li>
                 </ul>
-              </div>
-            </div>
-          </div>
 
-          <div>
-            <Title noBorder variant="h3">
-              3.2 Cookies mit Einwilligung
-            </Title>
-            <p class="mb-4">
+            <h3>3.2 Cookies mit Einwilligung</h3>
+            <p>
               Diese Cookies erfordern Ihre ausdrückliche Einwilligung und
               werden nur gesetzt, wenn Sie dieser zugestimmt haben.
             </p>
-            <div class="space-y-4">
-              <div>
-                <Title noBorder variant="h4">
-                  User-ID Cookie (Bewertungssystem)
-                </Title>
-                <ul class="ml-4 list-inside list-disc space-y-1 text-sm">
+                <h4>User-ID Cookie (Bewertungssystem)</h4>
+                <ul>
                   <li>
                     <strong>Cookie-Name:</strong> speisly_user_id
                   </li>
@@ -191,12 +156,8 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
                     können Ihre Einwilligung jederzeit widerrufen.
                   </li>
                 </ul>
-              </div>
-              <div>
-                <Title noBorder variant="h4">
-                  Cookie-Einwilligung
-                </Title>
-                <ul class="ml-4 list-inside list-disc space-y-1 text-sm">
+                <h4>Cookie-Einwilligung</h4>
+                <ul>
                   <li>
                     <strong>Cookie-Name:</strong> speisly_consent
                   </li>
@@ -213,15 +174,9 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
                     Einwilligung)
                   </li>
                 </ul>
-              </div>
-            </div>
-          </div>
 
-          <div>
-            <Title noBorder variant="h3">
-              3.3 Verwaltung von Cookies
-            </Title>
-            <p class="mb-4">
+            <h3>3.3 Verwaltung von Cookies</h3>
+            <p>
               Sie können Ihre Cookie-Einstellungen jederzeit über den
               Cookie-Banner ändern oder Cookies in den Einstellungen deines
               Browsers löschen. Bitte beachten Sie, dass das Löschen von
@@ -229,25 +184,18 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
               beeinträchtigen kann.
             </p>
             <CookiePreferencesButton client:idle />
-          </div>
-        </div>
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          4. Verarbeitung von IP-Adressen
-        </Title>
-        <p class="mb-4">
+        <h2>4. Verarbeitung von IP-Adressen</h2>
+        <p>
           Bei jedem Zugriff auf unsere Website werden IP-Adressen automatisch
           erfasst. Um Ihre Privatsphäre zu schützen, werden IP-Adressen nicht
           im Klartext gespeichert, sondern mittels SHA-256-Hashfunktion
           verschlüsselt (gehasht).
         </p>
-        <div class="mb-4 space-y-2">
-          <Title noBorder variant="h4">
-            Details zur IP-Adress-Verarbeitung:
-          </Title>
-          <ul class="ml-4 list-inside list-disc space-y-1 text-sm">
+          <h4>Details zur IP-Adress-Verarbeitung:</h4>
+          <ul>
             <li>
               <strong>Verarbeitung:</strong> IP-Adressen werden beim
               Serverzugriff automatisch erfasst
@@ -276,8 +224,7 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
               erforderlich sind
             </li>
           </ul>
-        </div>
-        <p class="text-muted-foreground text-sm">
+        <p class="muted">
           Durch die Verwendung von Hash-Funktionen können IP-Adressen nicht
           mehr direkt identifiziert werden. Dies stellt einen zusätzlichen
           Schutz Ihrer Privatsphäre dar.
@@ -285,25 +232,19 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          5. Bewertungssystem
-        </Title>
-        <p class="mb-4">
+        <h2>5. Bewertungssystem</h2>
+        <p>
           Wenn Sie Gerichte bewerten möchten, verwenden wir eine Kombination
           aus gehashten IP-Adressen und Cookie-Hashes, um sicherzustellen,
           dass jeder Nutzer nur einmal pro Gericht bewerten kann.
         </p>
-        <div class="mb-4 space-y-2">
-          <Title noBorder variant="h4">
-            Verarbeitete Daten:
-          </Title>
-          <ul class="ml-4 list-inside list-disc space-y-1 text-sm">
+          <h4>Verarbeitete Daten:</h4>
+          <ul>
             <li>Gehashte IP-Adresse (SHA-256)</li>
             <li>Gehashte Cookie-ID (SHA-256) - nur bei Einwilligung</li>
             <li>Bewertungsdaten (Sternebewertung, optional Kommentar)</li>
             <li>Zeitstempel der Bewertung</li>
           </ul>
-        </div>
         <p>
           <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO
           (Einwilligung) für die Verwendung von Cookies, Art. 6 Abs. 1 lit. f
@@ -313,115 +254,73 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          6. Ihre Rechte
-        </Title>
-        <p class="mb-4">
+        <h2>6. Ihre Rechte</h2>
+        <p>
           Sie haben nach der DSGVO verschiedene Rechte bezüglich Ihrer
           personenbezogenen Daten:
         </p>
-        <div class="space-y-4">
-          <div>
-            <Title noBorder variant="h4">
-              Recht auf Auskunft (Art. 15 DSGVO)
-            </Title>
-            <p class="text-muted-foreground text-sm">
+            <h4>Recht auf Auskunft (Art. 15 DSGVO)</h4>
+            <p class="muted">
               Sie haben das Recht, Auskunft über die von uns gespeicherten
               personenbezogenen Daten zu erhalten.
             </p>
-          </div>
-          <div>
-            <Title noBorder variant="h4">
-              Recht auf Berichtigung (Art. 16 DSGVO)
-            </Title>
-            <p class="text-muted-foreground text-sm">
+            <h4>Recht auf Berichtigung (Art. 16 DSGVO)</h4>
+            <p class="muted">
               Sie haben das Recht, die Berichtigung unrichtiger oder die
               Vervollständigung unvollständiger Daten zu verlangen.
             </p>
-          </div>
-          <div>
-            <Title noBorder variant="h4">
-              Recht auf Löschung (Art. 17 DSGVO)
-            </Title>
-            <p class="text-muted-foreground text-sm">
+            <h4>Recht auf Löschung (Art. 17 DSGVO)</h4>
+            <p class="muted">
               Sie haben das Recht, die Löschung Ihrer personenbezogenen Daten
               zu verlangen, sofern keine gesetzlichen Aufbewahrungspflichten
               bestehen.
             </p>
-          </div>
-          <div>
-            <Title noBorder variant="h4">
-              Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)
-            </Title>
-            <p class="text-muted-foreground text-sm">
+            <h4>Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)</h4>
+            <p class="muted">
               Sie haben das Recht, die Einschränkung der Verarbeitung Ihrer
               personenbezogenen Daten zu verlangen.
             </p>
-          </div>
-          <div>
-            <Title noBorder variant="h4">
-              Recht auf Datenübertragbarkeit (Art. 20 DSGVO)
-            </Title>
-            <p class="text-muted-foreground text-sm">
+            <h4>Recht auf Datenübertragbarkeit (Art. 20 DSGVO)</h4>
+            <p class="muted">
               Sie haben das Recht, Ihre personenbezogenen Daten in einem
               strukturierten, gängigen und maschinenlesbaren Format zu
               erhalten.
             </p>
-          </div>
-          <div>
-            <Title noBorder variant="h4">
-              Widerspruchsrecht (Art. 21 DSGVO)
-            </Title>
-            <p class="text-muted-foreground text-sm">
+            <h4>Widerspruchsrecht (Art. 21 DSGVO)</h4>
+            <p class="muted">
               Sie haben das Recht, der Verarbeitung Ihrer personenbezogenen
               Daten zu widersprechen, wenn die Verarbeitung auf Art. 6 Abs. 1
               lit. f DSGVO (berechtigtes Interesse) beruht.
             </p>
-          </div>
-          <div>
-            <Title noBorder variant="h4">
-              Widerruf der Einwilligung (Art. 7 Abs. 3 DSGVO)
-            </Title>
-            <p class="text-muted-foreground text-sm">
+            <h4>Widerruf der Einwilligung (Art. 7 Abs. 3 DSGVO)</h4>
+            <p class="muted">
               Sie haben das Recht, Ihre erteilte Einwilligung jederzeit zu
               widerrufen. Die Rechtmäßigkeit der aufgrund der Einwilligung bis
               zum Widerruf erfolgten Verarbeitung wird dadurch nicht berührt.
             </p>
-          </div>
-          <div>
-            <Title noBorder variant="h4">
-              Beschwerderecht (Art. 77 DSGVO)
-            </Title>
-            <p class="text-muted-foreground text-sm">
+            <h4>Beschwerderecht (Art. 77 DSGVO)</h4>
+            <p class="muted">
               Sie haben das Recht, sich bei einer Aufsichtsbehörde zu
               beschweren, wenn Sie der Ansicht sind, dass die Verarbeitung
               Ihrer personenbezogenen Daten gegen die DSGVO verstößt.
             </p>
-          </div>
-        </div>
-        <div class="mt-6">
-          <Title noBorder variant="h4">
-            Kontakt für Auskünfte:
-          </Title>
-          <p class="text-sm">
+          <h4>Kontakt für Auskünfte:</h4>
+          <p>
             Um Ihre Rechte auszuüben, wenden Sie sich bitte an den
             Verantwortlichen (siehe Abschnitt 1). Bitte geben Sie bei Ihrer
             Anfrage an, welche Daten betroffen sind und welche Rechte Sie
             ausüben möchten.
           </p>
-        </div>
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          7. Datensicherheit
-        </Title>
-        <p class="mb-4">
+        <h2>7. Datensicherheit</h2>
+        <p>
           Wir setzen technische und organisatorische Maßnahmen ein, um Ihre
           personenbezogenen Daten vor Verlust, Zerstörung, Manipulation oder
           unbefugtem Zugriff zu schützen. Dazu gehören:
         </p>
-        <ul class="ml-4 list-inside list-disc space-y-2 text-sm">
+        <ul>
           <li>
             Verschlüsselung von IP-Adressen mittels SHA-256 Hashfunktion
           </li>
@@ -435,15 +334,13 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          8. Speicherdauer
-        </Title>
-        <p class="mb-4">
+        <h2>8. Speicherdauer</h2>
+        <p>
           Wir speichern personenbezogene Daten nur so lange, wie es für die
           jeweiligen Zwecke erforderlich ist oder gesetzliche
           Aufbewahrungspflichten bestehen. Im Einzelnen:
         </p>
-        <ul class="ml-4 list-inside list-disc space-y-2 text-sm">
+        <ul>
           <li>
             <strong>Cookies:</strong> Maximal 365 Tage, danach werden sie
             automatisch gelöscht
@@ -457,21 +354,19 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
             Löschung beantragt wird
           </li>
         </ul>
-        <p class="mt-4 text-muted-foreground text-sm">
+        <p class="muted">
           Sie können jederzeit die Löschung Ihrer Daten verlangen (siehe
           Abschnitt 6).
         </p>
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          9. Weitergabe von Daten
-        </Title>
-        <p class="mb-4">
+        <h2>9. Weitergabe von Daten</h2>
+        <p>
           Wir geben Ihre personenbezogenen Daten grundsätzlich nicht an Dritte
           weiter. Ausnahmen bestehen nur:
         </p>
-        <ul class="ml-4 list-inside list-disc space-y-2 text-sm">
+        <ul>
           <li>
             wenn Sie ausdrücklich eingewilligt haben (Art. 6 Abs. 1 lit. a
             DSGVO)
@@ -485,7 +380,7 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
             von Rechtsansprüchen erforderlich ist (Art. 6 Abs. 1 lit. f DSGVO)
           </li>
         </ul>
-        <p class="mt-4">
+        <p>
           <strong>Hinweis:</strong> Wir nutzen Hosting-Dienste, die
           personenbezogene Daten im Auftrag verarbeiten können. Diese
           Dienstleister sind vertraglich verpflichtet, die Daten nur im Rahmen
@@ -495,9 +390,7 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
       </section>
 
       <section>
-        <Title noBorder variant="h2">
-          10. Änderungen dieser Datenschutzerklärung
-        </Title>
+        <h2>10. Änderungen dieser Datenschutzerklärung</h2>
         <p>
           Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit
           sie stets den aktuellen rechtlichen Anforderungen entspricht oder um
@@ -506,6 +399,6 @@ import { CookiePreferencesButton } from "@/components/consent/cookie-preferences
           Datenschutzerklärung.
         </p>
       </section>
-    </div>
-  </div>
+    </Prose>
+  </Card>
 </BackLayout>

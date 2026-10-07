@@ -1,60 +1,56 @@
 ---
-// Astro-Port von meal-serving-stats.tsx (Inhalt der Server Island)
+// Angebotshistorie eines Gerichts (Inhalt der Server Island). Icons inline
+// statt aus dem Sprite: Die Island wird separat geladen.
 import { CalendarDays } from "@lucide/astro";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { badgeVariants } from "@/components/ui/badge";
+import Meter from "@/components/ui/meter.astro";
+import Stat from "@/components/ui/stat.astro";
+import { toneAt } from "@/components/ui/tones";
 import { isoDayToLocalDate } from "@/lib/format-day";
-import { cn } from "@/lib/utils";
 import type { MealServingStats } from "@/server/queries/serving-stats";
 
 type Props = { stats: MealServingStats };
 const { totalServings, mensaCount, firstServed, lastServed, byMensa } =
   Astro.props.stats;
 
-const formatServingDate = (isoDay: string) =>
-  format(isoDayToLocalDate(isoDay), "dd.MM.yyyy", { locale: de });
-
-const items = [
-  { label: "An Mensen", value: String(mensaCount) },
-  ...(firstServed ? [{ label: "Erstmals", value: formatServingDate(firstServed) }] : []),
-  ...(lastServed ? [{ label: "Zuletzt", value: formatServingDate(lastServed) }] : []),
-];
+const formatDate = (isoDay: string, pattern = "dd.MM.yyyy") =>
+  format(isoDayToLocalDate(isoDay), pattern, { locale: de });
+const maxCount = Math.max(1, ...byMensa.map((entry) => entry.servingCount));
 ---
 
-<div class="relative space-y-4 rounded-lg border bg-muted p-5">
-  {
-    totalServings === 0 ? (
-      <p class="text-center text-muted-foreground text-sm">Noch keine Angebotsdaten vorhanden</p>
-    ) : (
-      <>
-        <span
-          class={cn(badgeVariants({ variant: "default" }), "-top-2 -right-2 absolute font-semibold")}
-          data-slot="badge"
-        >{`${totalServings} ${totalServings === 1 ? "Angebot" : "Angebote"}`}</span>
-        <div class="space-y-1 border-b pb-4">
-          {items.map((item) => (
-            <div class="flex items-center justify-between gap-4 py-1.5">
-              <span class="text-muted-foreground text-sm">{item.label}</span>
-              <span class="font-semibold text-sm tabular-nums">{item.value}</span>
+{
+  totalServings === 0 ? (
+    <p class="rounded-2xl bg-muted/60 p-5 text-center text-muted-foreground text-sm">
+      Noch keine Angebotsdaten vorhanden
+    </p>
+  ) : (
+    <div class="space-y-5">
+      <div class="grid grid-cols-3 gap-2">
+        <Stat label={totalServings === 1 ? "Angebot" : "Angebote"} value={String(totalServings)} />
+        <Stat label={mensaCount === 1 ? "Mensa" : "Mensen"} tone="mint" value={String(mensaCount)} />
+        {lastServed && <Stat label="zuletzt" tone="sun" value={formatDate(lastServed, "dd.MM.yy")} />}
+      </div>
+      {firstServed && (
+        <p class="flex items-center gap-1.5 text-muted-foreground text-sm">
+          <CalendarDays class="size-4" />
+          {`Erstmals am ${formatDate(firstServed)}`}
+        </p>
+      )}
+      <ul class="space-y-4">
+        {byMensa.map((entry, index) => (
+          <li>
+            <div class="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
+              <span class="truncate font-semibold">{entry.mensaName}</span>
+              <span class="shrink-0 font-bold font-display tabular-nums">{`${entry.servingCount}×`}</span>
             </div>
-          ))}
-        </div>
-        <div class="space-y-3">
-          <p class="flex items-center gap-1.5 font-medium text-sm"><CalendarDays class="size-4 text-muted-foreground" />Pro Mensa</p>
-          <ul class="space-y-2">
-            {byMensa.map((entry) => (
-              <li class="flex items-start justify-between gap-4 rounded-md border bg-background px-3 py-2">
-                <div class="min-w-0">
-                  <p class="truncate font-medium text-sm">{entry.mensaName}</p>
-                  <p class="text-muted-foreground text-xs">{`${formatServingDate(entry.firstServed)} – ${formatServingDate(entry.lastServed)}`}</p>
-                </div>
-                <span class="shrink-0 font-semibold text-sm tabular-nums">{`${entry.servingCount}×`}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </>
-    )
-  }
-</div>
+            <Meter tone={toneAt(index)} value={entry.servingCount / maxCount} />
+            <p class="mt-1 text-muted-foreground text-xs">
+              {`${formatDate(entry.firstServed)} – ${formatDate(entry.lastServed)}`}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}

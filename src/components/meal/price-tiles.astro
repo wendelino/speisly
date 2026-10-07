@@ -1,0 +1,39 @@
+---
+// Preise auf der Detailseite: Studierende hervorgehoben, dazu Mitarbeitende und Gäste
+import { formatEuro } from "@/lib/price";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  meal: Pick<Meal, "priceStud" | "priceWork" | "priceGuest">;
+  /** Teil der View Transition (lib/view-transitions.ts) */
+  vt?: boolean;
+};
+const { meal, vt = false } = Astro.props;
+
+const prices = [
+  { cents: meal.priceStud, label: "Student*in" },
+  { cents: meal.priceWork, label: "Mitarbeiter*in" },
+  { cents: meal.priceGuest, label: "Besucher*in" },
+];
+---
+
+<dl class="grid grid-cols-3 gap-2 sm:gap-3">
+  {
+    prices.map((price, index) => (
+      <div
+        class={cn(
+          "flex flex-col-reverse items-center rounded-2xl px-2 py-3 text-center",
+          index === 0
+            ? "-rotate-2 bg-primary text-primary-foreground shadow-pop"
+            : "bg-card shadow-soft ring-1 ring-border/70"
+        )}
+        data-vt={index === 0 && vt ? "price" : undefined}
+      >
+        <dt class="text-xs opacity-75">{price.label}</dt>
+        <dd class="font-bold font-display text-xl tabular-nums sm:text-2xl">
+          {formatEuro(price.cents)}<small class="ml-0.5 text-[0.7em]">€</small>
+        </dd>
+      </div>
+    ))
+  }
+</dl>

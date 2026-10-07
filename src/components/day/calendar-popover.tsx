@@ -10,14 +10,14 @@ import { $calendarOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
 
 type Props = {
-  /** der statische Kalender-Button aus day-selector.astro */
+  /** der Kalender-Button aus day-selector.astro */
   anchor: HTMLElement;
   /** ausgewählter Tag (`YYYY-MM-DD`) */
   selected: string;
 };
 
 /**
- * Kalender-Popover des Day-Selectors (wie bisher react-day-picker in einem
+ * Kalender-Popover der Tagesauswahl (react-day-picker in einem
  * modalen Radix-Popover). Wird erst beim ersten Öffnen geladen.
  */
 export function CalendarPopover({ anchor, selected }: Props) {

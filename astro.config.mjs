@@ -32,22 +32,22 @@ export default defineConfig({
   prefetch: { prefetchAll: false, defaultStrategy: "hover" },
   // Keine Remote-Domains für astro:assets: Gerichtsbilder werden beim Sync
   // vorberechnet (src/server/images), `/_image` rechnet nichts Fremdes.
-  // Schrift wie bisher in Produktion: Fließtext in der Systemschrift (Geist Sans
-  // war in der Next-Version nie aktiv, siehe globals.css), Geist Mono nur für
-  // `font-mono`. Self-hosted aus node_modules, kein Netzwerk beim Build.
+  // Fließtext in der Systemschrift, Überschriften und Preise in Bricolage
+  // Grotesque (eine variable Datei, Latin inkl. Umlaute und €). Self-hosted aus
+  // node_modules, kein Netzwerk beim Build.
   fonts: [
     {
       provider: fontProviders.local(),
-      name: "Geist Mono",
-      cssVariable: "--font-geist-mono",
-      fallbacks: ["monospace"],
+      name: "Bricolage Grotesque",
+      cssVariable: "--font-bricolage",
+      fallbacks: ["sans-serif"],
       options: {
         variants: [
           {
             src: [
-              "@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
+              "@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2",
             ],
-            weight: "100 900",
+            weight: "200 800",
             style: "normal",
           },
         ],

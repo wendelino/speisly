@@ -1,0 +1,27 @@
+---
+// Sprungmarken zu den Mensen des Tages. Vom Mensa-Filter ausgeblendete
+// Mensen verschwinden auch hier (data-mensa-jump, lib/filters/boot.ts).
+import Chip from "@/components/ui/chip.astro";
+import { TONES, toneAt } from "@/components/ui/tones";
+import { cn } from "@/lib/utils";
+
+type Props = { mensen: Mensa[] };
+const { mensen } = Astro.props;
+---
+
+{
+  mensen.length > 1 && (
+    <nav aria-label="Mensen" class="container-page mb-2" data-mensa-nav>
+      <ul class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-2 sm:-mx-6 sm:px-6">
+        {mensen.map((mensa, index) => (
+          <li data-mensa-id={mensa.id} data-mensa-jump>
+            <Chip href={`#mensa-${mensa.slug}`}>
+              <span class={cn("size-2 rounded-full", TONES[toneAt(index)].solid)} />
+              {mensa.name}
+            </Chip>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}

@@ -1,4 +1,4 @@
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Cookie, Loader2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { type ConsentState, readConsent } from "@/lib/cookies";
@@ -62,27 +62,23 @@ const ConsentRequired = ({
 }: ConsentRequiredProps) => (
   <div
     className={cn(
-      !disableStyling && "rounded-lg border bg-card p-8 shadow-lg",
-      "w-full max-w-md space-y-6 pt-2 text-center"
+      !disableStyling &&
+        "rounded-3xl bg-card p-8 shadow-soft ring-1 ring-border/70",
+      "w-full space-y-5 text-center"
     )}
   >
-    <div className="flex justify-center">
-      <div className="rounded-full bg-destructive/10 p-2">
-        <AlertCircle className="size-7 text-destructive" />
-      </div>
+    <div className="mx-auto inline-flex size-16 rotate-6 items-center justify-center rounded-[42%_58%_63%_37%/41%_44%_56%_59%] bg-rose-soft text-rose">
+      <Cookie className="size-8" />
     </div>
-
-    <div className="space-y-2">
-      <h2 className="font-bold text-xl tracking-tight">
+    <div className="space-y-1.5">
+      <h2 className="font-bold font-display text-xl">
         Zustimmung erforderlich
       </h2>
       <p className="text-muted-foreground text-sm">
-        Um diese Funktion zu nutzen, musst du uns deine Zustimmung für Cookies
-        geben.
+        Um Gerichte zu bewerten, brauchen wir deine Zustimmung für Cookies.
       </p>
     </div>
-
-    <Button className="w-full" onClick={onReset} variant="default">
+    <Button className="w-full" onClick={onReset}>
       Cookie-Einstellungen öffnen
     </Button>
   </div>

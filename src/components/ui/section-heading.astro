@@ -1,0 +1,27 @@
+---
+// Abschnittsüberschrift mit optionalem Icon (slot "icon") und Zusatz rechts (slot "aside")
+import type { HTMLAttributes } from "astro/types";
+import { cn } from "@/lib/utils";
+
+type Props = HTMLAttributes<"h2"> & { as?: "h2" | "h3" };
+const { as: Tag = "h2", class: className, ...rest } = Astro.props;
+const hasIcon = Astro.slots.has("icon");
+const hasAside = Astro.slots.has("aside");
+---
+
+<div class="mb-4 flex items-center justify-between gap-3">
+  <Tag
+    class={cn("flex items-center gap-2.5 font-bold text-xl sm:text-2xl", className)}
+    {...rest}
+  >
+    {
+      hasIcon && (
+        <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary [&_svg]:size-4.5">
+          <slot name="icon" />
+        </span>
+      )
+    }
+    <span><slot /></span>
+  </Tag>
+  {hasAside && <slot name="aside" />}
+</div>

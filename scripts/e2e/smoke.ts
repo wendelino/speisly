@@ -254,7 +254,7 @@ await check("Filter: eine Mensa auswählen zeigt nur diese", async () => {
 });
 
 await check("Tageswahl: Morgen", async () => {
-  await page.locator("[data-day-href]").nth(1).click();
+  await page.locator("[data-day]").nth(1).click();
   await page.waitForURL(DAY_URL);
   await page.waitForLoadState("networkidle");
   return new URL(page.url()).pathname;

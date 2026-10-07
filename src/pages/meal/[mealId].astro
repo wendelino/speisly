@@ -1,27 +1,25 @@
 ---
-// Detailseite eines Gerichts (ersetzt src/app/meal/[mealId]/page.tsx).
-// Mit ?mmid= zeigt sie die Zutaten dieser Ausgabe und erlaubt das Bewerten,
-// sonst die der neuesten Ausgabe. Die Angebotshistorie ist eine Server
-// Island und wird separat geladen und gecacht.
-import { UtensilsCrossed } from "@lucide/astro";
-import Title from "@/components/astro/title.astro";
-import IngredientBadge from "@/components/meal/ingredient-badge.astro";
-import IngredientsList from "@/components/meal/ingredients-list.astro";
+// Detailseite eines Gerichts. Mit ?mmid= zeigt sie die Zutaten dieser Ausgabe
+// und erlaubt das Bewerten, sonst die der neuesten Ausgabe. Die
+// Angebotshistorie ist eine Server Island und wird separat geladen und gecacht.
+import { FlaskConical, History, Sparkles } from "@lucide/astro";
 import {
   INGREDIENT_ICONS,
   type SpriteIconName,
 } from "@/components/icons/sprite-icons";
+import DietBadge from "@/components/meal/diet-badge.astro";
+import IngredientsList from "@/components/meal/ingredients-list.astro";
 import MealImage from "@/components/meal/meal-image.astro";
-import MealPrice from "@/components/meal/meal-price.astro";
-import MealTitle from "@/components/meal/meal-title.astro";
-import RatingButtonScript from "@/components/meal/rating-button-script.astro";
-import RatingStats from "@/components/meal/rating-stats.astro";
+import PriceTiles from "@/components/meal/price-tiles.astro";
 import ServingStatsSkeleton from "@/components/meal/serving-stats-skeleton.astro";
+import RatingButtonScript from "@/components/rating/rating-button-script.astro";
+import RatingSummary from "@/components/rating/rating-summary.astro";
 import ServingStats from "@/components/server-islands/serving-stats.astro";
-import { badgeVariants } from "@/components/ui/badge";
+import Badge from "@/components/ui/badge.astro";
+import Card from "@/components/ui/card.astro";
+import SectionHeading from "@/components/ui/section-heading.astro";
 import BackLayout from "@/layouts/back-layout.astro";
 import { visibleIngredientTypes } from "@/lib/ingredients";
-import { cn } from "@/lib/utils";
 import { mealPolicy } from "@/server/cache-policy";
 import { findMeal } from "@/server/queries/meal";
 import { getMealRatingStats } from "@/server/queries/ratings";
@@ -40,7 +38,6 @@ if (!meal) {
 }
 Astro.cache.set(mealPolicy(meal.id));
 
-// Beschreibung wie bisher (generateMetadata)
 const ratingText = ratingStats.avgRating.value
   ? ` - ${ratingStats.avgRating.value}/5 ⭐ (${ratingStats.ratingCount} Bewertungen)`
   : "";
@@ -58,70 +55,94 @@ const images = meal.imgPath
 const badgeTypes = visibleIngredientTypes(meal.flags);
 const spriteIcons: SpriteIconName[] = [
   ...new Set(badgeTypes.map((type) => INGREDIENT_ICONS[type])),
-  ...(meal.imgPath ? [] : (["image-off"] as const)),
+  ...(meal.imgPath ? [] : (["chef-hat"] as const)),
   "star",
   ...(mmid ? (["loader-circle"] as const) : []),
 ];
+// View Transition nur, wenn die Seite von einer Karte (mit ?mmid=) kommt
+const vt = Boolean(mmid);
 ---
 
 <BackLayout
-  mealAssets={spriteIcons}
   description={description}
+  mealAssets={spriteIcons}
   og={{ title: meal.name, description, images }}
   title={meal.name}
+  width="wide"
 >
   {mmid && <RatingButtonScript slot="head" />}
-  <div class="space-y-6">
-    <MealTitle h1 name={meal.name} subtitle={meal.subtitle} vt={Boolean(mmid)} />
-    <div class="px-8 py-2">
+  <article class="grid items-start gap-8 md:grid-cols-2 md:gap-12">
+    <div class="relative md:sticky md:top-6">
+      <div
+        aria-hidden="true"
+        class="-inset-3 sm:-inset-4 -z-10 absolute rotate-3 rounded-[2.5rem] bg-secondary/80"
+      >
+      </div>
       <MealImage
         alt={meal.name}
-        class="mx-auto w-full max-w-sm"
+        class="shadow-lift"
         priority
         src={meal.imgPath}
         view="detail"
-        vt={Boolean(mmid)}
+        vt={vt}
       />
     </div>
-    <div
-      class="flex flex-wrap gap-2"
-      data-vt={mmid ? "ingredients" : undefined}
-    >
-      {badgeTypes.map((type) => <IngredientBadge type={type} />)}
+
+    <div class="space-y-7">
+      <div class="space-y-3">
+        {
+          badgeTypes.length > 0 && (
+            <div class="flex flex-wrap gap-2" data-vt={vt ? "ingredients" : undefined}>
+              {badgeTypes.map((type) => <DietBadge size="lg" type={type} />)}
+            </div>
+          )
+        }
+        <h1
+          class="font-extrabold text-3xl leading-tight sm:text-4xl"
+          data-vt={vt ? "title" : undefined}
+        >
+          {`${meal.name} `}<span class="font-semibold text-muted-foreground">{meal.subtitle}</span>
+        </h1>
+      </div>
+
+      <PriceTiles meal={meal} vt={vt} />
+
+      {
+        meal.extras.length > 0 && (
+          <div>
+            <h2 class="mb-2.5 flex items-center gap-1.5 font-semibold text-muted-foreground text-sm">
+              <Sparkles class="size-4 text-sun" />
+              Dazu gibt’s
+            </h2>
+            <ul class="flex flex-wrap gap-2">
+              {meal.extras.map((extra) => (
+                <li><Badge class="px-3.5 py-1.5 text-sm" variant="sun">{extra}</Badge></li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+
+      <RatingSummary mealId={meal.id} mensaMealId={mmid} stats={ratingStats} />
     </div>
-    <div class="border-t pt-4">
-      <MealPrice expanded meal={meal} vt={Boolean(mmid)} />
-    </div>
+  </article>
 
-    <RatingStats mealId={meal.id} mensaMealId={mmid} stats={ratingStats} />
-
-    {
-      meal.extras.length > 0 && (
-        <>
-          <Title variant="h2">Beilagen</Title>
-          <ul class="flex flex-wrap gap-3">
-            {meal.extras.map((extra) => (
-              <li>
-                <span
-                  class={cn(badgeVariants({ variant: "secondary" }), "border border-primary bg-primary/10 px-4 py-1 font-medium text-sm")}
-                  data-slot="badge"
-                >{extra}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )
-    }
-
-    <Title variant="h2">Inhaltsstoffe</Title>
-    <IngredientsList ingredients={meal.ingredients} />
+  <div class="mt-8 grid items-start gap-6 md:mt-12 md:grid-cols-2">
+    <Card as="section" aria-labelledby="ingredients-title">
+      <SectionHeading id="ingredients-title">
+        <FlaskConical slot="icon" />
+        Inhaltsstoffe
+      </SectionHeading>
+      <IngredientsList ingredients={meal.ingredients} />
+    </Card>
+    <Card as="section" aria-labelledby="history-title">
+      <SectionHeading id="history-title">
+        <History slot="icon" />
+        Angebotshistorie
+      </SectionHeading>
+      <ServingStats mealId={meal.id} server:defer>
+        <ServingStatsSkeleton slot="fallback" />
+      </ServingStats>
+    </Card>
   </div>
-
-  <Title class="flex items-center gap-2" variant="h2">
-    <UtensilsCrossed class="size-4.5" />
-    <span class="font-semibold">Angebotshistorie</span>
-  </Title>
-  <ServingStats mealId={meal.id} server:defer>
-    <ServingStatsSkeleton slot="fallback" />
-  </ServingStats>
 </BackLayout>

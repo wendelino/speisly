@@ -4,7 +4,7 @@ import { PUBLIC_COOKIE_CONSENT_NAME } from "astro:env/client";
  * Cookie-Consent, gemeinsam für Browser und Server. Name und Format des
  * Cookies dürfen sich nicht ändern, sonst ist der Consent aller Nutzer weg.
  */
-export type ConsentCookie = { accepted: boolean; timestamp: string };
+type ConsentCookie = { accepted: boolean; timestamp: string };
 export type ConsentState = "pending" | "accepted" | "rejected";
 
 const ONE_YEAR_DAYS = 365;
@@ -32,7 +32,7 @@ export function parseConsent(raw: string | null | undefined): ConsentState {
 }
 
 /** Wert eines Cookies aus `document.cookie` (nur im Browser) */
-export function readCookie(name: string): string | null {
+function readCookie(name: string): string | null {
   if (typeof document === "undefined") {
     return null;
   }

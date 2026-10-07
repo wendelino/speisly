@@ -1,18 +1,10 @@
 import { actions } from "astro:actions";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Mail,
-  MessageSquare,
-  Send,
-  Sparkles,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Mail, Send, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
@@ -23,6 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Textarea } from "@/components/ui/textarea";
 import { FEEDBACK_MESSAGE } from "@/lib/feedback";
 
@@ -77,6 +70,11 @@ export function ContactForm({
         : { email: "", message: "", dsgvoConsent: false },
   });
 
+  const successText =
+    variant === "feedback"
+      ? "Super, danke für dein Feedback! 🎉"
+      : "Alles klar! Wir haben deine Nachricht erhalten und melden uns bald bei dir. ✨";
+
   const handleSubmit = async (data: FeedbackFormValues | ContactFormValues) => {
     setIsSubmitting(true);
     setSubmitError(null);
@@ -102,16 +100,9 @@ export function ContactForm({
       setSubmitSuccess(true);
       form.reset();
 
-      // Show toast notification
-      if (variant === "feedback") {
-        toast.success("Super, danke für dein Feedback! 🎉");
-      } else {
-        toast.success(
-          "Alles klar! Wir haben deine Nachricht erhalten und melden uns bald bei dir. ✨"
-        );
-      }
+      toast.success(successText);
 
-      // Reset success message after 5 seconds
+      // Erfolgsmeldung nach 5 Sekunden ausblenden
       setTimeout(() => {
         setSubmitSuccess(false);
       }, 5000);
@@ -129,22 +120,19 @@ export function ContactForm({
 
   return (
     <Form {...form}>
-      <form className="space-y-6" onSubmit={form.handleSubmit(handleSubmit)}>
+      <form className="space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
         {variant === "contact" && (
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Deine E-Mail-Adresse
-                </FormLabel>
+                <FormLabel>Deine E-Mail-Adresse</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+                    <Mail className="-translate-y-1/2 absolute top-1/2 left-4 size-4 text-muted-foreground" />
                     <Input
-                      className="pl-10"
+                      className="pl-11"
                       placeholder="deine.email@beispiel.de"
                       type="email"
                       {...field}
@@ -162,8 +150,7 @@ export function ContactForm({
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
+              <FormLabel>
                 {variant === "feedback" ? "Was denkst du?" : "Deine Nachricht"}
               </FormLabel>
               <FormControl>
@@ -173,7 +160,7 @@ export function ContactForm({
                       ? "Ich finde die Ladezeiten super! Aber ..."
                       : "Schreib uns einfach, was du auf dem Herzen hast. Wir hören gerne zu!"
                   }
-                  rows={8}
+                  rows={7}
                   {...field}
                 />
               </FormControl>
@@ -186,18 +173,18 @@ export function ContactForm({
             control={form.control}
             name="dsgvoConsent"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-1 text-sm">
+              <FormItem className="flex flex-row items-start gap-3 rounded-2xl bg-muted/60 p-3.5">
                 <FormControl>
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>
-                <div className="space-y-1 leading-none">
-                  <p className="inline cursor-pointer font-normal text-sm">
+                <div className="space-y-1 text-sm leading-snug">
+                  <p>
                     Ich habe die{" "}
                     <a
-                      className="inline text-primary underline hover:text-primary/80"
+                      className="font-semibold text-primary underline-offset-4 hover:underline"
                       href="/datenschutz"
                       rel="noopener noreferrer"
                       target="_blank"
@@ -214,46 +201,33 @@ export function ContactForm({
         )}
 
         {submitError ? (
-          <div className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-            <p className="text-destructive text-sm">{submitError}</p>
+          <div className="flex items-start gap-3 rounded-2xl bg-rose-soft p-4 text-rose">
+            <AlertCircle className="mt-0.5 size-5 shrink-0" />
+            <p className="text-sm">{submitError}</p>
           </div>
         ) : null}
 
         {submitSuccess ? (
-          <div className="flex items-start gap-3 rounded-lg border border-green-500/20 bg-green-500/10 p-4">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
-            <p className="text-green-600 text-sm dark:text-green-400">
-              {variant === "feedback"
-                ? "Super, danke für dein Feedback! 🎉"
-                : "Alles klar! Wir haben deine Nachricht erhalten und melden uns bald bei dir. ✨"}
-            </p>
+          <div className="flex animate-pop-in items-start gap-3 rounded-2xl bg-mint-soft p-4 text-mint">
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
+            <p className="font-medium text-sm">{successText}</p>
           </div>
         ) : null}
 
-        <Button
-          className="w-full gap-2"
-          disabled={isSubmitting}
+        <LoadingButton
+          className="w-full"
+          loading={isSubmitting}
+          loadingText="Wird verschickt..."
           size="lg"
           type="submit"
         >
-          {isSubmitting ? (
-            <>
-              <Send className="h-4 w-4 animate-pulse" />
-              Wird verschickt...
-            </>
-          ) : variant === "feedback" ? (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Feedback abschicken
-            </>
+          {variant === "feedback" ? (
+            <Sparkles className="size-4" />
           ) : (
-            <>
-              <Send className="h-4 w-4" />
-              Abschicken
-            </>
+            <Send className="size-4" />
           )}
-        </Button>
+          {variant === "feedback" ? "Feedback abschicken" : "Abschicken"}
+        </LoadingButton>
       </form>
     </Form>
   );

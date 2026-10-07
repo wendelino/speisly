@@ -1,3 +1,4 @@
+import { Cookie } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConsentDialog } from "./consent-dialog";
@@ -8,10 +9,11 @@ export function CookiePreferencesButton() {
   return (
     <>
       <Button
-        className="mt-4"
+        className="mt-2"
         onClick={() => setShowDialog(true)}
         variant="outline"
       >
+        <Cookie className="size-4" />
         Cookie-Einstellungen ändern
       </Button>
       {showDialog ? (
