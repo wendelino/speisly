@@ -10,6 +10,19 @@ import { createSyncHandler } from "@/server/sync-endpoint";
 
 const TOKEN = "test-token";
 const syncCalls: unknown[] = [];
+const imageCalls: unknown[] = [];
+let imagesResult: () => Promise<{
+  changedDates: string[];
+  changedMealIds: string[];
+  created: number;
+  failed: number;
+}> = () =>
+  Promise.resolve({
+    changedDates: [],
+    changedMealIds: [],
+    created: 0,
+    failed: 0,
+  });
 const POST = createSyncHandler({
   token: TOKEN,
   handleSync: (date) => {
@@ -18,6 +31,10 @@ const POST = createSyncHandler({
       changedDates: ["2026-10-07"],
       changedMealIds: ["m1"],
     });
+  },
+  syncImages: (range) => {
+    imageCalls.push(range);
+    return imagesResult();
   },
   prewarm: () => Promise.resolve([]),
 });
@@ -69,10 +86,46 @@ describe("POST /api/sync", () => {
     expect(body.changedDates).toEqual(["2026-10-07"]);
   });
 
+  test("pages with new image variants are invalidated too", async () => {
+    imagesResult = () =>
+      Promise.resolve({
+        changedDates: ["2026-10-07", "2026-10-08"],
+        changedMealIds: ["m2"],
+        created: 1,
+        failed: 0,
+      });
+    imageCalls.length = 0;
+    const { body, invalidated } = await call("today");
+    expect(imageCalls).toHaveLength(1);
+    expect(imageCalls[0]).toMatchObject({ from: expect.any(String) });
+    expect(invalidated).toEqual([
+      [
+        "day:2026-10-07",
+        "day:2026-10-08",
+        "meal:m1",
+        "meal-stats:m1",
+        "meal:m2",
+        "meal-stats:m2",
+      ],
+    ]);
+    expect(body.images).toEqual({ created: 1, failed: 0 });
+  });
+
+  test("failing image sync does not fail the sync", async () => {
+    imagesResult = () => Promise.reject(new Error("sharp kaputt"));
+    const { res, invalidated } = await call("week");
+    expect(res.status).toBe(200);
+    expect(invalidated).toEqual([
+      ["day:2026-10-07", "meal:m1", "meal-stats:m1"],
+    ]);
+  });
+
   test("midnight: no sync, only the home page", async () => {
     syncCalls.length = 0;
+    imageCalls.length = 0;
     const { body, invalidated } = await call("midnight");
     expect(syncCalls).toHaveLength(0);
+    expect(imageCalls).toHaveLength(0);
     expect(invalidated).toEqual([["home"]]);
     expect(body.invalidatedTags).toEqual(["home"]);
   });

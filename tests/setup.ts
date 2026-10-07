@@ -19,6 +19,7 @@ plugin({
         JWT_SECRET: env.JWT_SECRET ?? "test-secret",
         JWT_ALGORITHM: env.JWT_ALGORITHM ?? "HS256",
         API_BEARER_TOKEN: env.API_BEARER_TOKEN ?? "test-token",
+        IMAGE_DIR: env.IMAGE_DIR ?? "./data/img-test",
         TELEGRAM_BOT_TOKEN: undefined,
         TELEGRAM_CHAT_ID: undefined,
       },

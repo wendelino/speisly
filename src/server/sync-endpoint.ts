@@ -15,8 +15,22 @@ type Deps = {
   handleSync: (
     date: string | { from: string; to: string }
   ) => Promise<SyncResult>;
+  /** Bildvarianten für den Zeitraum erzeugen (src/server/images) */
+  syncImages: (range: {
+    from: string;
+    to: string;
+  }) => Promise<SyncResult & { created: number; failed: number }>;
   prewarm: (baseUrl: string) => Promise<unknown>;
 };
+
+function mergeResults(a: SyncResult, b: SyncResult): SyncResult {
+  return {
+    changedDates: [...new Set([...a.changedDates, ...b.changedDates])].sort(),
+    changedMealIds: [
+      ...new Set([...a.changedMealIds, ...b.changedMealIds]),
+    ].sort(),
+  };
+}
 
 function authorized(request: Request, expectedToken: string): boolean {
   const header = request.headers.get("authorization") ?? "";
@@ -55,15 +69,35 @@ export function createSyncHandler(deps: Deps) {
 
     const today = todayBerlin();
     let result: SyncResult = { changedDates: [], changedMealIds: [] };
+    const range =
+      scope === "today"
+        ? { from: today, to: today }
+        : scope === "week"
+          ? { from: today, to: addDays(today, 7) }
+          : null;
     try {
-      if (scope === "today") {
-        result = await deps.handleSync(today);
-      } else if (scope === "week") {
-        result = await deps.handleSync({ from: today, to: addDays(today, 7) });
+      if (range) {
+        result = await deps.handleSync(
+          range.from === range.to ? range.from : range
+        );
       }
     } catch (error) {
       logError({ message: "Error syncing data", ctx: { scope, error } });
       return Response.json({ error: "Error syncing data" }, { status: 500 });
+    }
+
+    // Bilder nach dem Sync und vor der Invalidierung: Seiten, die danach neu
+    // rendern, verweisen schon auf die Varianten. Fehler hier brechen den
+    // Sync nicht ab, die Seiten zeigen dann das Original.
+    let images = { created: 0, failed: 0 };
+    if (range) {
+      try {
+        const { created, failed, ...changed } = await deps.syncImages(range);
+        images = { created, failed };
+        result = mergeResults(result, changed);
+      } catch (error) {
+        logError({ message: "Error syncing images", ctx: { scope, error } });
+      }
     }
 
     // Startseite: läuft um Mitternacht ohnehin ab (maxAge); der Tag ist ein
@@ -83,6 +117,6 @@ export function createSyncHandler(deps: Deps) {
       })
     );
 
-    return Response.json({ scope, ...result, invalidatedTags: tags });
+    return Response.json({ scope, ...result, images, invalidatedTags: tags });
   };
 }

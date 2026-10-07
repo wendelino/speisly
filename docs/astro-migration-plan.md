@@ -15,7 +15,8 @@
 | 4. Speiseplan | ✅ erledigt – siehe „Umsetzungsnotizen Phase 4“ unten |
 | 5. Gericht-Detail | ✅ erledigt – siehe „Umsetzungsnotizen Phase 5“ unten |
 | 6. Caching | ✅ erledigt – siehe „Umsetzungsnotizen Phase 6“ unten |
-| 7.–9. | offen |
+| 7. Bilder | ✅ erledigt – siehe „Umsetzungsnotizen Phase 7“ unten |
+| 8.–9. | offen |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -639,3 +640,64 @@ Client-seitig sind alle Zielwerte aus §9 erreicht. Serverseitig fehlt noch der 
 **Messhinweis:** Der Host gehört zum Cache-Key. Über `compress-proxy.ts` (der `127.0.0.1` aufruft) landet der Browser deshalb in anderen Einträgen als der Lasttest (`localhost`), was dort einen MISS ergibt. In Produktion ist der Host konstant.
 
 **Grenzen des Memory-Caches:** pro Prozess, nach Neustart leer (Pre-Warm beim Start kommt mit Phase 9). Bei mehreren Instanzen bräuchte man einen gemeinsamen Provider; die `Astro.cache`-Aufrufe bleiben dabei gleich.
+
+## Umsetzungsnotizen Phase 7
+
+Umgesetzt ist **Option 1 aus §7: Optimierung beim Sync, nicht beim Request**. Im Request-Pfad läuft kein sharp mehr.
+
+**Ablauf** (`src/server/images/`):
+- **Wann:** `POST /api/sync` ruft nach dem Speiseplan-Sync `syncImages({ from, to })` auf, für `today` heute, für `week` heute bis +7.
+- **Was:** Für jedes Bild im Zeitraum, dem Varianten fehlen, lädt der Sync das Original **einmal** von meine-mensa.de. Daraus erzeugt er **AVIF und WebP in 400 und 800 px Breite**.
+- **Wohin:** `IMAGE_DIR/<key>-<breite>.<format>`. Der Default ist `./data/img`, in Produktion ein persistentes Volume.
+- **Key:** die ersten 16 Hex-Zeichen von SHA-256 über die Original-URL. Eine neue Bild-URL ergibt damit neue Dateinamen. Für das Cache-Busting braucht es kein neues DB-Feld wie ursprünglich geplant, also auch keine Migration.
+- **Sicherer Dateiwechsel:** Alle vier Dateien werden erst als `.tmp` geschrieben und dann umbenannt. Eine Seite sieht nie eine halbe Variante.
+- **Jedes Mal der ganze Zeitraum:** Geprüft wird nicht nur, was der Sync geändert hat. Ein fehlgeschlagener Download wird so beim nächsten Sync nachgeholt.
+- **Invalidierung:** Seiten, deren Bilder neue Varianten bekommen haben, werden invalidiert (`day:<datum>`, `meal:<id>`). Die Tage und Gerichte dazu werden mit dem Sync-Ergebnis zusammengeführt.
+- **Fehler:** Einzelne Bilder werden geloggt (ohne Telegram). Ein Fehler der ganzen Bildverarbeitung lässt den Sync trotzdem erfolgreich sein. Die Seite zeigt dann weiter das Original.
+- **Absicherung beim Download:**
+  - Nur `https://meine-mensa.de/mediathek/*` ist erlaubt.
+  - Timeout 20 s, höchstens 15 MB.
+  - Der Content-Type muss `image/*` sein.
+  - sharp bekommt `limitInputPixels`.
+
+**Rendern** (`meal-image.astro`):
+- **Mit Varianten:** `<picture class="contents">` mit `<source type="image/avif">` und `<source type="image/webp">`, jeweils mit `srcset` 400w/800w. `display: contents` lässt das Layout unverändert.
+- **Ohne Varianten:** das bisherige `<img>` mit der Original-URL. Das gilt z. B. für alte Tage vor dem Backfill.
+- **Kosten der Prüfung:** Ob es Varianten gibt, prüft `existsSync` nur beim Rendern. Wegen des Route Caches passiert das selten. Positive Treffer merkt sich der Prozess.
+- **Unverändert:** `priority` (`loading="eager"`, `fetchpriority="high"` für die ersten drei Karten), Skeleton und Einblenden.
+- **`sizes` an die echte Darstellung angepasst:**
+  - Karte: `(max-width: 768px) 30vw, 160px`. Next hatte hier `100vw`, damit lud das Handy ein Vielfaches der nötigen Pixel.
+  - Detailseite: `(max-width: 448px) 100vw, 384px`.
+- **Gemessen:**
+  - Handy (DPR 3): Karten laden die 400er-AVIF-Variante, die Detailseite die 800er.
+  - Desktop: überall 400er.
+
+**Auslieferung:** `GET /img/<datei>` (`src/pages/img/[file].ts`).
+- Gültig sind nur Namen, die zu `^[0-9a-f]{16}-(400|800)\.(avif|webp)$` passen, alles andere ist 404.
+- Header `Cache-Control: public, max-age=31536000, immutable`.
+- In Produktion kann der Reverse Proxy `IMAGE_DIR` auch direkt unter `/img/` ausliefern.
+
+**`image.domains` entfernt:** Vorher hätte `/_image?href=https://meine-mensa.de/…` sharp im Request-Pfad ausgelöst, für jeden beliebigen Aufrufer. Jetzt antwortet der Endpoint mit 403.
+
+**Encoder-Einstellung:** AVIF `quality: 55, effort: 2`, WebP `quality: 78`. Mit dem Default `effort: 4` dauerte ein Bild mit allen vier Varianten ~1,2 s, mit `effort: 2` sind es ~150 ms. Die Dateien sind dabei kaum größer (27 vs. 28 KB pro Bild, alle Varianten zusammen). Die Varianten entstehen nacheinander, damit laufende Requests nicht ausgebremst werden.
+
+**Backfill:** `scripts/images/backfill.ts [--since YYYY-MM-DD]` erzeugt die Varianten für alle Bilder in der DB. Der Sync deckt nur heute bis +7 ab. Das Skript überspringt Vorhandenes und darf mehrfach laufen.
+- **Beim Cutover (Phase 9):** einmal **vor** dem Start des Servers ausführen. Sonst bleiben vergangene Tage bis zum Ablauf ihres Caches beim Original.
+
+**Tests:** `src/server/images/images.test.ts` (Varianten, Maße, `srcset`, Wiederholung, Fehler ohne Dateireste, Allowlist, `syncImages` gegen die Seed-DB) und `tests/api-sync.test.ts` (Zusammenführen der Invalidierung, ein Bildfehler bricht den Sync nicht ab). Insgesamt 50 Tests.
+
+**E2E:** Den Seed-Gerichten habe ich Bild-URLs gegeben und die Varianten für die nächsten 8 Tage erzeugt (331 Bilder, 5,3 MB). Danach habe ich im Browser geprüft (Handy und Desktop):
+- Alle sichtbaren Bilder kommen als AVIF von `/img/`, das Skeleton ist ausgeblendet.
+- 0 externe Requests, 0 Konsolenfehler.
+- Die View Transition zur Detailseite funktioniert.
+- Vergangene Tage ohne Varianten zeigen das Original.
+
+**Lighthouse mit Bildern** (vorher hatte der Seed keine Bilder; Rohdaten `docs/perf/phase7-astro.json`):
+
+| Seite | Score | LCP | CLS | TTFB p95 (Cache) |
+|---|---|---|---|---|
+| `/` | 100 | 1,66 s | 0 | 11,5 ms |
+| `/day/<morgen>` | 100 | 1,53 s | 0 | 10,3 ms |
+| `/meal/<id>?mmid=…` | 100 | 1,51 s | 0 | 3,8 ms |
+
+Nicht testbar war hier der Download von echten meine-mensa.de-Bildern (aus der Umgebung gesperrt). Die Download-Logik ist mit einem Fake-`fetch` getestet.

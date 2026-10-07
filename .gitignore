@@ -15,6 +15,9 @@
 
 # astro
 /dist/
+
+# Bildvarianten (src/server/images)
+/data/
 /.astro/
 
 # next.js (bis Migration abgeschlossen)

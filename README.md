@@ -144,6 +144,16 @@ curl -X POST -H "Authorization: Bearer $API_BEARER_TOKEN" \
 
 Seiten werden im Speicher des Servers gecacht (Route Cache) und nach dem Sync gezielt invalidiert, siehe `src/server/cache-policy.ts`.
 
+### Bilder
+
+Gerichtsbilder werden beim Sync einmal von meine-mensa.de geladen und als AVIF/WebP (400 und 800 px) in `IMAGE_DIR` abgelegt (Default `./data/img`, in Produktion ein persistentes Volume). Ausgeliefert werden sie unter `/img/…` mit einjährigem Browser-Cache. Solange es für ein Bild keine Varianten gibt, zeigt die Seite das Original.
+
+Der Sync deckt heute bis +7 Tage ab. Für ältere Gerichte (z. B. nach dem Umzug oder dem Verlust des Volumes) einmalig vor dem Serverstart:
+
+```bash
+IMAGE_DIR=/data/img bun scripts/images/backfill.ts   # optional: --since 2026-01-01
+```
+
 ## 🤝 Beitragen
 
 Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Studierendenschaft der MLU Halle.

@@ -1,5 +1,6 @@
 import { API_BEARER_TOKEN } from "astro:env/server";
 import type { APIRoute } from "astro";
+import { syncImages } from "@/server/images";
 import { prewarm } from "@/server/prewarm";
 import { handleSync } from "@/server/sync";
 import { createSyncHandler } from "@/server/sync-endpoint";
@@ -7,6 +8,8 @@ import { createSyncHandler } from "@/server/sync-endpoint";
 /**
  * Daten-Sync mit meine-mensa.de und gezielte Cache-Invalidierung.
  * Ersetzt src/app/api/sync und src/app/api/revalidate.
+ *
+ * Danach erzeugt er fehlende Bildvarianten (src/server/images).
  *
  *   POST /api/sync?scope=today     Speiseplan von heute (tagsüber)
  *   POST /api/sync?scope=week      heute bis +7 Tage (nachts)
@@ -21,5 +24,6 @@ export const prerender = false;
 export const POST: APIRoute = createSyncHandler({
   token: API_BEARER_TOKEN,
   handleSync,
+  syncImages,
   prewarm,
 });

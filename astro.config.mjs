@@ -30,9 +30,8 @@ export default defineConfig({
   // Prefetch nur bei Nutzerabsicht (Hover/Touch) für Links mit
   // data-astro-prefetch – nicht wie bei Next alles im Viewport
   prefetch: { prefetchAll: false, defaultStrategy: "hover" },
-  image: {
-    domains: ["meine-mensa.de"],
-  },
+  // Keine Remote-Domains für astro:assets: Gerichtsbilder werden beim Sync
+  // vorberechnet (src/server/images), `/_image` rechnet nichts Fremdes.
   // Schrift wie bisher in Produktion: Fließtext in der Systemschrift (Geist Sans
   // war in der Next-Version nie aktiv, siehe globals.css), Geist Mono nur für
   // `font-mono`. Self-hosted aus node_modules, kein Netzwerk beim Build.
@@ -67,6 +66,12 @@ export default defineConfig({
       API_BEARER_TOKEN: envField.string({
         context: "server",
         access: "secret",
+      }),
+      // Bildvarianten aus dem Sync (persistentes Volume in Produktion)
+      IMAGE_DIR: envField.string({
+        context: "server",
+        access: "secret",
+        default: "./data/img",
       }),
       TELEGRAM_BOT_TOKEN: envField.string({
         context: "server",

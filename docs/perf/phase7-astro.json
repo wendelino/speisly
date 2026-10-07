@@ -1,0 +1,121 @@
+{
+  "label": "phase7-astro",
+  "base": "http://127.0.0.1:4321",
+  "browserBase": "http://localhost:4322",
+  "date": "2026-10-07T00:05:19.451Z",
+  "concurrency": 10,
+  "durationS": 5,
+  "pages": {
+    "home": {
+      "path": "/",
+      "server": {
+        "status": 200,
+        "htmlBytes": 315679,
+        "htmlGzipBytes": 22374,
+        "cacheControl": "public, max-age=0, must-revalidate",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 8936,
+          "rps": 1786,
+          "ttfbP50": 4.6,
+          "ttfbP95": 11.5,
+          "ttfbP99": 15.1,
+          "statuses": {
+            "200": 8936
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 651,
+        "jsFiles": 9,
+        "jsBytes": 8439,
+        "jsGzipBytes": 4615,
+        "followUpRequests": [],
+        "dbQueriesPerPageView": 1,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 100,
+        "fcpMs": 1153,
+        "lcpMs": 1656,
+        "tbtMs": 0,
+        "cls": 0,
+        "scriptTransferBytes": 7597
+      }
+    },
+    "day-future": {
+      "path": "/day/2026-10-08",
+      "server": {
+        "status": 200,
+        "htmlBytes": 315251,
+        "htmlGzipBytes": 22733,
+        "cacheControl": "public, max-age=0, must-revalidate",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 10227,
+          "rps": 2044,
+          "ttfbP50": 3.8,
+          "ttfbP95": 10.3,
+          "ttfbP99": 13.2,
+          "statuses": {
+            "200": 10227
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 650,
+        "jsFiles": 9,
+        "jsBytes": 8439,
+        "jsGzipBytes": 4615,
+        "followUpRequests": [],
+        "dbQueriesPerPageView": 1,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 100,
+        "fcpMs": 1142,
+        "lcpMs": 1533,
+        "tbtMs": 0,
+        "cls": 0,
+        "scriptTransferBytes": 7597
+      }
+    },
+    "meal-detail": {
+      "path": "/meal/meal_0000000000000000000000000uy?mmid=mm_00000000000000000000000000exi",
+      "server": {
+        "status": 200,
+        "htmlBytes": 28114,
+        "htmlGzipBytes": 5579,
+        "cacheControl": "public, max-age=0, must-revalidate",
+        "dbQueriesPerRequest": 0,
+        "load": {
+          "requests": 30802,
+          "rps": 6159,
+          "ttfbP50": 1.1,
+          "ttfbP95": 3.8,
+          "ttfbP99": 6.7,
+          "statuses": {
+            "200": 30802
+          }
+        }
+      },
+      "browser": {
+        "loadMs": 566,
+        "jsFiles": 7,
+        "jsBytes": 14515,
+        "jsGzipBytes": 6639,
+        "followUpRequests": [],
+        "dbQueriesPerPageView": 3,
+        "consoleErrors": []
+      },
+      "lighthouse": {
+        "score": 100,
+        "fcpMs": 1281,
+        "lcpMs": 1509,
+        "tbtMs": 0,
+        "cls": 0,
+        "scriptTransferBytes": 8929
+      }
+    }
+  }
+}

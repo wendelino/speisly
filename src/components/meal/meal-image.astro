@@ -1,9 +1,17 @@
 ---
 // Astro-Port von MealImage (meal-comp.tsx). Skeleton + Einblenden per CSS,
 // der Ladezustand kommt über ein Inline-onload statt React-State.
+// Bilder: vorberechnete AVIF/WebP-Varianten aus dem Sync (src/server/images),
+// solange es keine gibt, das Original von meine-mensa.de.
 import { ImageOff } from "@lucide/astro";
-import { mealImageSrc } from "@/lib/meal-image";
 import { cn } from "@/lib/utils";
+import { images } from "@/server/images";
+
+/**
+ * Karte: Bild = erste von drei Spalten der Karte (gemessen ~90 px auf dem
+ * Handy, ~105 px auf dem Desktop), siehe meal-card.astro
+ */
+const CARD_SIZES = "(max-width: 768px) 30vw, 160px";
 
 type Props = {
   src?: string | null;
@@ -22,9 +30,10 @@ const {
   class: className,
   priority = false,
   view = "card",
-  sizes = "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw",
+  sizes = CARD_SIZES,
   vtId,
 } = Astro.props;
+const variants = src ? images.variants(src) : null;
 ---
 
 <div
@@ -45,6 +54,13 @@ const {
           )}
           data-slot="skeleton"
         />
+        <picture class="contents">
+          {variants && (
+            <source sizes={sizes} srcset={variants.srcset.avif} type="image/avif" />
+          )}
+          {variants && (
+            <source sizes={sizes} srcset={variants.srcset.webp} type="image/webp" />
+          )}
         <img
           alt={alt}
           class="h-full w-full object-contain transition-opacity duration-300"
@@ -55,10 +71,11 @@ const {
           loading={priority ? "eager" : "lazy"}
           onerror="this.dataset.loaded=''"
           onload="this.dataset.loaded=''"
-          sizes={sizes}
-          src={mealImageSrc(src)}
+          sizes={variants ? undefined : sizes}
+          src={variants?.src ?? src}
           width="500"
         />
+        </picture>
       </>
     ) : (
       <div class="flex h-full w-full items-center justify-center rounded-lg border border-border/30 bg-muted/50">
@@ -74,7 +91,7 @@ const {
   img[data-meal-img]:not([data-loaded]) {
     opacity: 0;
   }
-  [data-meal-image]:has(> img[data-loaded]) > [data-slot="skeleton"] {
+  [data-meal-image]:has(img[data-loaded]) > [data-slot="skeleton"] {
     display: none;
   }
 </style>
