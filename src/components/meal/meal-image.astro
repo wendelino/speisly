@@ -6,10 +6,6 @@
 // Bilder: vorberechnete Varianten aus dem Sync (src/server/images), feste URL
 // je Ansicht (Karte klein, Detail groß), AVIF per <source>, WebP als Fallback
 // im <img>; ohne Varianten das Original.
-// Detailseite mit View Transition: `data-meal-small` ist die URL des
-// Kartenbilds. Kommt man per Transition von der Liste, zeigt
-// lib/view-transitions.ts erst dieses (Cache-Treffer) und tauscht auf das
-// große, sobald es geladen und dekodiert ist. Direktaufrufe bleiben unberührt.
 import Icon from "@/components/icons/icon.astro";
 import { cn } from "@/lib/utils";
 import { images } from "@/server/images";
@@ -32,17 +28,18 @@ const {
   view = "card",
   vt = false,
 } = Astro.props;
-const isCard = view === "card";
 const variants = src ? images.variants(src) : null;
-const urls = variants ? (isCard ? variants.small : variants.large) : null;
-const small = !isCard && vt && variants ? variants.small.avif : undefined;
+const urls = variants?.[view === "card" ? "small" : "large"];
 ---
 
 <div
   class={
-    isCard
+    view === "card"
       ? "m-img"
-      : cn("relative aspect-4/3 overflow-hidden rounded-lg", className)
+      : cn(
+          "relative aspect-4/3 overflow-hidden rounded-lg transition-all duration-300",
+          className
+        )
   }
   data-meal-image
   data-vt={vt ? "image" : undefined}
@@ -57,7 +54,6 @@ const small = !isCard && vt && variants ? variants.small.avif : undefined;
           alt={alt}
           class="m-photo"
           data-meal-img
-          data-meal-small={small}
           decoding="async"
           fetchpriority={priority ? "high" : undefined}
           height="375"
@@ -70,7 +66,7 @@ const small = !isCard && vt && variants ? variants.small.avif : undefined;
     ) : (
       <div class="m-noimg">
         <Icon
-          class={cn("size-16 text-border", isCard ? "" : "size-32")}
+          class={cn("size-16 text-border", view === "detail" ? "size-32" : "")}
           name="image-off"
         />
       </div>

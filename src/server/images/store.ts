@@ -11,12 +11,11 @@ import sharp from "sharp";
  * WebP in zwei Breiten ab: `<dir>/<key>-<breite>.<format>`. Die kleine Breite
  * nutzt die Karte (~90–105 CSS-px, auch auf 3×-Displays scharf genug), die
  * große die Detailseite (max. 384 CSS-px). Feste URLs je Ansicht statt
- * `srcset`: Mit `srcset` würde die Karte auf Retina die große Datei wählen,
- * und die Detailseite könnte die Karten-URL nicht sicher aus dem Cache
- * wiederverwenden (meal-image.astro). Der Key ist ein
- * Hash der Original-URL, eine neue URL ergibt also neue Dateinamen (Cache-
- * Busting ohne DB-Feld). Im Request-Pfad rechnet niemand mehr: Seiten fragen
- * nur ab, ob die Dateien existieren, `/img/<datei>` liefert sie aus.
+ * `srcset`: Mit `srcset` würde die Karte auf Retina die große Datei wählen.
+ * Der Key ist ein Hash der Original-URL, eine neue URL ergibt also neue
+ * Dateinamen (Cache-Busting ohne DB-Feld). Im Request-Pfad rechnet niemand
+ * mehr: Seiten fragen nur ab, ob die Dateien existieren, `/img/<datei>`
+ * liefert sie aus.
  */
 
 export const IMAGE_WIDTHS = [240, 800] as const;
