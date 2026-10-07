@@ -75,6 +75,7 @@ export default async function RootLayout({
       {isProduction ? (
         <head>
           <Script
+            data-performance="true"
             data-website-id="d6c44311-0001-4b07-a1c0-75bee4883fb1"
             defer
             src="https://stats.speisly.de/script.js"
