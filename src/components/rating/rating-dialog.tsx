@@ -17,8 +17,8 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { LoadingButton } from "@/components/ui/loading-button";
+import { labelClass } from "@/components/ui/variants";
 import { $ratingDialogOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
 
@@ -50,7 +50,7 @@ export function RatingDialog({
   existing,
   onChange,
 }: RatingDialogProps) {
-  const open = useAtom($ratingDialogOpen, false);
+  const open = useAtom($ratingDialogOpen);
   const [submitting, setSubmitting] = useState(false);
   const [value, setValue] = useState<number>(existing?.value ?? 0);
   const [valuePrice, setValuePrice] = useState<number | undefined>(
@@ -155,13 +155,7 @@ export function RatingDialog({
 
   return (
     <Drawer onOpenChange={setOpen} open={open}>
-      <DrawerContent
-        onCloseAutoFocus={(event) => {
-          // kein Radix-Trigger vorhanden: Fokus zurück auf den Bewerten-Button
-          event.preventDefault();
-          document.querySelector<HTMLElement>("[data-rate-button]")?.focus();
-        }}
-      >
+      <DrawerContent returnFocus="[data-rate-button]">
         <DrawerHeader>
           <DrawerTitle>Gericht bewerten</DrawerTitle>
           <DrawerDescription>
@@ -169,7 +163,7 @@ export function RatingDialog({
           </DrawerDescription>
         </DrawerHeader>
 
-        <ConsentProvider disableStyling>
+        <ConsentProvider>
           <DrawerBody className="space-y-4">
             <StarRating
               featured
@@ -195,7 +189,9 @@ export function RatingDialog({
               />
             </div>
             <div className="space-y-2 pt-1">
-              <Label htmlFor="comment">Kommentar (optional)</Label>
+              <label className={labelClass} htmlFor="comment">
+                Kommentar (optional)
+              </label>
               <Input
                 id="comment"
                 maxLength={500}

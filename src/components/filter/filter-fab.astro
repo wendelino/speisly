@@ -1,8 +1,8 @@
 ---
 // Schwebender Filter-Button mit Chips für aktive Filter. Die Chips und der
-// Punkt am Button erscheinen per CSS (lib/filters/boot.ts setzt die Attribute
-// vor dem ersten Paint), der Dialog wird erst bei Bedarf geladen
-// (filter-dialog.mount.tsx).
+// Punkt am Button erscheinen per CSS (styles/components.css; die Attribute
+// setzt lib/filters/boot.ts vor dem ersten Paint), der Dialog wird erst bei
+// Bedarf geladen (filter-dialog.mount.tsx).
 import { SlidersHorizontal } from "@lucide/astro";
 import Icon from "@/components/icons/icon.astro";
 import { INGREDIENT_ICONS } from "@/components/icons/sprite-icons";
@@ -57,40 +57,25 @@ const CHIP =
   type="application/json"
 />
 
-<style is:global>
-  [data-chip] {
-    display: none;
-  }
-  html[data-filter-vegan] [data-chip="vegan"],
-  html[data-filter-veggie] [data-chip="veggie"] {
-    display: inline-flex;
-  }
-  html[data-filter-active] [data-filter-dot] {
-    display: block;
-  }
-</style>
-
 <script>
+  import { loadOnIntent } from "@/lib/load-on-intent";
   import {
     setSelectedMensen,
     setShowVegan,
     setShowVeggie,
   } from "@/stores/filters";
 
-  const loadDialog = () => import("./filter-dialog.mount");
   const fab = document.querySelector<HTMLElement>("[data-filter-fab]");
   const mensen = JSON.parse(
     document.querySelector("[data-filter-mensen]")?.textContent ?? "[]"
   ) as Mensa[];
 
   if (fab) {
-    for (const event of ["pointerenter", "touchstart", "focus"]) {
-      fab.addEventListener(event, loadDialog, { once: true, passive: true });
-    }
-    fab.addEventListener("click", async () => {
-      const { openFilterDialog } = await loadDialog();
-      openFilterDialog(mensen);
-    });
+    loadOnIntent(
+      fab,
+      () => import("./filter-dialog.mount"),
+      ({ openFilterDialog }) => openFilterDialog(mensen)
+    );
   }
 
   const chipActions: Record<string, () => void> = {

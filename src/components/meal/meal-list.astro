@@ -6,13 +6,14 @@
  *  - vegetarisch/vegan: html[data-diet] blendet [data-meal] ohne Flag aus.
  * Alles, was vom Ernährungsfilter abhängt (Hinweise „X Gerichte ausgeblendet“,
  * Zähler, leere Bereiche), wird hier für jede Variante vorberechnet und über
- * data-only-diet / data-hide-diet umgeschaltet – ohne JS und ohne Flackern.
+ * data-only-diet / data-hide-diet umgeschaltet (styles/components.css) – ohne
+ * JS und ohne Flackern.
  */
 import Icon from "@/components/icons/icon.astro";
 import { TONES, toneAt } from "@/components/ui/tones";
 import Note from "@/components/ui/note.astro";
 import { cn } from "@/lib/utils";
-import EmptyState from "./empty-state.astro";
+import NoMeals from "./no-meals.astro";
 import MealCard from "./meal-card.astro";
 
 type Props = {
@@ -63,7 +64,7 @@ const prepared = groups.map((group, index) => {
 
 {
   groups.length === 0 ? (
-    <EmptyState date={date} today={today} type="date" />
+    <NoMeals date={date} today={today} type="date" />
   ) : (
     <>
       <div class="container-page space-y-8 pt-2 pb-8 md:pt-6" id="mealslist">
@@ -135,29 +136,11 @@ const prepared = groups.map((group, index) => {
         ))}
       </div>
       <div data-filter-empty>
-        <EmptyState type="filter" />
+        <NoMeals type="filter" />
       </div>
     </>
   )
 }
-
-<style is:global>
-  html[data-diet="veggie"] [data-meal]:not([data-veggie]),
-  html[data-diet="vegan"] [data-meal]:not([data-vegan]),
-  html[data-diet="veggie"] [data-hide-diet~="veggie"],
-  html[data-diet="vegan"] [data-hide-diet~="vegan"] {
-    display: none !important;
-  }
-  [data-only-diet],
-  [data-filter-empty] {
-    display: none;
-  }
-  /* revert-layer: zurück auf die Utility-Klassen des Elements (z. B. flex) */
-  html[data-diet="veggie"] [data-only-diet="veggie"],
-  html[data-diet="vegan"] [data-only-diet="vegan"] {
-    display: revert-layer;
-  }
-</style>
 
 <script>
   import { setSelectedMensen } from "@/stores/filters";

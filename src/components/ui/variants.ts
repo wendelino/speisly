@@ -15,7 +15,6 @@ export const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/70",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "rounded-md text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-5 has-[>svg]:px-4",
@@ -23,7 +22,6 @@ export const buttonVariants = cva(
         lg: "h-12 px-7 text-base has-[>svg]:px-6",
         icon: "size-10",
         "icon-sm": "size-8",
-        "icon-lg": "size-12",
       },
     },
     defaultVariants: {
@@ -33,25 +31,11 @@ export const buttonVariants = cva(
   }
 );
 
-/** Badge-Stile, für ui/badge.astro */
-export const badgeVariants = cva(
-  "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold text-xs [&>svg]:pointer-events-none [&>svg]:size-3",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground",
-        secondary: "bg-secondary text-secondary-foreground",
-        outline: "bg-card text-foreground ring-1 ring-border",
-        muted: "bg-muted text-muted-foreground",
-        sun: "bg-sun-soft text-sun",
-        mint: "bg-mint-soft text-mint",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-);
+/** Eingabefelder, gemeinsam für React (ui/input.tsx) und Astro-Formulare */
+export const fieldClass =
+  "w-full min-w-0 rounded-2xl border border-input bg-card px-4 text-base shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/80 focus-visible:border-primary/50 focus-visible:ring-[3px] focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 md:text-sm";
+
+/** Feldbeschriftung */
+export const labelClass = "block font-semibold text-sm leading-none";
 
 export type ButtonVariants = VariantProps<typeof buttonVariants>;
-export type BadgeVariants = VariantProps<typeof badgeVariants>;

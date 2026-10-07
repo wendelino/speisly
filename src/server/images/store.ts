@@ -18,10 +18,10 @@ import sharp from "sharp";
  * liefert sie aus.
  */
 
-export const IMAGE_WIDTHS = [240, 800] as const;
+const IMAGE_WIDTHS = [240, 800] as const;
 const [SMALL_WIDTH, LARGE_WIDTH] = IMAGE_WIDTHS;
-export const IMAGE_FORMATS = ["avif", "webp"] as const;
-export const IMAGE_ROUTE = "/img";
+const IMAGE_FORMATS = ["avif", "webp"] as const;
+const IMAGE_ROUTE = "/img";
 
 type Format = (typeof IMAGE_FORMATS)[number];
 

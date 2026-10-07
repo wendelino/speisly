@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./meal.css";
+@import "./components.css";
 
 /*
  * Design-Tokens. Farben in OKLCH: warme Creme-Flächen, die Marken-Beere als
@@ -66,6 +67,7 @@
   --animate-float: float 6s ease-in-out infinite;
   --animate-wiggle: wiggle 0.5s ease-in-out;
   --animate-pop-in: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-skeleton: skeleton 1.6s ease-in-out 0.3s infinite;
 
   @keyframes float {
     0%,
@@ -86,6 +88,11 @@
     }
     70% {
       transform: rotate(-5deg);
+    }
+  }
+  @keyframes skeleton {
+    50% {
+      background-color: var(--muted);
     }
   }
   @keyframes pop-in {
@@ -190,6 +197,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* organische Blob-Form für Icons (ui/icon-blob.astro, Consent-Dialog) */
+@utility rounded-blob {
+  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
 }
 
 @utility no-scrollbar {

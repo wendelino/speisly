@@ -1,6 +1,7 @@
 ---
-// „Jetzt bewerten“ / „Bewertung ändern“. Statisch gerendert; das Verhalten
-// steckt in rating-button-script.astro (im <head> eingebunden). Die Seite
+// „Jetzt bewerten“ / „Bewertung ändern“. Statisch gerendert; die Beschriftung
+// je Zustand schaltet styles/components.css um, das Verhalten steckt in
+// rating-button-script.astro (im <head> eingebunden). Die Seite
 // braucht die Sprite-Icons "star" und "loader-circle".
 import Icon from "@/components/icons/icon.astro";
 import { buttonVariants } from "@/components/ui/variants";
@@ -14,7 +15,6 @@ const classFor = (variant: "default" | "outline") =>
 ---
 
 <button
-  aria-expanded="false"
   aria-haspopup="dialog"
   class={classFor("default")}
   data-class-default={classFor("default")}
@@ -24,15 +24,3 @@ const classFor = (variant: "default" | "outline") =>
   data-rate-button="new"
   type="button"
 ><span data-rate-label="new"><Icon class="size-4 fill-current" name="star" />Jetzt bewerten</span><span data-rate-label="existing"><Icon class="size-4" name="star" />Bewertung ändern</span><span data-rate-label="loading"><Icon class="size-4 animate-spin" name="loader-circle" />Laden...</span></button>
-
-<style is:global>
-  /* Spans sind layout-neutral: Icon und Text stehen direkt im Button */
-  [data-rate-label] {
-    display: contents;
-  }
-  [data-rate-button="new"] [data-rate-label]:not([data-rate-label="new"]),
-  [data-rate-button="existing"] [data-rate-label]:not([data-rate-label="existing"]),
-  [data-rate-button="loading"] [data-rate-label]:not([data-rate-label="loading"]) {
-    display: none;
-  }
-</style>

@@ -1,14 +1,15 @@
 import { and, desc, eq } from "drizzle-orm";
+import { toIsoDay } from "@/lib/dates";
 import { meal, mensa, mensaMeal } from "@/lib/db/schema/schema";
 import { generateFlags } from "@/lib/meal-flags";
-import { toIsoDay } from "../dates";
 import { db } from "../db";
 import { logError } from "../log";
 
-/** Gericht inkl. Zutaten einer Ausgabe – ohne Bewertungen (eigene Query). */
-export type MealDetail = Omit<Meal, "mensaMealId" | "date"> & {
-  /** Die Ausgabe, deren Zutaten/Extras angezeigt werden */
-  mensaMealId: string;
+/**
+ * Gericht inkl. Zutaten einer Ausgabe (`mensaMealId`: die Ausgabe, deren
+ * Zutaten/Extras angezeigt werden) – ohne Bewertungen (eigene Query).
+ */
+export type MealDetail = Meal & {
   servedOn: string;
   mensaName: string;
 };

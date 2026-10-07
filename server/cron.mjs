@@ -14,7 +14,7 @@ export const SCHEDULES = [
   { cron: "1 0 * * *", scope: "midnight" },
 ];
 
-export const TIME_ZONE = "Europe/Berlin";
+const TIME_ZONE = "Europe/Berlin";
 
 /**
  * @param {{ baseUrl: string, token: string, scope: string, fetch?: typeof fetch }} options

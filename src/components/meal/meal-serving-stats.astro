@@ -2,12 +2,10 @@
 // Angebotshistorie eines Gerichts (Inhalt der Server Island). Icons inline
 // statt aus dem Sprite: Die Island wird separat geladen.
 import { CalendarDays } from "@lucide/astro";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
 import Meter from "@/components/ui/meter.astro";
 import Stat from "@/components/ui/stat.astro";
 import { toneAt } from "@/components/ui/tones";
-import { isoDayToLocalDate } from "@/lib/format-day";
+import { formatDay } from "@/lib/format";
 import type { MealServingStats } from "@/server/queries/serving-stats";
 
 type Props = { stats: MealServingStats };
@@ -15,7 +13,7 @@ const { totalServings, mensaCount, firstServed, lastServed, byMensa } =
   Astro.props.stats;
 
 const formatDate = (isoDay: string, pattern = "dd.MM.yyyy") =>
-  format(isoDayToLocalDate(isoDay), pattern, { locale: de });
+  formatDay(isoDay, pattern);
 const maxCount = Math.max(1, ...byMensa.map((entry) => entry.servingCount));
 ---
 

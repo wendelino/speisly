@@ -18,12 +18,15 @@ type ConsentDialogProps = {
   onConsent: (accepted: boolean) => void;
   /** ohne Entscheidung geschlossen (Wegziehen, Escape, Schließen-Button) */
   onDismiss: () => void;
+  /** Fokus nach dem Schließen (siehe DrawerContent) */
+  returnFocus?: string;
 };
 
 export function ConsentDialog({
   open,
   onConsent,
   onDismiss,
+  returnFocus,
 }: ConsentDialogProps) {
   const handleConsent = (accepted: boolean) => {
     writeConsent(accepted);
@@ -44,9 +47,9 @@ export function ConsentDialog({
       }}
       open={open}
     >
-      <DrawerContent>
+      <DrawerContent returnFocus={returnFocus}>
         <DrawerHeader className="items-center gap-3 pr-0 text-center">
-          <div className="-rotate-6 inline-flex size-20 animate-float items-center justify-center rounded-[42%_58%_63%_37%/41%_44%_56%_59%] bg-sun-soft text-sun">
+          <div className="-rotate-6 inline-flex size-20 animate-float items-center justify-center rounded-blob bg-sun-soft text-sun">
             <Cookie className="size-10" />
           </div>
           <DrawerTitle className="text-2xl">Kekse gefällig?</DrawerTitle>

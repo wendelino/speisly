@@ -8,11 +8,11 @@
   import { actions } from "astro:actions";
   import type { ExistingRating } from "@/components/rating/rating-dialog";
   import { readConsent } from "@/lib/cookies";
+  import { loadOnIntent } from "@/lib/load-on-intent";
 
   type UiState = "new" | "existing" | "loading";
 
   const button = document.querySelector<HTMLButtonElement>("[data-rate-button]");
-  const loadDialog = () => import("@/components/rating/rating-dialog.mount");
   let existing: ExistingRating | null = null;
 
   function setUi(state: UiState) {
@@ -53,21 +53,20 @@
         .catch(() => setUi("new"));
     }
 
-    for (const event of ["pointerenter", "touchstart", "focus"]) {
-      button.addEventListener(event, loadDialog, { once: true, passive: true });
-    }
-    button.addEventListener("click", async () => {
-      const { openRatingDialog } = await loadDialog();
-      openRatingDialog({
-        mealId,
-        mensaMealId,
-        existing,
-        onChange: (next) => {
-          existing = next;
-          setUi(next ? "existing" : "new");
-          refreshSummary();
-        },
-      });
-    });
+    loadOnIntent(
+      button,
+      () => import("@/components/rating/rating-dialog.mount"),
+      ({ openRatingDialog }) =>
+        openRatingDialog({
+          mealId,
+          mensaMealId,
+          existing,
+          onChange: (next) => {
+            existing = next;
+            setUi(next ? "existing" : "new");
+            refreshSummary();
+          },
+        })
+    );
   }
 </script>

@@ -57,14 +57,23 @@
   .m-img {
     @apply relative aspect-4/3 overflow-hidden rounded-2xl bg-white ring-1 ring-black/5;
   }
-  .m-skel {
-    @apply absolute inset-0 animate-pulse bg-muted;
-  }
   .m-photo {
-    @apply size-full object-contain p-1.5 transition-opacity duration-300;
+    @apply size-full object-contain p-1.5;
+  }
+  /* Skeleton als Hintergrund des Bildes, erst nach einer kurzen Verzögerung:
+     Bilder aus dem Cache sind bis dahin längst da und blitzen nicht auf */
+  .m-photo:not([data-loaded]) {
+    @apply animate-skeleton;
+  }
+  .m-photo[data-error] {
+    @apply invisible;
+  }
+  .m-noimg,
+  .m-img:has(.m-photo[data-error]) {
+    @apply bg-linear-to-br from-peach-soft to-sun-soft;
   }
   .m-noimg {
-    @apply flex size-full items-center justify-center bg-linear-to-br from-peach-soft to-sun-soft text-peach/50;
+    @apply flex size-full items-center justify-center text-peach/50;
   }
   /* Detailseite: mehr Luft um den Teller */
   .m-img-lg .m-photo {

@@ -1,6 +1,8 @@
 ---
-// Gerichtsbild mit Skeleton. `data-loaded` setzt ein einziger Load-Listener im
-// <head> (lib/meal-assets.ts) statt onload/onerror an jedem Bild.
+// Gerichtsbild. Das Bild ist nie ausgeblendet: Aus dem Cache steht es sofort
+// da, ohne Ein- und Ausblenden beim Seitenwechsel. Nur wenn es nach 300 ms
+// noch lädt, pulsiert ein Skeleton (meal.css .m-photo); `data-loaded` setzt
+// ein einziger Load-Listener im <head> (lib/meal-assets.ts).
 // Bilder: vorberechnete Varianten aus dem Sync (src/server/images), feste URL
 // je Ansicht (Karte klein, Detail groß), AVIF per <source>, WebP als Fallback
 // im <img>; ohne Varianten das Original. Ohne Bild: Kochmützen-Platzhalter.
@@ -34,18 +36,14 @@ const urls = variants?.[view === "card" ? "small" : "large"];
 
 <div
   class={view === "card" ? "m-img" : cn("m-img m-img-lg rounded-3xl", className)}
-  data-meal-image
   data-vt={vt ? "image" : undefined}
 >
   {
     src ? (
-      <>
-        <div class="m-skel" />
-        <picture class="contents">
-          {urls && <source srcset={urls.avif} type="image/avif" />}
-          <img alt={alt} class="m-photo" data-meal-img decoding="async" fetchpriority={priority ? "high" : undefined} height="375" loading={priority ? "eager" : "lazy"} src={urls?.webp ?? src} width="500" />
-        </picture>
-      </>
+      <picture class="contents">
+        {urls && <source srcset={urls.avif} type="image/avif" />}
+        <img alt={alt} class="m-photo" decoding={priority ? "sync" : "async"} fetchpriority={priority ? "high" : undefined} height="375" loading={priority ? "eager" : "lazy"} src={urls?.webp ?? src} width="500" />
+      </picture>
     ) : (
       <div class="m-noimg">
         <Icon class={view === "detail" ? "size-24 -rotate-12" : "size-10 -rotate-12"} name="chef-hat" />
@@ -53,12 +51,3 @@ const urls = variants?.[view === "card" ? "small" : "large"];
     )
   }
 </div>
-
-<style is:global>
-  img[data-meal-img]:not([data-loaded]) {
-    opacity: 0;
-  }
-  [data-meal-image]:has(img[data-loaded]) > .m-skel {
-    display: none;
-  }
-</style>

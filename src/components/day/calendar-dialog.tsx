@@ -8,13 +8,12 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { isoDayToLocalDate } from "@/lib/format-day";
+import { DAY_WINDOW } from "@/lib/dates";
+import { isoDayToLocalDate } from "@/lib/format";
 import { $calendarOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
 
 type Props = {
-  /** der Kalender-Button aus day-selector.astro (bekommt den Fokus zurück) */
-  trigger: HTMLElement;
   /** ausgewählter Tag (`YYYY-MM-DD`) */
   selected: string;
 };
@@ -22,33 +21,21 @@ type Props = {
 /**
  * Kalender der Tagesauswahl als Drawer (Handy: Bottom-Sheet zum Wegziehen).
  * Kein am Button verankertes Popover: nichts springt beim Öffnen. Wird erst
- * beim ersten Öffnen geladen.
+ * beim ersten Öffnen geladen. Tage außerhalb von DAY_WINDOW sind 404 und
+ * daher nicht wählbar.
  */
-// wie DAY_WINDOW in server/dates.ts: ältere/spätere Tage sind 404
-const PAST_DAYS = 365;
-const FUTURE_DAYS = 14;
-
-export function CalendarDialog({ trigger, selected }: Props) {
-  const open = useAtom($calendarOpen, false);
+export function CalendarDialog({ selected }: Props) {
+  const open = useAtom($calendarOpen);
   const selectedDate = isoDayToLocalDate(selected);
   const now = new Date();
-  const first = addDays(now, -PAST_DAYS);
-  const last = addDays(now, FUTURE_DAYS);
+  const first = addDays(now, -DAY_WINDOW.past);
+  const last = addDays(now, DAY_WINDOW.future);
 
   return (
-    <Drawer
-      onOpenChange={(value) => {
-        $calendarOpen.set(value);
-        trigger.setAttribute("aria-expanded", String(value));
-      }}
-      open={open}
-    >
+    <Drawer onOpenChange={(value) => $calendarOpen.set(value)} open={open}>
       <DrawerContent
         className="sm:max-w-sm"
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          trigger.focus();
-        }}
+        returnFocus="[data-calendar-trigger]"
       >
         <DrawerHeader>
           <DrawerTitle>Tag wählen</DrawerTitle>
@@ -59,7 +46,6 @@ export function CalendarDialog({ trigger, selected }: Props) {
         </DrawerHeader>
         <DrawerBody>
           <Calendar
-            captionLayout="dropdown"
             className="mx-auto [--cell-size:--spacing(10)]"
             defaultMonth={selectedDate}
             disabled={[

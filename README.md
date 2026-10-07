@@ -104,8 +104,10 @@ speisly/
 
 - **Tokens** (Farben, Radien, Schatten, Animationen) in `src/styles/globals.css`: warme Creme-Flächen, die Marken-Beere als Primärfarbe und verspielte Akzente (`sun`, `mint`, `sky`, `peach`, `rose`).
 - **Schrift:** Fließtext in der Systemschrift, Überschriften und Preise in [Bricolage Grotesque](https://fontsource.org/fonts/bricolage-grotesque) (self-hosted, `astro.config.mjs`).
-- **Bausteine** in `src/components/ui/`: Astro-Komponenten ohne JS (`button`, `badge`, `card`, `chip`, `tabs`/`tab-panel`, `stat`, `stars`, `meter`, `note`, `empty-state`, `icon-blob`, `prose`, `skeleton`) und die React-Primitives für Dialoge (shadcn/Radix). Button- und Badge-Stile kommen für beide aus `ui/variants.ts`.
-- **Gerichtskarten** nutzen kurze Klassen aus `src/styles/meal.css` (die Karte steht ~90× auf einer Seite, das hält das HTML klein).
+- **Bausteine** in `src/components/ui/`: Astro-Komponenten ohne JS (`button`, `badge`, `card`, `chip`, `field`, `tabs`/`tab-panel`, `stat`, `stars`, `meter`, `note`, `empty-state`, `icon-blob`, `prose`, `skeleton`) und die React-Primitives für Dialoge (shadcn/Radix). Button- und Feld-Stile kommen für beide aus `ui/variants.ts`.
+- **CSS:** ein gemeinsames Stylesheet für alle Seiten (`globals.css` mit `meal.css` und `components.css`), keine `<style>`-Blöcke in Komponenten. Gerichtskarten nutzen kurze Klassen aus `meal.css` (die Karte steht ~90× auf einer Seite, das hält das HTML klein).
+- **Kein React beim Laden:** Formulare (Kontakt, Feedback) sind natives HTML mit kleinem Script, alle React-Dialoge (Filter, Kalender, Bewerten, Cookie-Einstellungen) werden erst bei Bedarf geladen (`lib/load-on-intent.ts`, `components/on-demand.tsx`).
+- **Bilder** sind nie per CSS ausgeblendet: Aus dem Cache stehen sie beim Seitenwechsel sofort da. Ein Skeleton erscheint nur, wenn ein Bild nach 300 ms noch lädt. View Transitions laufen nur zwischen Gerichtskarte und Detailseite.
 - Speiseplan: Tagesauswahl und Mensa-Sprungmarken stehen in einer Toolbar, die ab `md` sticky ist (mit Markierung der sichtbaren Mensa); auf dem Handy sind die Mensa-Überschriften sticky.
 - Dialoge (`ui/drawer.tsx`) sind auf dem Handy Drawer: Bottom-Sheets, die sich wegziehen lassen (Feder-Animation mit [motion](https://motion.dev), Schließen ab 30 % Weg oder 400 px/s), auf Radix Dialog aufgebaut (Fokusfalle, Escape, Screenreader). Ab `sm` zentriert. Animationen respektieren `prefers-reduced-motion`. Keine Emojis in Texten.
 

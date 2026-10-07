@@ -3,12 +3,12 @@
  * ist für alle gleich (gecacht), der Filterzustand lebt in Cookies.
  *
  * `filterBoot` wird als Inline-Script im <head> ausgeführt (siehe
- * filter-head.astro), also vor dem ersten Paint – kein Flackern. Es setzt
- * `data-diet`, `data-filter-veggie/-vegan` und `data-filter-active` auf
+ * layouts/plan-layout.astro), also vor dem ersten Paint – kein Flackern. Es
+ * setzt `data-diet`, `data-filter-veggie/-vegan` und `data-filter-active` auf
  * <html> und erzeugt CSS für die Mensa-Auswahl (Gruppen und Sprungmarken)
- * und den Mensa-Chip. Außerdem stellt
- * es `window.speislyFilters` bereit, über das der Store (stores/filters.ts)
- * Änderungen anwendet. Die Funktion muss in sich geschlossen sein, weil sie
+ * und den Mensa-Chip (statische Regeln: styles/components.css). Außerdem
+ * stellt es `window.speislyFilters` bereit, über das der Store
+ * (stores/filters.ts) Änderungen anwendet. Die Funktion muss in sich geschlossen sein, weil sie
  * per `toString()` inline eingebettet wird.
  */
 export function filterBoot() {

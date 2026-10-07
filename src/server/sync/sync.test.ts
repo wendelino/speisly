@@ -5,8 +5,8 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { inArray, sql } from "drizzle-orm";
+import { addDays, todayBerlin } from "@/lib/dates";
 import { meal, mealUpdate } from "@/lib/db/schema/schema";
-import { addDays, todayBerlin } from "../dates";
 import { db } from "../db";
 import { handleSync } from "./index";
 import type { MeineMensaFoodPlanItem, MeineMensaResponse } from "./types";

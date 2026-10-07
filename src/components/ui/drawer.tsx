@@ -139,6 +139,14 @@ function useScrollableBodies(): (root: HTMLElement | null) => void {
   }, []);
 }
 
+function focusTarget(target: HTMLElement | string): void {
+  const element =
+    typeof target === "string"
+      ? document.querySelector<HTMLElement>(target)
+      : target;
+  element?.focus();
+}
+
 function offscreenY(): number {
   return typeof window === "undefined" ? 1000 : window.innerHeight;
 }
@@ -171,12 +179,19 @@ type DrawerContentProps = Omit<
   "asChild" | "forceMount"
 > & {
   showCloseButton?: boolean;
+  /**
+   * Bekommt nach dem Schließen den Fokus (Element oder Selektor): der Button
+   * außerhalb von React, der den Drawer geöffnet hat – Radix kennt ihn nicht.
+   */
+  returnFocus?: HTMLElement | string;
 };
 
 function DrawerContent({
   className,
   children,
   showCloseButton = true,
+  returnFocus,
+  onCloseAutoFocus,
   ...props
 }: DrawerContentProps) {
   const { open, onOpenChange } = useDrawer();
@@ -224,6 +239,14 @@ function DrawerContent({
     }
   };
 
+  const closeAutoFocus = (event: Event) => {
+    onCloseAutoFocus?.(event);
+    if (returnFocus !== undefined && !event.defaultPrevented) {
+      event.preventDefault();
+      focusTarget(returnFocus);
+    }
+  };
+
   const sheetMotion = {
     initial: { y: offscreenY() },
     animate: { y: 0 },
@@ -261,7 +284,12 @@ function DrawerContent({
                 />
               )}
             </DialogOverlay>
-            <DialogContent asChild forceMount {...props}>
+            <DialogContent
+              asChild
+              forceMount
+              onCloseAutoFocus={closeAutoFocus}
+              {...props}
+            >
               <m.div
                 className={cn(
                   "fixed z-50 flex flex-col bg-background shadow-lift outline-none",

@@ -3,7 +3,7 @@
 import PageHeader from "@/components/layout/page-header.astro";
 import Card from "@/components/ui/card.astro";
 import type { Tone } from "@/components/ui/tones";
-import { ContactForm } from "./contact-form";
+import ContactForm from "./contact-form.astro";
 
 type Props = {
   variant: "contact" | "feedback";
@@ -19,5 +19,5 @@ const { variant, heading, intro, tone } = Astro.props;
   <slot name="icon" slot="icon" />
 </PageHeader>
 <Card class="mx-auto max-w-xl" padding="lg">
-  <ContactForm client:idle variant={variant} />
+  <ContactForm variant={variant} />
 </Card>

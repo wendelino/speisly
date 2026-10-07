@@ -11,13 +11,6 @@ export const TONES = {
 export type Tone = keyof typeof TONES;
 
 /** Wechselnde Töne für Listen (z. B. eine Farbe pro Mensa) */
-const TONE_CYCLE: readonly Tone[] = [
-  "primary",
-  "sun",
-  "mint",
-  "sky",
-  "peach",
-  "rose",
-];
+const TONE_CYCLE = Object.keys(TONES) as Tone[];
 export const toneAt = (index: number): Tone =>
   TONE_CYCLE[index % TONE_CYCLE.length];

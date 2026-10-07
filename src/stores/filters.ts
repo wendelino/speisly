@@ -13,13 +13,13 @@ type FilterRuntime = {
   cookies: { mensen: string; veggie: string; vegan: string };
 };
 
-export const EMPTY_FILTERS: FilterState = {
+const EMPTY_FILTERS: FilterState = {
   selectedMensen: [],
   showVeggie: false,
   showVegan: false,
 };
 
-/** Vom Inline-Script in filter-head.astro bereitgestellt (nur im Browser) */
+/** Vom Inline-Script in layouts/plan-layout.astro bereitgestellt (nur im Browser) */
 function runtime(): FilterRuntime | undefined {
   return typeof window === "undefined"
     ? undefined

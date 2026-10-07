@@ -1,27 +1,16 @@
 ---
-// Pill als Link oder Button, optional aktiv (z. B. Mensa-Sprungmarken)
+// Pill-Link (z. B. Mensa-Sprungmarken); aktiv-Stile per Klasse von außen
 import type { HTMLAttributes } from "astro/types";
 import { cn } from "@/lib/utils";
 
-type Props = Omit<HTMLAttributes<"a"> & HTMLAttributes<"button">, "type"> & {
-  href?: string;
-  active?: boolean;
-};
-
-const { href, active = false, class: className, ...rest } = Astro.props;
-const classes = cn(
-  "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-1.5 font-semibold text-sm ring-1 transition-[background-color,color,box-shadow,translate] duration-200 hover:-translate-y-0.5 active:scale-95",
-  active
-    ? "bg-primary text-primary-foreground shadow-pop ring-primary"
-    : "bg-card text-foreground shadow-soft ring-border/70 hover:ring-primary/30",
-  className
-);
+type Props = HTMLAttributes<"a">;
+const { class: className, ...rest } = Astro.props;
 ---
 
-{
-  href ? (
-    <a class={classes} href={href} {...rest}><slot /></a>
-  ) : (
-    <button class={classes} type="button" {...rest}><slot /></button>
-  )
-}
+<a
+  class={cn(
+    "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-card px-3.5 py-1.5 font-semibold text-foreground text-sm shadow-soft ring-1 ring-border/70 transition-[background-color,color,box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:ring-primary/30 active:scale-95",
+    className
+  )}
+  {...rest}
+><slot /></a>

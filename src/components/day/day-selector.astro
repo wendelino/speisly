@@ -4,11 +4,9 @@
 // calendar-dialog.mount.tsx). Ein Tag außerhalb der Leiste steht im
 // Kalender-Button.
 import { CalendarDays } from "@lucide/astro";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
-import { isoDayToLocalDate } from "@/lib/format-day";
+import { addDays } from "@/lib/dates";
+import { formatDay, isoDayToLocalDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { addDays } from "@/server/dates";
 
 type Props = {
   /** heute in Berlin (`YYYY-MM-DD`) */
@@ -29,11 +27,9 @@ for (let d = addDays(today, 1); days.length < DAYS_IN_STRIP; d = addDays(d, 1)) 
   }
 }
 const isCustomDate = !days.includes(selected);
-const fullDate = (day: string) =>
-  format(isoDayToLocalDate(day), "EEEE, d. MMMM", { locale: de });
-const weekday = (day: string) =>
-  format(isoDayToLocalDate(day), "EEEEEE", { locale: de });
-const dayOfMonth = (day: string) => format(isoDayToLocalDate(day), "dd");
+const fullDate = (day: string) => formatDay(day, "EEEE, d. MMMM");
+const weekday = (day: string) => formatDay(day, "EEEEEE");
+const dayOfMonth = (day: string) => formatDay(day, "dd");
 
 const PILL =
   "relative flex h-14 min-w-0 flex-col items-center justify-center rounded-2xl leading-tight outline-none ring-1 transition-[background-color,color,box-shadow] duration-200 focus-visible:ring-[3px] focus-visible:ring-ring md:w-14";
@@ -68,7 +64,6 @@ const pillState = (active: boolean) =>
     }
     <li class="min-w-0 md:ml-1">
       <button
-        aria-expanded="false"
         aria-haspopup="dialog"
         aria-label={isCustomDate ? `Kalender, gewählt: ${fullDate(selected)}` : "Anderen Tag im Kalender wählen"}
         class={cn(PILL, "w-full", isCustomDate ? pillState(true) : "bg-transparent text-primary ring-border hover:bg-accent")}
@@ -94,19 +89,16 @@ const pillState = (active: boolean) =>
 </nav>
 
 <script>
+  import { loadOnIntent } from "@/lib/load-on-intent";
+
   const nav = document.getElementById("day-selector");
   const trigger = nav?.querySelector<HTMLElement>("[data-calendar-trigger]");
-  const loadCalendar = () => import("./calendar-dialog.mount");
 
   if (nav && trigger) {
-    // React + Kalender bei Nutzerabsicht vorladen, beim Klick öffnen
-    for (const event of ["pointerenter", "touchstart", "focus"]) {
-      trigger.addEventListener(event, loadCalendar, { once: true, passive: true });
-    }
-    trigger.addEventListener("click", async () => {
-      const { openCalendar } = await loadCalendar();
-      trigger.setAttribute("aria-expanded", "true");
-      openCalendar(trigger, nav.dataset.selected as string);
-    });
+    loadOnIntent(
+      trigger,
+      () => import("./calendar-dialog.mount"),
+      ({ openCalendar }) => openCalendar(nav.dataset.selected as string)
+    );
   }
 </script>

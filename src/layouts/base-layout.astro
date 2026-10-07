@@ -7,7 +7,6 @@ import Footer from "@/components/layout/footer.astro";
 import SiteHeader from "@/components/layout/site-header.astro";
 import { mealImageBoot } from "@/lib/meal-assets";
 import { viewTransitionBoot } from "@/lib/view-transitions";
-import { Toaster } from "@/components/ui/toaster";
 import "@/styles/globals.css";
 
 type Props = {
@@ -20,11 +19,6 @@ type Props = {
     description?: string;
     images?: { url: string; width?: number; height?: number; alt?: string }[];
   };
-  /**
-   * Toaster (sonner) als Island einbinden. Nur auf Seiten, die Toasts zeigen,
-   * damit alle anderen Seiten ohne React-Runtime auskommen.
-   */
-  withToasts?: boolean;
   /**
    * SVG-Sprite für components/icons/icon.astro. Seiten mit Gerichten
    * bekommen außerdem den Load-Listener für die Gerichtsbilder.
@@ -43,7 +37,6 @@ const {
   title,
   description = DEFAULT_DESCRIPTION,
   og = {},
-  withToasts = false,
   mealAssets = false,
 } = Astro.props;
 const fullTitle = title ? `${title} | Speisly` : "Speisly";
@@ -119,6 +112,5 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <SiteHeader />
     <div class="flex-1"><slot/></div>
     <Footer/>
-    {withToasts && <Toaster client:idle position="top-right" />}
   </body>
 </html>

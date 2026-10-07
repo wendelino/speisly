@@ -1,5 +1,5 @@
 import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from "astro:env/server";
-import { format } from "date-fns";
+import { TIME_ZONE } from "@/lib/dates";
 
 /**
  * Escaped Sonderzeichen für Telegrams (Legacy-)Markdown. Ohne Escaping lehnt
@@ -11,9 +11,16 @@ export function escapeMarkdown(text: string): string {
   return text.replace(MARKDOWN_SPECIAL, "\\$1");
 }
 
+const timestamp = () =>
+  new Date().toLocaleString("de-DE", {
+    timeZone: TIME_ZONE,
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
 const template = (message: string) =>
-  `*Speilsy Nachricht*
-*T:* ${format(new Date(), "dd.MM.yyyy - HH:mm")}\n
+  `*Speisly Nachricht*
+*T:* ${timestamp()}\n
 ${escapeMarkdown(message)}
 `;
 

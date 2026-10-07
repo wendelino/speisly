@@ -5,7 +5,7 @@
 import { CalendarX2, SearchX } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
 import EmptyState from "@/components/ui/empty-state.astro";
-import { formatIsoDay } from "@/lib/format-day";
+import { formatRelativeDay } from "@/lib/format";
 
 type Props = {
   type?: "date" | "filter";
@@ -17,7 +17,7 @@ type Props = {
 
 const { type = "date", date, today } = Astro.props;
 
-const day = date && today ? formatIsoDay(date, today, "EEEE, dd.MM.yy") : null;
+const day = date && today ? formatRelativeDay(date, today) : null;
 const isFilter = type === "filter";
 const title = isFilter ? "Nichts gefunden" : "Die Küche bleibt kalt";
 const description = isFilter

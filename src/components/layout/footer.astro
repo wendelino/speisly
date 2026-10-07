@@ -2,8 +2,7 @@
 // Fußzeile: Wellenkante, Marke, Links und Feedback-Aufruf. Kein Client-JS.
 import { Heart, MessageCircleHeart } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
-// gehasht unter /_astro/ (immutable): bleibt beim Seitenwechsel im Cache
-import logoUrl from "@/assets/logo.png?url&no-inline";
+import Brand from "./brand.astro";
 
 const LINKS = [
   { href: "/", label: "Speiseplan" },
@@ -28,18 +27,7 @@ const LINKS = [
   <div class="container-page grid gap-10 py-12 md:grid-cols-[1.2fr_1fr_1.2fr] md:items-start">
     <div class="space-y-3">
       <a class="inline-flex items-center gap-2.5" href="/">
-        <img
-          alt=""
-          class="size-10 rounded-[0.6rem] shadow-soft"
-          decoding="async"
-          height="40"
-          loading="lazy"
-          src={logoUrl}
-          width="40"
-        >
-        <span class="font-bold font-display text-xl">
-          Speisly<span class="text-primary">.de</span>
-        </span>
+        <Brand />
       </a>
       <p class="max-w-xs text-muted-foreground leading-relaxed">
         Die Speisepläne der Mensen in Halle – schnell, übersichtlich und mit

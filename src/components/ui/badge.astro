@@ -1,10 +1,14 @@
 ---
+// Kleines Etikett in einem Farbton (z. B. Beilagen auf der Detailseite)
 import type { HTMLAttributes } from "astro/types";
 import { cn } from "@/lib/utils";
-import { type BadgeVariants, badgeVariants } from "./variants";
+import { TONES, type Tone } from "./tones";
 
-type Props = BadgeVariants & HTMLAttributes<"span">;
-const { variant, class: className, ...rest } = Astro.props;
+type Props = HTMLAttributes<"span"> & { tone?: Tone };
+const { tone = "primary", class: className, ...rest } = Astro.props;
 ---
 
-<span class={cn(badgeVariants({ variant }), className)} {...rest}><slot /></span>
+<span
+  class={cn("inline-flex w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold text-xs", TONES[tone].soft, TONES[tone].text, className)}
+  {...rest}
+><slot /></span>

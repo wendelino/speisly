@@ -391,7 +391,7 @@ await check("Kontaktformular (mit DSGVO-Einwilligung)", async () => {
     .first()
     .fill("smoke@example.org");
   await page.locator("textarea").fill("Smoke-Test: bitte ignorieren.");
-  await page.locator('button[role="checkbox"]').click();
+  await page.locator('input[type="checkbox"]').check();
   await page.locator('button[type="submit"]').click();
   await page.getByText(CONTACT_SENT_TEXT).first().waitFor();
 });

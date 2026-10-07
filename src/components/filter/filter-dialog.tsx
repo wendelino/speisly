@@ -12,13 +12,13 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
+  $filters,
   setSelectedMensen,
   setShowVegan,
   setShowVeggie,
 } from "@/stores/filters";
 import { $filterDialogOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
-import { useFilterState } from "@/stores/use-filters";
 
 type Diet = "all" | "veggie" | "vegan";
 
@@ -53,8 +53,8 @@ const DIETS: {
  * den Filter-Button benutzt (filter-fab.astro).
  */
 export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
-  const { selectedMensen, showVeggie, showVegan } = useFilterState();
-  const open = useAtom($filterDialogOpen, false);
+  const { selectedMensen, showVeggie, showVegan } = useAtom($filters);
+  const open = useAtom($filterDialogOpen);
   const diet: Diet = showVegan ? "vegan" : showVeggie ? "veggie" : "all";
 
   const selectDiet = (value: Diet) => {
@@ -72,13 +72,7 @@ export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
 
   return (
     <Drawer onOpenChange={(v) => $filterDialogOpen.set(v)} open={open}>
-      <DrawerContent
-        onCloseAutoFocus={(event) => {
-          // kein Radix-Trigger vorhanden: Fokus zurück auf den Filter-Button
-          event.preventDefault();
-          document.querySelector<HTMLElement>("[data-filter-fab]")?.focus();
-        }}
-      >
+      <DrawerContent returnFocus="[data-filter-fab]">
         <DrawerHeader>
           <DrawerTitle>Filter</DrawerTitle>
           <DrawerDescription>

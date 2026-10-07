@@ -1,5 +1,5 @@
 import { defineMiddleware, sequence } from "astro:middleware";
-import { parseDayParam } from "@/server/dates";
+import { parseDayParam } from "@/lib/dates";
 
 const DAY_ROUTE = /^\/day\/([^/]+)\/?$/;
 

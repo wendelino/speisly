@@ -7,7 +7,8 @@ declare type MealFlags = {
   isSmall: boolean;
 };
 
-declare type DB_Meal = {
+/** Gericht einer Ausgabe (Mensa + Tag) */
+declare type Meal = {
   id: string;
   mensaMealId: string;
   name: string;
@@ -18,10 +19,6 @@ declare type DB_Meal = {
   priceStud: number;
   priceWork: number;
   priceGuest: number;
-  date: Date;
-};
-
-declare type Meal = DB_Meal & {
   flags: MealFlags;
 };
 

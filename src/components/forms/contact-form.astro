@@ -1,0 +1,232 @@
+---
+// Kontakt- bzw. Feedback-Formular: native Felder, die Prüfung mit eigenen
+// Meldungen und der Versand (Astro Action feedback.submit) stecken im Script
+// unten – ohne React.
+import {
+  CircleAlert,
+  CircleCheck,
+  LoaderCircle,
+  Mail,
+  Send,
+  Sparkles,
+} from "@lucide/astro";
+import Field from "@/components/ui/field.astro";
+import { buttonVariants, fieldClass } from "@/components/ui/variants";
+import { FEEDBACK_MESSAGE } from "@/lib/feedback";
+import { cn } from "@/lib/utils";
+
+type Props = { variant: "contact" | "feedback" };
+const { variant } = Astro.props;
+const isContact = variant === "contact";
+const successText = isContact
+  ? "Danke! Wir haben deine Nachricht erhalten und melden uns bald."
+  : "Danke für dein Feedback!";
+const STATUS = "flex items-start gap-3 rounded-2xl p-4 text-sm";
+---
+
+<form class="space-y-5" data-contact-form data-success={successText} novalidate>
+  {
+    isContact && (
+      <Field id="email" label="Deine E-Mail-Adresse">
+        <div class="relative">
+          <Mail class="-translate-y-1/2 pointer-events-none absolute top-1/2 left-4 size-4 text-muted-foreground" />
+          <input
+            aria-describedby="email-error"
+            autocomplete="email"
+            class={cn(fieldClass, "h-11 py-2 pl-11")}
+            id="email"
+            maxlength="255"
+            name="email"
+            placeholder="deine.email@beispiel.de"
+            type="email"
+          />
+        </div>
+      </Field>
+    )
+  }
+
+  <Field id="message" label={isContact ? "Deine Nachricht" : "Was denkst du?"}>
+    <textarea
+      aria-describedby="message-error"
+      class={cn(fieldClass, "field-sizing-content block min-h-28 py-3")}
+      id="message"
+      maxlength={FEEDBACK_MESSAGE.max}
+      name="message"
+      placeholder={isContact
+        ? "Schreib uns einfach, was du auf dem Herzen hast. Wir hören gerne zu!"
+        : "Ich finde die Ladezeiten super! Aber ..."}
+      rows="7"
+    ></textarea>
+  </Field>
+
+  {
+    isContact && (
+      <div class="space-y-2 rounded-2xl bg-muted/60 p-3.5">
+        <div class="flex items-start gap-3 text-sm leading-snug">
+          <input
+            aria-describedby="consent-error"
+            class="mt-px size-5 shrink-0 cursor-pointer accent-primary"
+            id="consent"
+            name="consent"
+            type="checkbox"
+          />
+          <label for="consent">
+            Ich habe die{" "}
+            <a
+              class="font-semibold text-primary underline-offset-4 hover:underline"
+              href="/datenschutz"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Datenschutzerklärung
+            </a>{" "}
+            gelesen und stimme der Verarbeitung meiner Daten zu.
+          </label>
+        </div>
+        <p class="pl-8 font-medium text-destructive text-sm" hidden id="consent-error"></p>
+      </div>
+    )
+  }
+
+  <div role="status">
+    <div class={cn(STATUS, "animate-pop-in bg-mint-soft font-medium text-mint")} data-status="success" hidden>
+      <CircleCheck class="mt-0.5 size-5 shrink-0" />
+      <p></p>
+    </div>
+    <div class={cn(STATUS, "bg-rose-soft text-rose")} data-status="error" hidden>
+      <CircleAlert class="mt-0.5 size-5 shrink-0" />
+      <p></p>
+    </div>
+  </div>
+
+  <button class={cn(buttonVariants({ size: "lg" }), "w-full")} type="submit">
+    <span class="contents" data-idle>
+      {isContact ? <Send class="size-4" /> : <Sparkles class="size-4" />}
+      {isContact ? "Abschicken" : "Feedback abschicken"}
+    </span>
+    <span class="contents" data-busy hidden>
+      <LoaderCircle class="size-4 animate-spin" />
+      Wird verschickt...
+    </span>
+  </button>
+</form>
+
+<script>
+  import { actions } from "astro:actions";
+  import { FEEDBACK_MESSAGE } from "@/lib/feedback";
+
+  type Control = HTMLInputElement | HTMLTextAreaElement;
+
+  const GENERIC_ERROR =
+    "Da ist etwas schiefgelaufen. Bitte versuch es noch einmal.";
+  // wie z.email() der Action: mit Top-Level-Domain
+  const EMAIL = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
+
+  /** Fehlermeldung eines Felds, leer = in Ordnung */
+  function problem(control: Control): string {
+    const value = control.value.trim();
+    if (control.name === "email") {
+      if (!value) {
+        return "Deine E-Mail-Adresse fehlt noch.";
+      }
+      return EMAIL.test(value)
+        ? ""
+        : "Das sieht nicht nach einer gültigen E-Mail-Adresse aus.";
+    }
+    if (control.name === "message") {
+      return value.length < FEEDBACK_MESSAGE.min
+        ? `Bitte schreib mindestens ${FEEDBACK_MESSAGE.min} Zeichen.`
+        : "";
+    }
+    if (control instanceof HTMLInputElement && control.type === "checkbox") {
+      return control.checked ? "" : "Bitte stimme der Datenschutzerklärung zu.";
+    }
+    return "";
+  }
+
+  for (const form of document.querySelectorAll<HTMLFormElement>(
+    "form[data-contact-form]"
+  )) {
+    const controls = [...form.querySelectorAll<Control>("[name]")];
+    const submit = form.querySelector<HTMLButtonElement>("[type=submit]");
+    let validateOnInput = false;
+    let hideSuccess: ReturnType<typeof setTimeout> | undefined;
+
+    /** Prüft ein Feld und zeigt bzw. entfernt seine Meldung */
+    const validate = (control: Control) => {
+      const message = problem(control);
+      if (message) {
+        control.setAttribute("aria-invalid", "true");
+      } else {
+        control.removeAttribute("aria-invalid");
+      }
+      const output = document.getElementById(`${control.id}-error`);
+      if (output) {
+        output.textContent = message;
+        output.hidden = !message;
+      }
+      return !message;
+    };
+
+    const showStatus = (kind: "success" | "error" | null, text = "") => {
+      clearTimeout(hideSuccess);
+      for (const box of form.querySelectorAll<HTMLElement>("[data-status]")) {
+        const active = box.dataset.status === kind;
+        box.hidden = !active;
+        const output = box.querySelector("p");
+        if (output) {
+          output.textContent = active ? text : "";
+        }
+      }
+    };
+
+    const setBusy = (busy: boolean) => {
+      if (!submit) {
+        return;
+      }
+      submit.disabled = busy;
+      submit.querySelector("[data-idle]")?.toggleAttribute("hidden", busy);
+      submit.querySelector("[data-busy]")?.toggleAttribute("hidden", !busy);
+    };
+
+    // nach dem ersten Absenden live nachprüfen, damit Meldungen verschwinden
+    form.addEventListener("input", (event) => {
+      if (validateOnInput) {
+        validate(event.target as Control);
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      validateOnInput = true;
+      const invalid = controls.filter((control) => !validate(control));
+      if (invalid.length > 0) {
+        invalid[0].focus();
+        return;
+      }
+
+      const data = new FormData(form);
+      setBusy(true);
+      showStatus(null);
+      try {
+        const { error } = await actions.feedback.submit({
+          message: String(data.get("message")),
+          email: data.get("email")?.toString(),
+        });
+        if (error) {
+          const internal = error.code === "INTERNAL_SERVER_ERROR";
+          showStatus("error", internal ? error.message : GENERIC_ERROR);
+          return;
+        }
+        form.reset();
+        validateOnInput = false;
+        showStatus("success", form.dataset.success);
+        hideSuccess = setTimeout(() => showStatus(null), 5000);
+      } catch {
+        showStatus("error", GENERIC_ERROR);
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+</script>

@@ -6,6 +6,7 @@
 // Die Seite braucht das Sprite-Icon "star".
 import Meter from "@/components/ui/meter.astro";
 import Stars from "@/components/ui/stars.astro";
+import { formatDecimal } from "@/lib/format";
 import RatingButton from "./rating-button.astro";
 
 type Props = {
@@ -17,7 +18,6 @@ type Props = {
 
 const { mealId, stats, mensaMealId } = Astro.props;
 const { ratingCount, avgRating } = stats;
-const format = (value: number) => value.toFixed(1).replace(".", ",");
 
 const categories = [
   { label: "Preis-Leistung", value: avgRating.value_price },
@@ -41,10 +41,10 @@ const categories = [
       <div class="space-y-5" data-rating-summary>
         <div class="flex items-center gap-4">
           <p class="font-display font-extrabold text-5xl text-primary tabular-nums leading-none">
-            {format(avgRating.value)}
+            {formatDecimal(avgRating.value)}
           </p>
           <div class="space-y-1">
-            <Stars size="md" value={avgRating.value} />
+            <Stars value={avgRating.value} />
             <p class="text-muted-foreground text-sm">
               {`aus ${ratingCount} ${ratingCount === 1 ? "Bewertung" : "Bewertungen"}`}
             </p>
@@ -56,7 +56,7 @@ const categories = [
               <li class="grid grid-cols-[7.5rem_1fr_2.25rem] items-center gap-3 text-sm">
                 <span class="text-muted-foreground">{item.label}</span>
                 <Meter tone="sun" value={item.value / 5} />
-                <span class="text-right font-bold font-display tabular-nums">{format(item.value)}</span>
+                <span class="text-right font-bold font-display tabular-nums">{formatDecimal(item.value)}</span>
               </li>
             ))}
           </ul>

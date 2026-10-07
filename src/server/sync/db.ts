@@ -1,8 +1,8 @@
 import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { toIsoDay } from "@/lib/dates";
 import { dataSource } from "@/lib/db/schema/data-source";
 import { meal, mealUpdate, mensa, mensaMeal } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
-import { toIsoDay } from "../dates";
 import { db } from "../db";
 import { logError } from "../log";
 import type { MealChange, NewMeal, SyncPlan } from "./plan";

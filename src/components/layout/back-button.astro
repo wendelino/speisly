@@ -1,15 +1,16 @@
 ---
-// Zurück-Link: geht in der History zurück, wenn es eine gibt, sonst zu `href`
+// Zurück-Link: geht in der History zurück, wenn es eine gibt, sonst zur
+// Startseite
 import { ArrowLeft } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
 
-type Props = { href?: string; label?: string; class?: string };
-const { href = "/", label = "Zurück", class: className } = Astro.props;
+type Props = { class?: string };
+const { class: className } = Astro.props;
 ---
 
-<Button class={className} data-back-button href={href} size="sm" variant="outline">
+<Button class={className} data-back-button href="/" size="sm" variant="outline">
   <ArrowLeft class="size-4" />
-  {label}
+  Zurück
 </Button>
 
 <script>

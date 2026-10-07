@@ -46,9 +46,3 @@ export function generateFlags(meal: {
   }
   return flags;
 }
-
-export function transformMeal(meal: DB_Meal): Meal {
-  const flags: MealFlags = generateFlags(meal);
-
-  return { ...meal, flags };
-}

@@ -7,7 +7,7 @@ export type DateRange = {
 export type DateInput = string | DateRange;
 
 // Meal data types
-export type MealAvailability = {
+type MealAvailability = {
   src_mensaId: string;
   mensaSlug: string;
   mensaName: string;
@@ -60,7 +60,7 @@ export type DataSourceRecord = {
 };
 
 // API types (Meine Mensa API)
-export type MeineMensaFoodData = {
+type MeineMensaFoodData = {
   id: number;
   name: string;
   name_2: string | null;
@@ -102,7 +102,6 @@ export type Location = {
 // Function parameter types
 export type GetMealDataParams = {
   date: DateInput;
-  locationId?: string;
 };
 
 export type GetExistingMensaMealsParams = {
@@ -112,7 +111,6 @@ export type GetExistingMensaMealsParams = {
 // Function return types
 export type GetMealDataResult = {
   data: MealData[];
-  length: number;
   /**
    * Tage (`YYYY-MM-DD`), für die die API überhaupt Einträge geliefert hat
    * (vor allen Filtern). Nur an diesen Tagen darf der Sync Ausgaben entfernen.
