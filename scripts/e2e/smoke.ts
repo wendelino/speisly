@@ -269,6 +269,8 @@ await check("Kalender öffnet und navigiert", async () => {
   await days.nth((await days.count()) - 1).click();
   await page.waitForURL((url) => url.href !== before);
   await page.waitForLoadState("networkidle");
+  // nur Tage im gültigen Fenster sind wählbar, also kein 404
+  assert(await page.locator("#day-selector").count(), "keine Speiseplanseite");
   return new URL(page.url()).pathname;
 });
 
@@ -282,7 +284,10 @@ await check("Detailseite mit Server Island (Angebotshistorie)", async () => {
   await page.waitForURL(MEAL_URL);
   const res = await island;
   assert(res.status() === 200, `Island ${res.status()}`);
+  // Angebotshistorie steht im zweiten Tab
+  await page.getByRole("tab", { name: "Angebotshistorie" }).click();
   await page.getByText(SERVING_STATS_TEXT).first().waitFor();
+  await page.getByRole("tab", { name: "Bewertungen" }).click();
   mealUrl = page.url();
   return new URL(mealUrl).pathname;
 });
@@ -372,7 +377,7 @@ await check("Feedback-Formular", async () => {
     .locator("textarea")
     .fill("Smoke-Test: alles gut, bitte ignorieren.");
   await page.locator('button[type="submit"]').click();
-  await page.getByText("Super, danke für dein Feedback!").first().waitFor();
+  await page.getByText("Danke für dein Feedback!").first().waitFor();
 });
 
 await check("Kontaktformular (mit DSGVO-Einwilligung)", async () => {

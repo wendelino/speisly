@@ -1,15 +1,12 @@
 ---
 // Speiseplan eines Tages. Nur gültige Daten im Fenster −365 … +14 Tage,
 // alles andere ist 404 (erzeugt so auch keine Cache-Einträge, siehe middleware).
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
-import DayHero from "@/components/day/day-hero.astro";
-import DaySelector from "@/components/day/day-selector.astro";
 import FilterFab from "@/components/filter/filter-fab.astro";
 import FilterHead from "@/components/filter/filter-head.astro";
 import MealList from "@/components/meal/meal-list.astro";
+import PlanToolbar from "@/components/meal/plan-toolbar.astro";
 import BaseLayout from "@/layouts/base-layout.astro";
-import { isoDayToLocalDate } from "@/lib/format-day";
+import { formatLongDay } from "@/lib/format-day";
 import { dayPolicy } from "@/server/cache-policy";
 import { parseDayParam, todayBerlin } from "@/server/dates";
 import { getMealsForDate } from "@/server/queries/meals";
@@ -29,16 +26,14 @@ const [groups, mensen] = await Promise.all([
   getVisibleMensen(),
 ]);
 Astro.cache.set(dayPolicy(date, today));
+const dayLabel = formatLongDay(date);
 ---
 
-<BaseLayout
-  mealAssets
-  title={`Speiseplan ${format(isoDayToLocalDate(date), "EEEE, dd.MM.yyyy", { locale: de })}`}
->
+<BaseLayout mealAssets title={`Speiseplan ${dayLabel}`}>
   <FilterHead slot="head" />
   <main>
-    <DayHero date={date} today={today} />
-    <DaySelector selected={date} today={today} />
+    <h1 class="sr-only">{`Speiseplan für ${dayLabel}`}</h1>
+    <PlanToolbar date={date} mensen={groups} today={today} />
     <MealList date={date} groups={groups} today={today} />
     <FilterFab mensen={mensen} />
   </main>

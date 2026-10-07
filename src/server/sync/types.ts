@@ -135,6 +135,4 @@ export const MEAL_SRC_ID_MAPPINGS: Record<number, string> = {
   1614: "k_suppe",
   1641: "k_suppe",
 } as const;
-
-export const MEINE_MENSA_BASE_URL = "https://meine-mensa.de/api" as const;
 export const DATA_SOURCE_NAME = "Meine Mensa API" as const;

@@ -131,10 +131,8 @@ function Calendar({
         WeekNumber: CalendarWeekNumber,
         ...components,
       }}
-      disabled={(date) => {
-        const day = date.getDay();
-        return day === 0 || day === 6; // Disable Sunday (0) and Saturday (6)
-      }}
+      // Wochenende (Mensen geschlossen); `disabled` in props ersetzt das
+      disabled={{ dayOfWeek: [0, 6] }}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString("de", { month: "short" }),

@@ -67,6 +67,11 @@ export default defineConfig({
         context: "server",
         access: "secret",
       }),
+      // Basis-URL der Speiseplan-API (meine-mensa.de), z. B. https://…/api
+      MEINE_MENSA_API_URL: envField.string({
+        context: "server",
+        access: "secret",
+      }),
       // Bildvarianten aus dem Sync (persistentes Volume in Produktion)
       IMAGE_DIR: envField.string({
         context: "server",

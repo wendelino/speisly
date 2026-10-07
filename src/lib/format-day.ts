@@ -36,3 +36,10 @@ export function formatIsoDay(
   }
   return format(date, formatStr, { locale: de });
 }
+
+/** `YYYY-MM-DD` → „Mittwoch, 7. Oktober 2026“ */
+export function formatLongDay(isoDay: string): string {
+  return format(isoDayToLocalDate(isoDay), "EEEE, d. MMMM yyyy", {
+    locale: de,
+  });
+}

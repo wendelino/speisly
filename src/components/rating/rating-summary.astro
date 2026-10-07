@@ -1,12 +1,10 @@
 ---
-// Bewertungsübersicht der Detailseite. Teil der (gecachten) Seite; die Seite
-// wird beim Bewerten über den Tag ratings:<id> invalidiert, der Bewerten-Button
-// lädt [data-rating-summary] danach neu (rating-button-script.astro).
+// Bewertungsübersicht der Detailseite (Tab „Bewertungen“). Teil der
+// (gecachten) Seite; die Seite wird beim Bewerten über den Tag ratings:<id>
+// invalidiert, der Bewerten-Button lädt [data-rating-summary] danach neu
+// (rating-button-script.astro).
 // Die Seite braucht das Sprite-Icon "star".
-import Icon from "@/components/icons/icon.astro";
-import Card from "@/components/ui/card.astro";
 import Meter from "@/components/ui/meter.astro";
-import SectionHeading from "@/components/ui/section-heading.astro";
 import Stars from "@/components/ui/stars.astro";
 import RatingButton from "./rating-button.astro";
 
@@ -30,11 +28,7 @@ const categories = [
 );
 ---
 
-<Card as="section" aria-labelledby="ratings-title">
-  <SectionHeading as="h2" id="ratings-title">
-    <Icon class="size-4.5 fill-gold text-gold" name="star" slot="icon" />
-    Bewertungen
-  </SectionHeading>
+<div>
   {
     ratingCount === 0 || avgRating.value === null ? (
       <div class="rounded-2xl bg-muted/60 p-5 text-center" data-rating-summary>
@@ -71,4 +65,4 @@ const categories = [
     )
   }
   {mensaMealId && <RatingButton class="mt-5" mealId={mealId} mensaMealId={mensaMealId} />}
-</Card>
+</div>

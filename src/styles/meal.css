@@ -9,8 +9,9 @@
   .m-grid {
     @apply grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3;
   }
+  /* Handy: sticky Mensa-Überschrift; ab md ist die Toolbar sticky */
   .m-head {
-    @apply sticky top-0 z-20 -mx-4 mb-2 flex items-center gap-2.5 bg-background/85 px-4 py-3 backdrop-blur-lg sm:-mx-6 sm:px-6;
+    @apply sticky top-0 z-20 -mx-4 mb-2 flex items-center gap-2.5 bg-background/90 px-4 py-3 backdrop-blur-lg sm:-mx-6 sm:px-6 md:static md:mx-0 md:mb-3 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none;
   }
   .m-count {
     @apply inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-muted px-2 font-bold text-muted-foreground text-xs tabular-nums;
@@ -30,36 +31,35 @@
 
   /* meal-card.astro */
   .m-card {
-    @apply relative grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3.5 rounded-3xl bg-card p-2.5 shadow-soft ring-1 ring-border/60 transition-[translate,box-shadow,scale] duration-300 ease-out outline-none hover:-translate-y-1 hover:shadow-lift focus-visible:ring-[3px] focus-visible:ring-ring active:scale-[0.985] sm:grid-cols-[7.5rem_minmax(0,1fr)];
+    @apply relative grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 rounded-3xl bg-card p-2 shadow-soft ring-1 ring-border/60 outline-none transition-[translate,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lift focus-visible:ring-[3px] focus-visible:ring-ring sm:grid-cols-[8.5rem_minmax(0,1fr)];
   }
   .m-body {
-    @apply flex min-w-0 flex-col gap-1.5 py-1 pr-1;
+    @apply flex min-w-0 flex-col gap-2 self-stretch py-1 pr-1.5;
   }
   .m-title {
     @apply line-clamp-2 font-display font-semibold text-[0.95rem] leading-snug tracking-tight transition-colors group-hover:text-primary;
   }
-  .m-badges {
-    @apply flex flex-wrap gap-1 empty:hidden;
-  }
+  /* Preis links, Ernährungs-Badges rechts daneben */
   .m-foot {
-    @apply mt-auto flex items-center justify-between gap-2 pt-1;
+    @apply mt-auto flex flex-wrap items-center justify-between gap-1.5;
+  }
+  .m-badges {
+    @apply flex flex-wrap justify-end gap-1 empty:hidden;
   }
   .m-price {
-    @apply inline-flex items-baseline gap-0.5 rounded-full bg-secondary px-3 py-1 font-bold font-display text-[0.95rem] text-primary tabular-nums leading-none transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-105;
-  }
-  .m-go {
-    @apply inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-[background-color,color,translate] duration-300 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground;
+    @apply inline-flex items-baseline gap-0.5 rounded-full bg-secondary px-2.5 py-1 font-bold font-display text-[0.95rem] text-primary tabular-nums leading-none;
   }
 
   /* meal-image.astro */
+  /* 4:3 wie die Fotos; object-contain schneidet nichts ab */
   .m-img {
-    @apply relative aspect-square overflow-hidden rounded-2xl bg-muted;
+    @apply relative aspect-4/3 overflow-hidden rounded-2xl bg-muted;
   }
   .m-skel {
     @apply absolute inset-0 animate-pulse bg-muted;
   }
   .m-photo {
-    @apply size-full object-cover transition-[opacity,scale] duration-500 ease-out group-hover:scale-105;
+    @apply size-full object-contain transition-opacity duration-300;
   }
   .m-noimg {
     @apply flex size-full items-center justify-center bg-linear-to-br from-peach-soft to-sun-soft text-peach/50;

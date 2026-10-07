@@ -1,12 +1,12 @@
 ---
 // Startseite: Speiseplan von heute (Berlin). Im Route Cache bis Mitternacht
 // (src/server/cache-policy.ts).
-import DayHero from "@/components/day/day-hero.astro";
-import DaySelector from "@/components/day/day-selector.astro";
 import FilterFab from "@/components/filter/filter-fab.astro";
 import FilterHead from "@/components/filter/filter-head.astro";
 import MealList from "@/components/meal/meal-list.astro";
+import PlanToolbar from "@/components/meal/plan-toolbar.astro";
 import BaseLayout from "@/layouts/base-layout.astro";
+import { formatLongDay } from "@/lib/format-day";
 import { homePolicy } from "@/server/cache-policy";
 import { todayBerlin } from "@/server/dates";
 import { getMealsForDate } from "@/server/queries/meals";
@@ -20,13 +20,14 @@ const [groups, mensen] = await Promise.all([
   getVisibleMensen(),
 ]);
 Astro.cache.set(homePolicy(today));
+const dayLabel = formatLongDay(today);
 ---
 
 <BaseLayout mealAssets>
   <FilterHead slot="head" />
   <main>
-    <DayHero date={today} today={today} />
-    <DaySelector today={today} />
+    <h1 class="sr-only">{`Speiseplan für ${dayLabel}`}</h1>
+    <PlanToolbar date={today} mensen={groups} today={today} />
     <MealList date={today} groups={groups} today={today} />
     <FilterFab mensen={mensen} />
   </main>

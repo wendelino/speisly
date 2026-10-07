@@ -1,8 +1,11 @@
 ---
-// Detailseite eines Gerichts. Mit ?mmid= zeigt sie die Zutaten dieser Ausgabe
-// und erlaubt das Bewerten, sonst die der neuesten Ausgabe. Die
+// Detailseite eines Gerichts. Mit ?mmid= zeigt sie Mensa, Tag und Zutaten
+// dieser Ausgabe und erlaubt das Bewerten, sonst die der neuesten Ausgabe.
+// Bewertungen, Inhaltsstoffe und Angebotshistorie stehen in Tabs; die
 // Angebotshistorie ist eine Server Island und wird separat geladen und gecacht.
-import { FlaskConical, History, Sparkles } from "@lucide/astro";
+import { CalendarDays, MapPin } from "@lucide/astro";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import {
   INGREDIENT_ICONS,
   type SpriteIconName,
@@ -17,8 +20,10 @@ import RatingSummary from "@/components/rating/rating-summary.astro";
 import ServingStats from "@/components/server-islands/serving-stats.astro";
 import Badge from "@/components/ui/badge.astro";
 import Card from "@/components/ui/card.astro";
-import SectionHeading from "@/components/ui/section-heading.astro";
+import TabPanel from "@/components/ui/tab-panel.astro";
+import Tabs from "@/components/ui/tabs.astro";
 import BackLayout from "@/layouts/back-layout.astro";
+import { isoDayToLocalDate } from "@/lib/format-day";
 import { visibleIngredientTypes } from "@/lib/ingredients";
 import { mealPolicy } from "@/server/cache-policy";
 import { findMeal } from "@/server/queries/meal";
@@ -38,14 +43,15 @@ if (!meal) {
 }
 Astro.cache.set(mealPolicy(meal.id));
 
+const euro = (cents: number) => `${(cents / 100).toFixed(2)} €`;
 const ratingText = ratingStats.avgRating.value
-  ? ` - ${ratingStats.avgRating.value}/5 ⭐ (${ratingStats.ratingCount} Bewertungen)`
+  ? ` Bewertung: ${ratingStats.avgRating.value.toFixed(1)} von 5 Sternen (${ratingStats.ratingCount}).`
   : "";
 const ingredientsText =
   meal.ingredients.length > 0
     ? `Zutaten: ${meal.ingredients.slice(0, 3).join(", ")}. `
     : "";
-const priceText = `Preise: Student ${(meal.priceStud / 100).toFixed(2)}€, Mitarbeiter ${(meal.priceWork / 100).toFixed(2)}€, Gast ${(meal.priceGuest / 100).toFixed(2)}€.`;
+const priceText = `Preise: Student ${euro(meal.priceStud)}, Mitarbeiter ${euro(meal.priceWork)}, Gast ${euro(meal.priceGuest)}.`;
 const description = `${meal.name} in der Mensa. ${ingredientsText}${priceText}${ratingText}`;
 const images = meal.imgPath
   ? [{ url: meal.imgPath, width: 1200, height: 630 }]
@@ -61,6 +67,20 @@ const spriteIcons: SpriteIconName[] = [
 ];
 // View Transition nur, wenn die Seite von einer Karte (mit ?mmid=) kommt
 const vt = Boolean(mmid);
+const servedOn = format(isoDayToLocalDate(meal.servedOn), "EEEE, d. MMMM", {
+  locale: de,
+});
+
+const TABS = [
+  { id: "bewertungen", label: "Bewertungen", count: ratingStats.ratingCount },
+  {
+    id: "inhaltsstoffe",
+    label: "Inhaltsstoffe",
+    short: "Zutaten",
+    count: meal.ingredients.length,
+  },
+  { id: "angebote", label: "Angebotshistorie", short: "Historie" },
+];
 ---
 
 <BackLayout
@@ -71,78 +91,75 @@ const vt = Boolean(mmid);
   width="wide"
 >
   {mmid && <RatingButtonScript slot="head" />}
-  <article class="grid items-start gap-8 md:grid-cols-2 md:gap-12">
-    <div class="relative md:sticky md:top-6">
-      <div
-        aria-hidden="true"
-        class="-inset-3 sm:-inset-4 -z-10 absolute rotate-3 rounded-[2.5rem] bg-secondary/80"
+  <article
+    class="grid items-start gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-10"
+  >
+    <MealImage
+      alt={meal.name}
+      class="shadow-soft ring-1 ring-border/60"
+      priority
+      src={meal.imgPath}
+      view="detail"
+      vt={vt}
+    />
+
+    <div class="space-y-5">
+      {
+        mmid && (
+          <p class="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-sm">
+            <span class="inline-flex items-center gap-1.5">
+              <MapPin class="size-4 text-primary" />
+              {meal.mensaName}
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <CalendarDays class="size-4 text-primary" />
+              {servedOn}
+            </span>
+          </p>
+        )
+      }
+      <h1
+        class="font-extrabold text-3xl leading-tight sm:text-4xl"
+        data-vt={vt ? "title" : undefined}
       >
-      </div>
-      <MealImage
-        alt={meal.name}
-        class="shadow-lift"
-        priority
-        src={meal.imgPath}
-        view="detail"
-        vt={vt}
-      />
-    </div>
-
-    <div class="space-y-7">
-      <div class="space-y-3">
-        {
-          badgeTypes.length > 0 && (
-            <div class="flex flex-wrap gap-2" data-vt={vt ? "ingredients" : undefined}>
-              {badgeTypes.map((type) => <DietBadge size="lg" type={type} />)}
-            </div>
-          )
-        }
-        <h1
-          class="font-extrabold text-3xl leading-tight sm:text-4xl"
-          data-vt={vt ? "title" : undefined}
-        >
-          {`${meal.name} `}<span class="font-semibold text-muted-foreground">{meal.subtitle}</span>
-        </h1>
-      </div>
-
+        {`${meal.name} `}<span class="font-semibold text-muted-foreground">{meal.subtitle}</span>
+      </h1>
+      {
+        badgeTypes.length > 0 && (
+          <div class="flex flex-wrap gap-2" data-vt={vt ? "ingredients" : undefined}>
+            {badgeTypes.map((type) => <DietBadge size="lg" type={type} />)}
+          </div>
+        )
+      }
       <PriceTiles meal={meal} vt={vt} />
-
       {
         meal.extras.length > 0 && (
           <div>
-            <h2 class="mb-2.5 flex items-center gap-1.5 font-semibold text-muted-foreground text-sm">
-              <Sparkles class="size-4 text-sun" />
-              Dazu gibt’s
-            </h2>
+            <h2 class="mb-2 font-semibold text-muted-foreground text-sm">Dazu gibt’s</h2>
             <ul class="flex flex-wrap gap-2">
               {meal.extras.map((extra) => (
-                <li><Badge class="px-3.5 py-1.5 text-sm" variant="sun">{extra}</Badge></li>
+                <li><Badge class="px-3 py-1 text-sm" variant="sun">{extra}</Badge></li>
               ))}
             </ul>
           </div>
         )
       }
-
-      <RatingSummary mealId={meal.id} mensaMealId={mmid} stats={ratingStats} />
     </div>
   </article>
 
-  <div class="mt-8 grid items-start gap-6 md:mt-12 md:grid-cols-2">
-    <Card as="section" aria-labelledby="ingredients-title">
-      <SectionHeading id="ingredients-title">
-        <FlaskConical slot="icon" />
-        Inhaltsstoffe
-      </SectionHeading>
-      <IngredientsList ingredients={meal.ingredients} />
+  <Tabs class="mt-8 md:mt-10" label="Details zum Gericht" tabs={TABS}>
+    <Card padding="md">
+      <TabPanel active id="bewertungen">
+        <RatingSummary mealId={meal.id} mensaMealId={mmid} stats={ratingStats} />
+      </TabPanel>
+      <TabPanel id="inhaltsstoffe">
+        <IngredientsList ingredients={meal.ingredients} />
+      </TabPanel>
+      <TabPanel id="angebote">
+        <ServingStats mealId={meal.id} server:defer>
+          <ServingStatsSkeleton slot="fallback" />
+        </ServingStats>
+      </TabPanel>
     </Card>
-    <Card as="section" aria-labelledby="history-title">
-      <SectionHeading id="history-title">
-        <History slot="icon" />
-        Angebotshistorie
-      </SectionHeading>
-      <ServingStats mealId={meal.id} server:defer>
-        <ServingStatsSkeleton slot="fallback" />
-      </ServingStats>
-    </Card>
-  </div>
+  </Tabs>
 </BackLayout>

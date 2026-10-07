@@ -1,3 +1,4 @@
+import { MEINE_MENSA_API_URL } from "astro:env/server";
 import { toIsoDay } from "../dates";
 import { logError } from "../log";
 import type {
@@ -9,10 +10,12 @@ import type {
   MeineMensaResponse,
   MeineMensaResponseMeta,
 } from "./types";
-import { MEAL_SRC_ID_MAPPINGS, MEINE_MENSA_BASE_URL } from "./types";
+import { MEAL_SRC_ID_MAPPINGS } from "./types";
 import { fetchJson, normalizeDateRange, normalizeSrcId, toSlug } from "./utils";
 
 const MAX_FOOD_PLANS = 999;
+/** aus der Umgebung (MEINE_MENSA_API_URL), ohne „/“ am Ende */
+const API_URL = MEINE_MENSA_API_URL.replace(/\/+$/, "");
 
 /**
  * Fetches food plans from the Meine Mensa API
@@ -28,7 +31,7 @@ function fetchFoodPlans(
   if (locationId) {
     params.set("location_id", locationId);
   }
-  const url = `${MEINE_MENSA_BASE_URL}/food_plans?${params}`;
+  const url = `${API_URL}/food_plans?${params}`;
   return fetchJson<MeineMensaResponse>(url);
 }
 
@@ -36,7 +39,7 @@ function fetchFoodPlans(
  * Fetches all locations from the Meine Mensa API
  */
 function getLocations(): Promise<Location[]> {
-  const url = `${MEINE_MENSA_BASE_URL}/locations`;
+  const url = `${API_URL}/locations`;
   return fetchJson<Location[]>(url);
 }
 

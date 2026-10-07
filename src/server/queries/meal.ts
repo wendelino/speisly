@@ -1,5 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
-import { meal, mensaMeal } from "@/lib/db/schema/schema";
+import { meal, mensa, mensaMeal } from "@/lib/db/schema/schema";
 import { generateFlags } from "@/lib/meal-flags";
 import { toIsoDay } from "../dates";
 import { db } from "../db";
@@ -10,6 +10,7 @@ export type MealDetail = Omit<Meal, "mensaMealId" | "date"> & {
   /** Die Ausgabe, deren Zutaten/Extras angezeigt werden */
   mensaMealId: string;
   servedOn: string;
+  mensaName: string;
 };
 
 /**
@@ -40,9 +41,11 @@ export async function findMeal(
         extras: mensaMeal.extras,
         mensaMealId: mensaMeal.id,
         date: mensaMeal.date,
+        mensaName: mensa.name,
       })
       .from(meal)
       .innerJoin(mensaMeal, eq(meal.id, mensaMeal.mealId))
+      .innerJoin(mensa, eq(mensa.id, mensaMeal.mensaId))
       .where(and(...conditions))
       .orderBy(desc(mensaMeal.date))
       .limit(1);

@@ -2,22 +2,22 @@
 
 **Speisly** ist eine Open-Source-Webanwendung für Studierende der Martin-Luther-Universität Halle-Wittenberg (MLU Halle), die aktuelle Speisepläne der Universitätsmensen übersichtlich und benutzerfreundlich präsentiert.
 
-## 🎯 Über das Projekt
+## Über das Projekt
 
 Speisly wurde entwickelt, um Studierenden der MLU Halle einen einfachen und schnellen Zugang zu den aktuellen Speiseplänen der Mensen zu ermöglichen. Die Anwendung bietet eine moderne, responsive Benutzeroberfläche und kann als Progressive Web App (PWA) installiert werden.
 
-## ✨ Features
+## Features
 
-- 📅 **Aktuelle Speisepläne** – Zeigt die Speisepläne aller MLU Halle Mensen
-- 🔍 **Filterung** – Filterung nach Mensen, Tagen und Ernährungspräferenzen (vegetarisch, vegan)
-- 📱 **Responsive Design** – Optimiert für Desktop, Tablet und Smartphone
-- 🎨 **Moderne UI** – Intuitive Benutzeroberfläche mit Tailwind CSS
-- 📊 **Detaillierte Informationen** – Vollständige Angaben zu Gerichten, Zutaten und Preisen
-- ⭐ **Bewertungen** – Möglichkeit, Gerichte zu bewerten
-- 💾 **Persistente Einstellungen** – Speicherung von Filterpräferenzen im Browser
-- 🔔 **PWA** – Installierbar als Progressive Web App
+- **Aktuelle Speisepläne** – Zeigt die Speisepläne aller MLU Halle Mensen
+- **Filterung** – Filterung nach Mensen, Tagen und Ernährungspräferenzen (vegetarisch, vegan)
+- **Responsive Design** – Optimiert für Desktop, Tablet und Smartphone
+- **Moderne UI** – Intuitive Benutzeroberfläche mit Tailwind CSS
+- **Detaillierte Informationen** – Vollständige Angaben zu Gerichten, Zutaten und Preisen
+- **Bewertungen** – Möglichkeit, Gerichte zu bewerten
+- **Persistente Einstellungen** – Speicherung von Filterpräferenzen im Browser
+- **PWA** – Installierbar als Progressive Web App
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **[Astro 7](https://astro.build)** – Web-Framework: Seiten werden auf dem Server gerendert und gecacht, Server Islands für Statistiken, React nur für interaktive Dialoge (Migration von Next.js: [`docs/astro-migration-plan.md`](docs/astro-migration-plan.md))
 - **[TypeScript](https://www.typescriptlang.org/)** – Typsichere Entwicklung
@@ -28,13 +28,13 @@ Speisly wurde entwickelt, um Studierenden der MLU Halle einen einfachen und schn
 - **[Bun](https://bun.sh/)** – Package Manager und Runtime
 - **[Biome](https://biomejs.dev/)** – Linter und Formatter
 
-## 📋 Voraussetzungen
+## Voraussetzungen
 
 - **Node.js** >= 22.12.0
 - **Bun** – Package Manager und Runtime
 - **PostgreSQL** Datenbank (für Produktion)
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 ### 1. Repository klonen
 
@@ -77,7 +77,7 @@ Für lokale Testdaten (ohne Zugriff auf die meine-mensa.de API):
 bun scripts/dev/seed.ts
 ```
 
-## 📁 Projektstruktur
+## Projektstruktur
 
 ```
 speisly/
@@ -100,15 +100,16 @@ speisly/
 └── public/                # Statische Assets
 ```
 
-## 🎨 UI & Design-System
+## UI & Design-System
 
 - **Tokens** (Farben, Radien, Schatten, Animationen) in `src/styles/globals.css`: warme Creme-Flächen, die Marken-Beere als Primärfarbe und verspielte Akzente (`sun`, `mint`, `sky`, `peach`, `rose`).
 - **Schrift:** Fließtext in der Systemschrift, Überschriften und Preise in [Bricolage Grotesque](https://fontsource.org/fonts/bricolage-grotesque) (self-hosted, `astro.config.mjs`).
-- **Bausteine** in `src/components/ui/`: Astro-Komponenten ohne JS (`button`, `badge`, `card`, `chip`, `stat`, `stars`, `meter`, `note`, `empty-state`, `icon-blob`, `section-heading`, `prose`, `skeleton`) und die React-Primitives für Dialoge (shadcn/Radix). Button- und Badge-Stile kommen für beide aus `ui/variants.ts`.
+- **Bausteine** in `src/components/ui/`: Astro-Komponenten ohne JS (`button`, `badge`, `card`, `chip`, `tabs`/`tab-panel`, `stat`, `stars`, `meter`, `note`, `empty-state`, `icon-blob`, `prose`, `skeleton`) und die React-Primitives für Dialoge (shadcn/Radix). Button- und Badge-Stile kommen für beide aus `ui/variants.ts`.
 - **Gerichtskarten** nutzen kurze Klassen aus `src/styles/meal.css` (die Karte steht ~90× auf einer Seite, das hält das HTML klein).
-- Dialoge sind auf dem Handy Bottom-Sheets, ab `sm` zentriert. Animationen respektieren `prefers-reduced-motion`.
+- Speiseplan: Tagesauswahl und Mensa-Sprungmarken stehen in einer Toolbar, die ab `md` sticky ist (mit Markierung der sichtbaren Mensa); auf dem Handy sind die Mensa-Überschriften sticky.
+- Dialoge sind auf dem Handy Bottom-Sheets, ab `sm` zentriert. Animationen respektieren `prefers-reduced-motion`. Keine Emojis in Texten.
 
-## 🔌 Datensync (`src/server/sync`)
+## Datensync (`src/server/sync`)
 
 Der Sync gleicht den Speiseplan mit der API von [meine-mensa.de](https://meine-mensa.de) ab: API lesen, Änderungen im Speicher planen (`plan.ts`), dann alles in einer Transaktion schreiben (`db.ts`). Danach erzeugt er fehlende Bildvarianten und invalidiert genau die gecachten Seiten, die sich geändert haben.
 
@@ -131,7 +132,7 @@ curl -X POST -H "Authorization: Bearer $API_BEARER_TOKEN" \
 
 **Schutz vor Datenverlust:** Gerichte, die die API nicht mehr liefert, entfernt der Sync nur an Tagen, für die die API überhaupt Einträge hat, und nie, wenn sie bewertet wurden. Würde ein Sync mehr als die Hälfte der Ausgaben im Zeitraum entfernen, entfernt er nichts und meldet sich per Telegram. Nach Prüfung lässt sich die Löschung mit `&force=1` erzwingen.
 
-## 🏗️ Build & Betrieb
+## Build & Betrieb
 
 ### Production Build und Start
 
@@ -176,6 +177,7 @@ Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`
 |---|---|---|
 | `DATABASE_URL` | ja | PostgreSQL |
 | `API_BEARER_TOKEN` | ja | Schutz für `/api/sync`; ohne Token startet kein Cron |
+| `MEINE_MENSA_API_URL` | ja | Basis-URL der Speiseplan-API (meine-mensa.de), privat; ohne sie schlägt der Sync fehl |
 | `JWT_SECRET`, `JWT_ALGORITHM` | ja | Signatur des Nutzer-Cookies |
 | `IMAGE_DIR` | empfohlen | Bildvarianten, persistentes Volume |
 | `ASTRO_KEY` | empfohlen, **beim Build** | Schlüssel für Server-Island-Props (`bunx astro create-key`). Ohne ihn erzeugt jeder Build einen neuen; offene Tabs können nach einem Deploy die Angebotshistorie dann nicht nachladen |
@@ -201,7 +203,7 @@ Ausführliche Schritt-für-Schritt-Anleitung mit allen Änderungen an `.env`, Da
 6. Prüfen: `curl -sI https://speisly.de/ -H 'Accept-Encoding: br'` zeigt `content-encoding: br` und nach dem zweiten Aufruf `x-astro-cache: HIT`.
    - Optional gegen eine Staging-Instanz mit Seed-Daten: `API_BEARER_TOKEN=… bun scripts/e2e/smoke.ts --base https://staging…`. Der Test schreibt Testdaten, also **nicht gegen Produktion** laufen lassen.
 
-## 🤝 Beitragen
+## Beitragen
 
 Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Studierendenschaft der MLU Halle.
 
@@ -219,7 +221,7 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 4. Push zum Branch (`git push origin feature/AmazingFeature`)
 5. Öffne einen Pull Request
 
-## 📝 Scripts
+## Scripts
 
 - `bun dev` – Startet den Development Server
 - `bun run build` – Erstellt einen Production Build
@@ -234,19 +236,19 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 - `bun db:migrate` – Führt Datenbank-Migrationen aus
 - `bun db:push` – Pusht Schema-Änderungen zur Datenbank
 
-## 📄 Lizenz
+## Lizenz
 
 Dieses Projekt ist Open Source. Weitere Informationen zur Lizenz findest du in der `LICENSE` Datei.
 
-## 🔗 Links
+## Links
 
 - **Live-Version**: [speisly.de](https://speisly.de)
 - **API-Dokumentation**: [meine-mensa.de/api](https://meine-mensa.de/api)
 
-## 📧 Kontakt
+## Kontakt
 
 Bei Fragen oder Anregungen kannst du uns über die Kontaktseite in der App erreichen oder ein Issue im Repository erstellen.
 
 ---
 
-**Entwickelt mit ❤️ für die Studierendenschaft der MLU Halle**
+**Entwickelt für die Studierendenschaft der MLU Halle**

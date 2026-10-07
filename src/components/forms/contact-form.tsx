@@ -22,10 +22,10 @@ import { FEEDBACK_MESSAGE } from "@/lib/feedback";
 const messageSchema = z
   .string()
   .trim()
-  .min(FEEDBACK_MESSAGE.min, "Hey, mindestens 10 Zeichen bitte 😊")
+  .min(FEEDBACK_MESSAGE.min, "Bitte schreib mindestens 10 Zeichen.")
   .max(
     FEEDBACK_MESSAGE.max,
-    "Wow, das ist ganz schön lang! Maximal 2000 Zeichen bitte"
+    "Das ist ganz schön lang. Maximal 2000 Zeichen, bitte."
   );
 
 const feedbackSchema = z.object({
@@ -36,7 +36,7 @@ const contactSchema = z.object({
   email: z
     .string()
     .min(1, "E-Mail-Adresse fehlt noch")
-    .pipe(z.email("Hmm, das sieht nicht nach einer gültigen E-Mail aus 🤔")),
+    .pipe(z.email("Das sieht nicht nach einer gültigen E-Mail-Adresse aus.")),
   message: messageSchema,
   dsgvoConsent: z
     .boolean("Bitte stimme der Datenschutzerklärung zu")
@@ -72,8 +72,8 @@ export function ContactForm({
 
   const successText =
     variant === "feedback"
-      ? "Super, danke für dein Feedback! 🎉"
-      : "Alles klar! Wir haben deine Nachricht erhalten und melden uns bald bei dir. ✨";
+      ? "Danke für dein Feedback!"
+      : "Danke! Wir haben deine Nachricht erhalten und melden uns bald.";
 
   const handleSubmit = async (data: FeedbackFormValues | ContactFormValues) => {
     setIsSubmitting(true);
@@ -92,7 +92,7 @@ export function ContactForm({
           throw new Error(
             error.code === "INTERNAL_SERVER_ERROR"
               ? error.message
-              : "Ups, da ist etwas schiefgelaufen. Versuch's doch bitte nochmal! 😅"
+              : "Da ist etwas schiefgelaufen. Bitte versuch es noch einmal."
           );
         }
       }
@@ -110,7 +110,7 @@ export function ContactForm({
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Ups, da ist etwas schiefgelaufen. Versuch's doch bitte nochmal! 😅";
+          : "Da ist etwas schiefgelaufen. Bitte versuch es noch einmal.";
       setSubmitError(errorMessage);
       toast.error(errorMessage);
     } finally {

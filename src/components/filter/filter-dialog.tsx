@@ -97,7 +97,7 @@ export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
                   className={cn(
                     "flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 font-semibold text-xs outline-none ring-1 transition-all duration-200 focus-visible:ring-[3px] focus-visible:ring-ring active:scale-95",
                     checked
-                      ? cn(active, "-rotate-2 shadow-soft")
+                      ? cn(active, "shadow-soft")
                       : "bg-muted/60 text-muted-foreground ring-transparent hover:bg-muted"
                   )}
                   id={value === "all" ? undefined : `${value}-filter`}

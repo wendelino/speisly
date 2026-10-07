@@ -45,7 +45,7 @@ export const server = {
           throw new ActionError({
             code: "INTERNAL_SERVER_ERROR",
             message:
-              "Ups, da ist etwas schiefgelaufen. Versuch's doch bitte nochmal! 😅",
+              "Da ist etwas schiefgelaufen. Bitte versuch es noch einmal.",
           });
         }
       },

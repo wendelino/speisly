@@ -15,8 +15,10 @@ const CHIP =
   "items-center gap-1.5 rounded-full px-3 py-2 font-semibold text-xs shadow-lift ring-1 ring-black/5 backdrop-blur-md transition-[translate,scale] hover:-translate-x-0.5 active:scale-95 animate-pop-in";
 ---
 
+<!-- right-scroll-bar-position: Radix gleicht damit die ausgeblendete Scrollbar
+     aus, solange ein Dialog offen ist -->
 <div
-  class="pointer-events-none fixed right-0 bottom-0 z-40 flex flex-col items-end gap-2 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+  class="right-scroll-bar-position pointer-events-none fixed right-0 bottom-0 z-40 flex flex-col items-end gap-2 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
 >
   <button
     aria-label="Mensa-Filter entfernen"

@@ -14,7 +14,6 @@ import Note from "@/components/ui/note.astro";
 import { cn } from "@/lib/utils";
 import EmptyState from "./empty-state.astro";
 import MealCard from "./meal-card.astro";
-import MensaNav from "./mensa-nav.astro";
 
 type Props = {
   groups: MensaMealGroup[];
@@ -67,12 +66,11 @@ const prepared = groups.map((group, index) => {
     <EmptyState date={date} today={today} type="date" />
   ) : (
     <>
-      <MensaNav mensen={groups} />
-      <div class="container-page space-y-8 pb-8" id="mealslist">
+      <div class="container-page space-y-8 pt-2 pb-8 md:pt-6" id="mealslist">
         {prepared.map(({ group, regular, portion, stats, tone }) => (
           <section
             aria-labelledby={`mensa-${group.slug}-title`}
-            class="scroll-mt-2"
+            class="scroll-mt-2 md:scroll-mt-40"
             data-mensa-group
             data-mensa-id={group.id}
             id={`mensa-${group.slug}`}

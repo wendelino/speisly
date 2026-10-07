@@ -2,7 +2,7 @@ import { Star } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const MOODS = ["", "Naja …", "Geht so", "Ganz gut", "Lecker!", "Mega! 🤩"];
+const MOODS = ["", "Naja", "Geht so", "Ganz gut", "Lecker", "Ausgezeichnet"];
 
 type StarRatingProps = {
   label: string;
