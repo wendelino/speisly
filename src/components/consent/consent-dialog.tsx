@@ -1,34 +1,33 @@
 import { PUBLIC_PRIVACY_POLICY_PATH } from "astro:env/client";
 import { Cookie } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { writeConsent } from "@/lib/cookies";
 
 type ConsentDialogProps = {
+  open: boolean;
+  /** Zustimmung oder Ablehnung (Cookie ist dann gesetzt) */
   onConsent: (accepted: boolean) => void;
-  onEarlyExit: () => void;
+  /** ohne Entscheidung geschlossen (Wegziehen, Escape, Schließen-Button) */
+  onDismiss: () => void;
 };
 
-export function ConsentDialog({ onConsent, onEarlyExit }: ConsentDialogProps) {
-  const [open, setOpen] = useState(true);
-  const handleOpenChange = (v: boolean) => {
-    onEarlyExit();
-    setOpen(v);
-  };
-
+export function ConsentDialog({
+  open,
+  onConsent,
+  onDismiss,
+}: ConsentDialogProps) {
   const handleConsent = (accepted: boolean) => {
     writeConsent(accepted);
     onConsent(accepted);
-    setOpen(false);
     toast.success(
       accepted
         ? "Cookie-Einstellungen gespeichert"
@@ -37,14 +36,21 @@ export function ConsentDialog({ onConsent, onEarlyExit }: ConsentDialogProps) {
   };
 
   return (
-    <Dialog onOpenChange={handleOpenChange} open={open}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader className="items-center gap-3 text-center sm:text-center">
+    <Drawer
+      onOpenChange={(next) => {
+        if (!next) {
+          onDismiss();
+        }
+      }}
+      open={open}
+    >
+      <DrawerContent>
+        <DrawerHeader className="items-center gap-3 pr-0 text-center">
           <div className="-rotate-6 inline-flex size-20 animate-float items-center justify-center rounded-[42%_58%_63%_37%/41%_44%_56%_59%] bg-sun-soft text-sun">
             <Cookie className="size-10" />
           </div>
-          <DialogTitle className="text-2xl">Kekse gefällig?</DialogTitle>
-          <DialogDescription className="leading-relaxed">
+          <DrawerTitle className="text-2xl">Kekse gefällig?</DrawerTitle>
+          <DrawerDescription className="leading-relaxed">
             Wir nutzen Cookies, um deine Bewertungen zu speichern und dir eine
             bessere Erfahrung zu bieten. Mehr Infos findest du in unserer{" "}
             <a
@@ -54,9 +60,9 @@ export function ConsentDialog({ onConsent, onEarlyExit }: ConsentDialogProps) {
               Datenschutzerklärung
             </a>
             .
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex-row gap-2 sm:justify-center">
+          </DrawerDescription>
+        </DrawerHeader>
+        <DrawerFooter className="flex-row">
           <Button
             className="flex-1"
             onClick={() => handleConsent(false)}
@@ -67,8 +73,8 @@ export function ConsentDialog({ onConsent, onEarlyExit }: ConsentDialogProps) {
           <Button className="flex-1" onClick={() => handleConsent(true)}>
             Akzeptieren
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

@@ -1,4 +1,4 @@
-import { Cookie, Loader2 } from "lucide-react";
+import { Cookie } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { type ConsentState, readConsent } from "@/lib/cookies";
@@ -24,30 +24,22 @@ export const ConsentProvider = ({
     setConsentState("pending");
   }, []);
 
-  // Show dialog if consent is pending
-  if (consentState === "pending") {
-    return (
+  return (
+    <>
+      {consentState === "accepted" ? children : null}
+      {consentState === "rejected" ? (
+        <ConsentRequired
+          disableStyling={disableStyling}
+          onReset={handleReset}
+        />
+      ) : null}
+      {/* bleibt gemountet, damit der Drawer animiert schließen kann */}
       <ConsentDialog
         onConsent={handleConsent}
-        onEarlyExit={() => setConsentState("rejected")}
+        onDismiss={() => setConsentState("rejected")}
+        open={consentState === "pending"}
       />
-    );
-  }
-
-  // Show rejection message if consent was rejected
-  if (consentState === "rejected") {
-    return (
-      <ConsentRequired disableStyling={disableStyling} onReset={handleReset} />
-    );
-  }
-
-  if (consentState === "accepted") {
-    return children;
-  }
-  return (
-    <div className="flex h-full min-h-32 items-center justify-center">
-      <Loader2 className="animate-spin" />
-    </div>
+    </>
   );
 };
 

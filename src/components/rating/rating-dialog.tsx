@@ -8,13 +8,14 @@ import { StarRating } from "@/components/rating/star-rating";
 import { Button } from "@/components/ui/button";
 import { confirm } from "@/components/ui/confirm";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingButton } from "@/components/ui/loading-button";
@@ -153,23 +154,23 @@ export function RatingDialog({
   };
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogContent
+    <Drawer onOpenChange={setOpen} open={open}>
+      <DrawerContent
         onCloseAutoFocus={(event) => {
           // kein Radix-Trigger vorhanden: Fokus zurück auf den Bewerten-Button
           event.preventDefault();
           document.querySelector<HTMLElement>("[data-rate-button]")?.focus();
         }}
       >
-        <DialogHeader>
-          <DialogTitle>Gericht bewerten</DialogTitle>
-          <DialogDescription>
+        <DrawerHeader>
+          <DrawerTitle>Gericht bewerten</DrawerTitle>
+          <DrawerDescription>
             Wie hat’s dir geschmeckt? Deine Sterne helfen allen beim Aussuchen.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
 
         <ConsentProvider disableStyling>
-          <div className="space-y-4">
+          <DrawerBody className="space-y-4">
             <StarRating
               featured
               label="Gesamtbewertung *"
@@ -203,9 +204,9 @@ export function RatingDialog({
                 value={comment}
               />
             </div>
-          </div>
+          </DrawerBody>
 
-          <DialogFooter className="flex-col gap-3 sm:flex-col">
+          <DrawerFooter className="gap-3">
             {hasExistingRating ? (
               <div className="flex items-center justify-between gap-2 rounded-2xl bg-muted/60 py-1.5 pr-1.5 pl-4">
                 <p className="text-muted-foreground text-sm">
@@ -244,9 +245,9 @@ export function RatingDialog({
                 Bewertung speichern
               </LoadingButton>
             </div>
-          </DialogFooter>
+          </DrawerFooter>
         </ConsentProvider>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

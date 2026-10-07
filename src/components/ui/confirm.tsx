@@ -1,13 +1,13 @@
 import { type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "./drawer";
 
 type ConfirmOptions = {
   title?: string;
@@ -51,33 +51,38 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
-      <Dialog
+      <Drawer
         onOpenChange={(open) => !open && close(false)}
         open={pending !== null}
       >
-        <DialogContent className="sm:max-w-sm" showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle className={options?.title ? "" : "sr-only"}>
+        <DrawerContent className="sm:max-w-sm" showCloseButton={false}>
+          <DrawerHeader className="pr-0">
+            <DrawerTitle className={options?.title ? "" : "sr-only"}>
               {options?.title ?? "Bestätigung"}
-            </DialogTitle>
-            <DialogDescription className={options?.title ? "" : "text-base"}>
+            </DrawerTitle>
+            <DrawerDescription className={options?.title ? "" : "text-base"}>
               {options?.message}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => close(false)} variant="outline">
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter className="flex-row">
+            <Button
+              className="flex-1"
+              onClick={() => close(false)}
+              variant="outline"
+            >
               {options?.cancelText ?? "Abbrechen"}
             </Button>
             <Button
               autoFocus
+              className="flex-1"
               onClick={() => close(true)}
               variant={options?.variant ?? "default"}
             >
               {options?.confirmText ?? "OK"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

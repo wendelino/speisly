@@ -1,12 +1,13 @@
 import { addDays, format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { isoDayToLocalDate } from "@/lib/format-day";
 import { $calendarOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
@@ -19,8 +20,8 @@ type Props = {
 };
 
 /**
- * Kalender der Tagesauswahl als Dialog (Handy: Bottom-Sheet). Ein Dialog statt
- * eines am Button verankerten Popovers: nichts springt beim Öffnen. Wird erst
+ * Kalender der Tagesauswahl als Drawer (Handy: Bottom-Sheet zum Wegziehen).
+ * Kein am Button verankertes Popover: nichts springt beim Öffnen. Wird erst
  * beim ersten Öffnen geladen.
  */
 // wie DAY_WINDOW in server/dates.ts: ältere/spätere Tage sind 404
@@ -35,45 +36,51 @@ export function CalendarDialog({ trigger, selected }: Props) {
   const last = addDays(now, FUTURE_DAYS);
 
   return (
-    <Dialog
+    <Drawer
       onOpenChange={(value) => {
         $calendarOpen.set(value);
         trigger.setAttribute("aria-expanded", String(value));
       }}
       open={open}
     >
-      <DialogContent
+      <DrawerContent
         className="sm:max-w-sm"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           trigger.focus();
         }}
       >
-        <DialogHeader>
-          <DialogTitle>Tag wählen</DialogTitle>
-          <DialogDescription>
+        <DrawerHeader>
+          <DrawerTitle>Tag wählen</DrawerTitle>
+          <DrawerDescription>
             Speisepläne gibt es für das letzte Jahr und die nächsten zwei
             Wochen.
-          </DialogDescription>
-        </DialogHeader>
-        <Calendar
-          captionLayout="dropdown"
-          className="mx-auto [--cell-size:--spacing(10)]"
-          defaultMonth={selectedDate}
-          disabled={[{ dayOfWeek: [0, 6] }, { before: first }, { after: last }]}
-          endMonth={last}
-          mode="single"
-          onSelect={(date) => {
-            if (!date) {
-              return;
-            }
-            $calendarOpen.set(false);
-            window.location.assign(`/day/${format(date, "yyyy-MM-dd")}`);
-          }}
-          selected={selectedDate}
-          startMonth={first}
-        />
-      </DialogContent>
-    </Dialog>
+          </DrawerDescription>
+        </DrawerHeader>
+        <DrawerBody>
+          <Calendar
+            captionLayout="dropdown"
+            className="mx-auto [--cell-size:--spacing(10)]"
+            defaultMonth={selectedDate}
+            disabled={[
+              { dayOfWeek: [0, 6] },
+              { before: first },
+              { after: last },
+            ]}
+            endMonth={last}
+            mode="single"
+            onSelect={(date) => {
+              if (!date) {
+                return;
+              }
+              $calendarOpen.set(false);
+              window.location.assign(`/day/${format(date, "yyyy-MM-dd")}`);
+            }}
+            selected={selectedDate}
+            startMonth={first}
+          />
+        </DrawerBody>
+      </DrawerContent>
+    </Drawer>
   );
 }

@@ -16,12 +16,11 @@ export function CookiePreferencesButton() {
         <Cookie className="size-4" />
         Cookie-Einstellungen ändern
       </Button>
-      {showDialog ? (
-        <ConsentDialog
-          onConsent={() => setShowDialog(false)}
-          onEarlyExit={() => setShowDialog(false)}
-        />
-      ) : null}
+      <ConsentDialog
+        onConsent={() => setShowDialog(false)}
+        onDismiss={() => setShowDialog(false)}
+        open={showDialog}
+      />
     </>
   );
 }

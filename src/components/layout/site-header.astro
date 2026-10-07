@@ -2,6 +2,8 @@
 // Kopfzeile aller Seiten: Logo/Wortmarke (Link zur Startseite) und Feedback-Link
 import { MessageCircleHeart } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
+// gehasht unter /_astro/ (immutable): bleibt beim Seitenwechsel im Cache
+import logoUrl from "@/assets/logo.png?url&no-inline";
 ---
 
 <header class="container-page flex items-center justify-between gap-4 py-4">
@@ -13,9 +15,10 @@ import Button from "@/components/ui/button.astro";
     <img
       alt=""
       class="size-10 rounded-[0.6rem] shadow-soft transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105"
-      decoding="async"
+      decoding="sync"
+      fetchpriority="high"
       height="40"
-      src="/logo-96.png"
+      src={logoUrl}
       width="40"
     >
     <span class="font-bold font-display text-xl tracking-tight">

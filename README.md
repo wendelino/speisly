@@ -107,7 +107,7 @@ speisly/
 - **Bausteine** in `src/components/ui/`: Astro-Komponenten ohne JS (`button`, `badge`, `card`, `chip`, `tabs`/`tab-panel`, `stat`, `stars`, `meter`, `note`, `empty-state`, `icon-blob`, `prose`, `skeleton`) und die React-Primitives für Dialoge (shadcn/Radix). Button- und Badge-Stile kommen für beide aus `ui/variants.ts`.
 - **Gerichtskarten** nutzen kurze Klassen aus `src/styles/meal.css` (die Karte steht ~90× auf einer Seite, das hält das HTML klein).
 - Speiseplan: Tagesauswahl und Mensa-Sprungmarken stehen in einer Toolbar, die ab `md` sticky ist (mit Markierung der sichtbaren Mensa); auf dem Handy sind die Mensa-Überschriften sticky.
-- Dialoge sind auf dem Handy Bottom-Sheets, ab `sm` zentriert. Animationen respektieren `prefers-reduced-motion`. Keine Emojis in Texten.
+- Dialoge (`ui/drawer.tsx`) sind auf dem Handy Drawer: Bottom-Sheets, die sich wegziehen lassen (Feder-Animation mit [motion](https://motion.dev), Schließen ab 30 % Weg oder 400 px/s), auf Radix Dialog aufgebaut (Fokusfalle, Escape, Screenreader). Ab `sm` zentriert. Animationen respektieren `prefers-reduced-motion`. Keine Emojis in Texten.
 
 ## Datensync (`src/server/sync`)
 

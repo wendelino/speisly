@@ -51,18 +51,24 @@
   }
 
   /* meal-image.astro */
-  /* 4:3 wie die Fotos; object-contain schneidet nichts ab */
+  /* Die Fotos sind freigestellte Teller auf Weiß, die bis an den Rand
+     reichen: weißer Rahmen wie das Foto, Innenabstand und object-contain,
+     damit die runden Ecken nichts abschneiden */
   .m-img {
-    @apply relative aspect-4/3 overflow-hidden rounded-2xl bg-muted;
+    @apply relative aspect-4/3 overflow-hidden rounded-2xl bg-white ring-1 ring-black/5;
   }
   .m-skel {
     @apply absolute inset-0 animate-pulse bg-muted;
   }
   .m-photo {
-    @apply size-full object-contain transition-opacity duration-300;
+    @apply size-full object-contain p-1.5 transition-opacity duration-300;
   }
   .m-noimg {
     @apply flex size-full items-center justify-center bg-linear-to-br from-peach-soft to-sun-soft text-peach/50;
+  }
+  /* Detailseite: mehr Luft um den Teller */
+  .m-img-lg .m-photo {
+    @apply p-3 sm:p-5;
   }
 
   /* diet-badge.astro, Filter-Chips (filter-fab.astro) */

@@ -320,6 +320,10 @@ await check(
     const accept = page.getByRole("button", { name: "Akzeptieren" });
     if (await accept.isVisible().catch(() => false)) {
       await accept.click();
+      // Consent-Drawer erst ausblenden lassen (Animation)
+      await page
+        .getByRole("dialog", { name: "Kekse gefällig?" })
+        .waitFor({ state: "detached" });
     }
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "hidden" });

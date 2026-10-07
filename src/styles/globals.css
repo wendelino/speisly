@@ -198,3 +198,17 @@
     display: none;
   }
 }
+
+/* Drawer (ui/drawer.tsx): Der Finger scrollt den Body nur, wenn es dort etwas
+   zu scrollen gibt; sonst zieht er den Drawer */
+[data-drawer-body] {
+  touch-action: none;
+}
+[data-drawer-body][data-scrollable] {
+  touch-action: pan-y;
+}
+@media (min-width: 640px) {
+  [data-drawer-body] {
+    touch-action: auto;
+  }
+}

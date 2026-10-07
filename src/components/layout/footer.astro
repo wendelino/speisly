@@ -2,6 +2,8 @@
 // Fußzeile: Wellenkante, Marke, Links und Feedback-Aufruf. Kein Client-JS.
 import { Heart, MessageCircleHeart } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
+// gehasht unter /_astro/ (immutable): bleibt beim Seitenwechsel im Cache
+import logoUrl from "@/assets/logo.png?url&no-inline";
 
 const LINKS = [
   { href: "/", label: "Speiseplan" },
@@ -32,7 +34,7 @@ const LINKS = [
           decoding="async"
           height="40"
           loading="lazy"
-          src="/logo-96.png"
+          src={logoUrl}
           width="40"
         >
         <span class="font-bold font-display text-xl">
