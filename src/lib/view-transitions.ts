@@ -1,8 +1,8 @@
 /**
- * Cross-Document View Transitions zwischen Gerichtskarte und Detailseite
- * (vorher React <ViewTransition> in Next). Namen werden nur für das jeweils
- * angeklickte Gericht vergeben: Bei ~90 Karten mit festen Namen müsste der
- * Browser bei jeder Navigation 90 Snapshots erstellen.
+ * Cross-Document View Transitions zwischen Gerichtskarte und Detailseite.
+ * Namen werden nur für das jeweils angeklickte Gericht vergeben: Bei ~90
+ * Karten mit festen Namen müsste der Browser bei jeder Navigation 90
+ * Snapshots erstellen.
  *
  * Elemente tragen nur ihre Rolle (`data-vt="image"`, `title`, `price`,
  * `ingredients`; meal-card.astro, meal/[mealId].astro). Der Name

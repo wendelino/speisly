@@ -1,7 +1,7 @@
 import { CronJob } from "cron";
 
 /**
- * Zeitpläne für den Daten-Sync (wie bisher in src/_boot.ts, Europe/Berlin).
+ * Zeitpläne für den Daten-Sync (Europe/Berlin).
  * Alle Jobs rufen den Sync-Endpoint im selben Prozess auf: Dort lebt der
  * Route Cache, der nach dem Sync gezielt invalidiert wird.
  */

@@ -56,8 +56,7 @@
     @apply flex h-full w-full items-center justify-center rounded-lg border border-border/30 bg-muted/50;
   }
 
-  /* ingredient-badge.astro: INGREDIENT_BADGE_BASE + INGREDIENT_STYLES aus
-     lib/ingredients.ts (dort weiter für Filter-Chips und React) */
+  /* ingredient-badge.astro, Filter-Chips (filter-fab.astro) */
   .ib {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold text-xs;
   }

@@ -5,9 +5,9 @@
 ---
 
 <script>
-  import { PUBLIC_COOKIE_CONSENT_NAME } from "astro:env/client";
   import { actions } from "astro:actions";
   import type { ExistingRating } from "@/components/rating/rating-dialog";
+  import { readConsent } from "@/lib/cookies";
 
   type UiState = "new" | "existing" | "loading";
 
@@ -27,18 +27,6 @@
         : button.dataset.classDefault) ?? button.className;
   }
 
-  function consentAccepted(): boolean {
-    const raw = `; ${document.cookie}`
-      .split(`; ${PUBLIC_COOKIE_CONSENT_NAME}=`)
-      .pop()
-      ?.split(";")[0];
-    try {
-      return Boolean(raw && JSON.parse(decodeURIComponent(raw)).accepted === true);
-    } catch {
-      return false;
-    }
-  }
-
   /** Bewertungsübersicht nach Änderungen frisch vom Server holen */
   async function refreshSummary() {
     const response = await fetch(location.href, { cache: "reload" });
@@ -54,7 +42,7 @@
     const mealId = button.dataset.mealId as string;
     const mensaMealId = button.dataset.mensaMealId as string;
 
-    if (consentAccepted()) {
+    if (readConsent() === "accepted") {
       setUi("loading");
       actions.rating
         .mine({ mealId })

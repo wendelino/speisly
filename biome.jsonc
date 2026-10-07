@@ -1,12 +1,8 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": [
-    "ultracite/core",
-    "ultracite/react",
-    "ultracite/next",
-    "ultracite/astro",
-    "ultracite/remix"
-  ],
+  "extends": ["ultracite/core", "ultracite/react", "ultracite/astro"],
+  // Von drizzle-kit erzeugt
+  "files": { "includes": ["**", "!drizzle"] },
   "linter": {
     "rules": {
       "style": {

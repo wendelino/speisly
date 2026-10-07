@@ -1,12 +1,10 @@
-"use client";
-
 import { de } from "date-fns/locale";
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "lucide-react";
-import * as React from "react";
+import { type ComponentProps, useEffect, useRef } from "react";
 import {
   type DayButton,
   DayPicker,
@@ -24,8 +22,8 @@ function Calendar({
   formatters,
   components,
   ...props
-}: React.ComponentProps<typeof DayPicker> & {
-  buttonVariant?: React.ComponentProps<typeof Button>["variant"];
+}: ComponentProps<typeof DayPicker> & {
+  buttonVariant?: ComponentProps<typeof Button>["variant"];
 }) {
   const defaultClassNames = getDefaultClassNames();
 
@@ -126,42 +124,10 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => (
-          <div
-            className={cn(className)}
-            data-slot="calendar"
-            ref={rootRef}
-            {...props}
-          />
-        ),
-        Chevron: ({ className, orientation, ...props }) => {
-          if (orientation === "left") {
-            return (
-              <ChevronLeftIcon className={cn("size-4", className)} {...props} />
-            );
-          }
-
-          if (orientation === "right") {
-            return (
-              <ChevronRightIcon
-                className={cn("size-4", className)}
-                {...props}
-              />
-            );
-          }
-
-          return (
-            <ChevronDownIcon className={cn("size-4", className)} {...props} />
-          );
-        },
+        Root: CalendarRoot,
+        Chevron: CalendarChevron,
         DayButton: CalendarDayButton,
-        WeekNumber: ({ children, ...props }) => (
-          <td {...props}>
-            <div className="flex size-(--cell-size) items-center justify-center text-center">
-              {children}
-            </div>
-          </td>
-        ),
+        WeekNumber: CalendarWeekNumber,
         ...components,
       }}
       disabled={(date) => {
@@ -181,17 +147,64 @@ function Calendar({
   );
 }
 
+type DayPickerComponents = NonNullable<
+  ComponentProps<typeof DayPicker>["components"]
+>;
+
+const CalendarRoot: DayPickerComponents["Root"] = ({
+  className,
+  rootRef,
+  ...props
+}) => (
+  <div
+    className={cn(className)}
+    data-slot="calendar"
+    ref={rootRef}
+    {...props}
+  />
+);
+
+const CalendarChevron: DayPickerComponents["Chevron"] = ({
+  className,
+  orientation,
+  ...props
+}) => {
+  const Icon =
+    orientation === "left"
+      ? ChevronLeftIcon
+      : orientation === "right"
+        ? ChevronRightIcon
+        : ChevronDownIcon;
+  return <Icon className={cn("size-4", className)} {...props} />;
+};
+
+const CalendarWeekNumber: DayPickerComponents["WeekNumber"] = ({
+  children,
+  ...props
+}) => (
+  <td {...props}>
+    <div className="flex size-(--cell-size) items-center justify-center text-center">
+      {children}
+    </div>
+  </td>
+);
+
 function CalendarDayButton({
   className,
   day,
   modifiers,
   ...props
-}: React.ComponentProps<typeof DayButton>) {
+}: ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames();
 
-  const ref = React.useRef<HTMLButtonElement>(null);
-  React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus();
+  const ref = useRef<HTMLButtonElement>(null);
+  const isSingleSelection =
+    modifiers.selected === true &&
+    !(modifiers.range_start || modifiers.range_end || modifiers.range_middle);
+  useEffect(() => {
+    if (modifiers.focused) {
+      ref.current?.focus();
+    }
   }, [modifiers.focused]);
 
   return (
@@ -205,12 +218,7 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       data-range-start={modifiers.range_start}
-      data-selected-single={
-        modifiers.selected &&
-        !modifiers.range_start &&
-        !modifiers.range_end &&
-        !modifiers.range_middle
-      }
+      data-selected-single={isSingleSelection}
       ref={ref}
       size="icon"
       variant="ghost"

@@ -1,4 +1,3 @@
-"use client";
 import { Star } from "lucide-react";
 import { Label } from "@/components/ui/label";
 

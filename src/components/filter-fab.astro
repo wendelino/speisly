@@ -5,10 +5,7 @@
 import { Funnel } from "@lucide/astro";
 import Icon from "@/components/icons/icon.astro";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  INGREDIENT_BADGE_BASE,
-  INGREDIENT_STYLES,
-} from "@/lib/ingredients";
+import { INGREDIENT_LABELS } from "@/lib/ingredients";
 import { cn } from "@/lib/utils";
 
 type Props = { mensen: Mensa[] };
@@ -18,8 +15,8 @@ const CHIP_FILTER =
   "cursor-pointer border px-3 py-2 font-bold shadow-lg hover:bg-accent hover:text-accent-foreground";
 const dietChips = (["vegan", "veggie"] as const).map((type) => ({
   type,
-  label: INGREDIENT_STYLES[type].label,
-  class: cn(INGREDIENT_BADGE_BASE, INGREDIENT_STYLES[type].tailwind, CHIP_FILTER),
+  label: INGREDIENT_LABELS[type],
+  class: cn("ib", `ib-${type}`, CHIP_FILTER),
 }));
 ---
 

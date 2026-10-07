@@ -1,11 +1,9 @@
-"use client";
-
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { type ConsentState, readConsent } from "@/lib/cookies";
 import { cn } from "@/lib/utils";
 import { ConsentDialog } from "./consent-dialog";
-import { type ConsentState, useCookies } from "./use-cookies";
 
 type ConsentProviderProps = {
   children: React.ReactNode;
@@ -16,8 +14,7 @@ export const ConsentProvider = ({
   children,
   disableStyling = false,
 }: ConsentProviderProps) => {
-  const { hasConsent } = useCookies();
-  const [consentState, setConsentState] = useState<ConsentState>(hasConsent());
+  const [consentState, setConsentState] = useState<ConsentState>(readConsent);
 
   const handleConsent = useCallback((accepted: boolean) => {
     setConsentState(accepted ? "accepted" : "rejected");

@@ -43,11 +43,3 @@ declare type MealRatingStats = {
     value_taste: number | null;
   };
 };
-
-declare type DetailedMeal = Omit<Meal, "mensaMealId" | "date"> &
-  MealRatingStats;
-
-declare type MealDetailProps = {
-  meal: DetailedMeal;
-  mensaMealId?: string;
-};

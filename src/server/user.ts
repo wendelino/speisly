@@ -7,7 +7,6 @@ import { hasConsent } from "./consent";
 import { db } from "./db";
 import { decodeJwt, encodeJwt } from "./jwt";
 
-/** Ersetzt src/actions/user.ts (gleiches Cookie, gleiche Logik) */
 const USER_COOKIE_NAME = "speisly_user_id";
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 

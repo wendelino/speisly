@@ -1,5 +1,3 @@
-"use client";
-
 import { PUBLIC_PRIVACY_POLICY_PATH } from "astro:env/client";
 import { Cookie } from "lucide-react";
 import { useState } from "react";
@@ -13,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useCookies } from "./use-cookies";
+import { writeConsent } from "@/lib/cookies";
 
 type ConsentDialogProps = {
   onConsent: (accepted: boolean) => void;
@@ -22,14 +20,13 @@ type ConsentDialogProps = {
 
 export function ConsentDialog({ onConsent, onEarlyExit }: ConsentDialogProps) {
   const [open, setOpen] = useState(true);
-  const { setConsent } = useCookies();
   const handleOpenChange = (v: boolean) => {
     onEarlyExit();
     setOpen(v);
   };
 
   const handleConsent = (accepted: boolean) => {
-    setConsent(accepted);
+    writeConsent(accepted);
     onConsent(accepted);
     setOpen(false);
     toast.success(

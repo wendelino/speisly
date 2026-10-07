@@ -5,7 +5,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 
 /**
- * Vorab berechnete Bildvarianten der Gerichtsbilder (Phase 7).
+ * Vorab berechnete Bildvarianten der Gerichtsbilder.
  *
  * Der Sync lädt jedes neue Bild einmal von meine-mensa.de und legt AVIF und
  * WebP in zwei Breiten ab: `<dir>/<key>-<breite>.<format>`. Die kleine Breite

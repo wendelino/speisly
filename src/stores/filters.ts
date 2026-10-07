@@ -1,4 +1,5 @@
 import { atom } from "nanostores";
+import { writeCookie } from "@/lib/cookies";
 
 export type FilterState = {
   selectedMensen: string[];
@@ -30,15 +31,6 @@ function runtime(): FilterRuntime | undefined {
  * Ersetzt den React-Context (Islands sind getrennte React-Roots).
  */
 export const $filters = atom<FilterState>(runtime()?.initial ?? EMPTY_FILTERS);
-
-const ONE_YEAR_DAYS = 365;
-
-function writeCookie(key: string, value: string) {
-  const expires = new Date(Date.now() + ONE_YEAR_DAYS * 86_400_000);
-  // Format wie bisher (use-cookies.tsx), damit bestehende Cookies gültig bleiben
-  // biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API ist nicht überall verfügbar
-  document.cookie = `${key}=${value};expires=${expires.toUTCString()};path=/`;
-}
 
 function update(patch: Partial<FilterState>) {
   const next = { ...$filters.get(), ...patch };

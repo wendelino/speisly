@@ -3,7 +3,10 @@ import { format } from "date-fns";
 import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ConsentProvider } from "@/components/consent/consent-provider";
+import { StarRating } from "@/components/rating/star-rating";
 import { Button } from "@/components/ui/button";
+import { confirm } from "@/components/ui/confirm";
 import {
   Dialog,
   DialogContent,
@@ -14,10 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ConsentProvider } from "@/lib/cookie/consent-provider";
-import { confirm } from "@/lnio/components/alert";
-import LoadingButton from "@/lnio/components/loading-button";
-import { StarRating } from "@/lnio/components/star-rating";
+import LoadingButton from "@/components/ui/loading-button";
 import { $ratingDialogOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
 

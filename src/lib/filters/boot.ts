@@ -69,7 +69,7 @@ export function filterBoot() {
         `${none} #mealslist{display:none!important}` +
         `${none} [data-filter-empty]{display:contents!important}`;
     }
-    // Chip „N Mensen“ – Bedingung wie bisher in mensa-filter.tsx
+    // Chip „N Mensen“ (nicht bei „alle Mensen“ ausgewählt)
     const count = next.selectedMensen.length;
     if (count > 0 && count !== 7) {
       css += `[data-chip="mensen"]{display:inline-flex!important}[data-chip-label]::before{content:"${count} Mensen "}`;

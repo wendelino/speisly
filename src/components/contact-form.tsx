@@ -1,5 +1,3 @@
-"use client";
-
 import { actions } from "astro:actions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {

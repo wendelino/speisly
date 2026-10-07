@@ -1,12 +1,12 @@
 import { and, desc, eq } from "drizzle-orm";
 import { meal, mensaMeal } from "@/lib/db/schema/schema";
-import { generateFlags } from "@/lib/helpers";
+import { generateFlags } from "@/lib/meal-flags";
 import { toIsoDay } from "../dates";
 import { db } from "../db";
 import { logError } from "../log";
 
-/** Gericht inkl. Zutaten einer Ausgabe – ohne Bewertungen (die kommen per Island). */
-export type MealDetail = Omit<DetailedMeal, keyof MealRatingStats> & {
+/** Gericht inkl. Zutaten einer Ausgabe – ohne Bewertungen (eigene Query). */
+export type MealDetail = Omit<Meal, "mensaMealId" | "date"> & {
   /** Die Ausgabe, deren Zutaten/Extras angezeigt werden */
   mensaMealId: string;
   servedOn: string;

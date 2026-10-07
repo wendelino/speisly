@@ -7,7 +7,7 @@ import type { SpriteIconName } from "@/components/icons/sprite-icons";
 import Footer from "@/components/layout/footer.astro";
 import { mealImageBoot } from "@/lib/meal-assets";
 import { viewTransitionBoot } from "@/lib/view-transitions";
-import ToastProvider from "@/lnio/components/toast/provider";
+import { Toaster } from "@/components/ui/toaster";
 import "@/styles/globals.css";
 
 type Props = {
@@ -36,7 +36,7 @@ type Props = {
 const DEFAULT_DESCRIPTION =
   "Aktuelle Speisepläne der Mensen der Martin-Luther-Universität Halle-Wittenberg";
 const DEFAULT_OG_IMAGES = [
-  { url: "/logo_512.png", width: 512, height: 512, alt: "Speisly Logo" },
+  { url: "/icons/icon-512x512.png", width: 512, height: 512, alt: "Speisly Logo" },
 ];
 
 const {
@@ -118,6 +118,6 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <slot/>
     <div class="flex-1"></div>
     <Footer/>
-    {withToasts && <ToastProvider client:idle position="top-right" />}
+    {withToasts && <Toaster client:idle position="top-right" />}
   </body>
 </html>

@@ -11,7 +11,7 @@
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { dataSource } from "../../src/lib/db/schema/dataSource";
+import { dataSource } from "../../src/lib/db/schema/data-source";
 import {
   meal,
   mealRating,

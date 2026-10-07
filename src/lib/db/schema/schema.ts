@@ -9,7 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { ID_LENGTH, timeStampUtils, uuid } from "../utils";
-import { dataSource } from "./dataSource";
+import { dataSource } from "./data-source";
 
 export const user = pgTable(
   "user",

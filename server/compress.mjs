@@ -4,8 +4,7 @@ import zlib from "node:zlib";
 
 /**
  * Antwort-Komprimierung (Brotli/gzip) für den Start-Wrapper (server/index.mjs).
- * `@astrojs/node` komprimiert nicht selbst; Next tat es, darum war das HTML in
- * Produktion bisher komprimiert.
+ * `@astrojs/node` komprimiert nicht selbst.
  *
  * Gecachte Seiten sind zwischen zwei Aufrufen Byte für Byte gleich. Die
  * komprimierte Fassung wird deshalb über einen Hash des Inhalts in einem

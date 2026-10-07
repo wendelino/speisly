@@ -28,7 +28,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   // Prefetch nur bei Nutzerabsicht (Hover/Touch) für Links mit
-  // data-astro-prefetch – nicht wie bei Next alles im Viewport
+  // data-astro-prefetch, nicht alles im Viewport
   prefetch: { prefetchAll: false, defaultStrategy: "hover" },
   // Keine Remote-Domains für astro:assets: Gerichtsbilder werden beim Sync
   // vorberechnet (src/server/images), `/_image` rechnet nichts Fremdes.

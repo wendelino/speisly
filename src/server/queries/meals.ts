@@ -1,6 +1,6 @@
 import { and, asc, eq, type SQL } from "drizzle-orm";
 import { meal, mensa, mensaMeal } from "@/lib/db/schema/schema";
-import { transformMeal } from "@/lib/helpers";
+import { transformMeal } from "@/lib/meal-flags";
 import { toUtcDate } from "../dates";
 import { db } from "../db";
 import { logError } from "../log";
