@@ -10,7 +10,7 @@ export async function invalidateTags(
   cache: APIContext["cache"],
   tags: string[]
 ): Promise<void> {
-  if (!cache.enabled) {
+  if (!cache.enabled || tags.length === 0) {
     return;
   }
   try {

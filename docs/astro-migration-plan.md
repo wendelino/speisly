@@ -17,7 +17,7 @@
 | 6. Caching | ✅ erledigt – siehe „Umsetzungsnotizen Phase 6“ unten |
 | 7. Bilder | ✅ erledigt – siehe „Umsetzungsnotizen Phase 7“ unten |
 | 8. Sync-Optimierung | ✅ erledigt – siehe „Umsetzungsnotizen Phase 8“ unten |
-| 9. | offen |
+| 9. Betrieb & Cutover | ✅ erledigt – siehe „Umsetzungsnotizen Phase 9“ und „Abschluss“ unten |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -527,7 +527,7 @@ Initiales JS auf `/` und `/day/*`: **4,6 KB gzip** (Next: 248 KB). Der gemeinsam
 - **Icons:** `@lucide/astro` ist auf **0.556.0** gepinnt, dieselbe Icon-Version wie `lucide-react`. In 1.x wurden „Blatt“ (Vegan) und „Rind“ (Fleisch) neu gezeichnet. Alle 17 verwendeten Icons sind per SVG-Vergleich identisch.
 - **Prefetch:** nur bei Hover/Touch auf Karten und Heute/Morgen (`data-astro-prefetch`), nicht wie bei Next für alles im Viewport. Bis Phase 5 liefert der Prefetch der Detailseite noch 404.
 - **Mensen** erscheinen alphabetisch (Entscheidung aus Phase 2). Innerhalb einer Mensa ist die Reihenfolge identisch zu Next (geprüft).
-- **Kompression:** Der Node-Adapter komprimiert nicht. Ohne Kompression ist das HTML der Liste 312 KB statt 22 KB, Lighthouse fiel dabei auf 71–89. **In Produktion muss gzip/brotli vor dem Server sitzen** (Reverse Proxy oder der Start-Wrapper aus Phase 9). Zum Messen gibt es `scripts/perf/compress-proxy.ts` und im Messskript die Option `--browser-base`.
+- **Kompression:** Der Node-Adapter komprimiert nicht. Ohne Kompression ist das HTML der Liste 312 KB statt 22 KB, Lighthouse fiel dabei auf 71–89. **In Produktion muss gzip/brotli vor dem Server sitzen** (Reverse Proxy oder der Start-Wrapper aus Phase 9). Zum Messen gab es `scripts/perf/compress-proxy.ts` (in Phase 9 entfernt, der Start-Wrapper komprimiert jetzt selbst) und im Messskript die Option `--browser-base`.
 - **Biome:** Für `.astro` sind jetzt auch Linter und Assist aus. Jedes `check/lint --write` (auch fixAll beim Speichern in VS Code) fügte eine Leerzeile ins Frontmatter ein, die sich bei jedem Lauf vermehrte. Die Typprüfung macht `astro check`.
 - **Aufgeräumt:** `meal-list.tsx`, `meal-card.tsx`, `empty-state.tsx`, `loading-state.tsx`, `mensa-header.tsx`, `info-card.tsx`, `filter-context.tsx`, `day-selector.tsx`, `mensa-filter.tsx`, `src/actions/mensa.ts` sowie `welcome-cta.tsx` (war schon vorher ungenutzt).
 
@@ -744,3 +744,80 @@ Gezählt sind Client-Statements über `pg_stat_statements`, ohne die internen Fr
 Insgesamt 59 Tests.
 
 **Unverändert und als Hinweis für später:** Liefert die API für den Zeitraum **gar keine** Daten (`No food plans found`), entfernt der Sync wie bisher alle Ausgaben im Zeitraum. Das ist an Feiertagen und in Schließzeiten gewollt. Bei einer API-Störung, die 200 mit leerer Liste liefert, wäre es aber gefährlich, weil per Cascade auch Bewertungen gelöscht würden. Eine Schutzregel wäre: Entfernen nur, wenn die API für den Zeitraum mindestens einen Eintrag geliefert hat, oder nur für Tage, die die API kennt. Das ändert das Verhalten und gehört deshalb nicht in diese Phase.
+
+## Umsetzungsnotizen Phase 9
+
+**Start-Wrapper** `server/index.mjs` (`bun run start`, ersetzt `src/_boot.ts`):
+- **Server:** Importiert den Build mit `ASTRO_NODE_AUTOSTART=disabled` und nutzt den Handler des Node-Adapters (statische Dateien + SSR) in einem eigenen `http.createServer`.
+- **Komprimierung** (`server/compress.mjs`): Brotli (q5) oder gzip (6) für HTML, JS, CSS, JSON, SVG und Manifest ab 1 KB, nur bei 200/404.
+  - **Kein zweites Komprimieren:** Gecachte Seiten sind Byte für Byte gleich. Die komprimierte Fassung liegt deshalb in einem LRU (500 Einträge, 32 MB), Schlüssel ist ein Inhalts-Hash. Unter Bun ist das `Bun.hash` (~30 µs), unter Node SHA-1 (~350 µs).
+  - **Wirkung:** `/` geht mit 9,7 KB Brotli statt 315 KB über die Leitung (gzip 20 KB).
+  - **Kosten:** Unkomprimiert schafft der Server ~785 req/s auf `/day/*`, mit Brotli ~650 req/s, also ~17 % weniger.
+- **Pre-Warm beim Start:** `POST /api/sync?scope=warm` (neuer Scope: kein Sync, keine Invalidierung) rendert `/` und `/day/<heute…+7>` vor.
+- **Cron** (`server/cron.mjs`): gleiche Zeiten wie bisher, Europe/Berlin, `waitForCompletion`. Die Jobs rufen `POST http://127.0.0.1:$PORT/api/sync` mit Bearer-Token und `Content-Type: application/json` auf.
+- **Abschalten:** `CRON_DISABLED=1` schaltet Cron und Pre-Warm ab.
+- **Herunterfahren:** Bei `SIGTERM`/`SIGINT` stoppt erst der Cron, dann schließt der Server. Laufende Requests haben 10 s.
+- **Node:** `bun run start:node` (`node --env-file-if-exists=.env`) funktioniert ebenso. Geprüft unter Node 22.22.
+
+**`ASTRO_KEY`** wird von Astro **beim Build** gelesen (`core/build`), nicht zur Laufzeit. Ohne ihn erzeugt jeder Build einen neuen Schlüssel. Folge: Offene Tabs aus der Zeit vor einem Deploy können die Angebotshistorie (Server Island) nicht mehr nachladen. Deshalb ist er empfohlen, aber nicht zwingend. Dasselbe gilt für alle `PUBLIC_*`-Werte: Sie werden beim Build eingebaut.
+
+**Aufgeräumt:**
+- `src/_boot.ts` entfernt, ebenso `scripts/perf/compress-proxy.ts` (der Wrapper komprimiert jetzt selbst).
+- Next-Einträge aus `.gitignore` und `tsconfig.json` entfernt.
+- README überarbeitet: Projektstruktur, Sync-Scopes, Betrieb, Caching, Umgebungsvariablen und eine Deploy-Checkliste für den Umstieg.
+
+**Tests:**
+- `tests/server.test.ts`: Kodierungswahl, Komprimierung inklusive LRU und Durchreichen von Bildern, Redirects, Fehlern und kleinen Antworten; Cron-Zeitpläne und Sync-Aufruf.
+- `tests/api-sync.test.ts`: Scope `warm`.
+
+Insgesamt 68 Tests.
+
+**E2E-Smoke-Test** `scripts/e2e/smoke.ts`, 19 Prüfungen gegen den laufenden Produktions-Build, zweimal hintereinander grün:
+- **HTTP:** alle Seiten, Redirect `/day/heute`, 404-Fälle, Manifest, Komprimierung, Route Cache (HIT), `/_image` gesperrt, `/api/sync` mit 401/400/200.
+- **Browser, mobil:**
+  - Vegan-Filter inklusive Reload und Chip;
+  - Mensa-Filter;
+  - Tageswahl und Kalender;
+  - Detailseite mit Server Island;
+  - Bewerten: Consent, speichern, Übersicht aktualisiert sich sofort und nach Reload, löschen mit Rückfrage, Übersicht wieder wie vorher;
+  - Feedback- und Kontaktformular;
+  - Kontakt, Datenschutz und 404.
+- **Browser, Desktop:** Startseite.
+- **Konsole:** keine Fehler.
+
+Der Test hat beim Schreiben zwei falsche Annahmen in ihm selbst aufgedeckt. Die Mensa-Auswahl funktioniert wie bei Next („keine Auswahl = alle“), und das Löschen hat eine Sicherheitsabfrage. Einen Fehler in der App hat er nicht gefunden.
+
+## Abschluss: Next.js 16 → Astro 7.3
+
+Gleiche Maschine und Messmethode wie die Baseline (`docs/perf-baseline.md`). Die Seiten sind beim Lasttest gecacht und werden komprimiert ausgeliefert. Rohdaten: `docs/perf/baseline-next.json` gegen `docs/perf/final-astro.json`.
+
+| Seite | TTFB p50 | TTFB p95 | Req/s | JS (gzip) | DB-Queries pro Seitenaufruf | Lighthouse | LCP (mobil) |
+|---|---|---|---|---|---|---|---|
+| `/` | 18 → **12.6 ms** | 31.4 → **30.8 ms** | 436 → **663** | 242 → **4.5 KB** | 11 → **0** | 93 → **100** | 3.16 → **1.39 s** |
+| `/day/<morgen>` | 79.9 → **12.9 ms** | 190.3 → **31.2 ms** | 54 → **645** | 242 → **4.5 KB** | 13 → **0** | 89 → **100** | 3.64 → **1.38 s** |
+| `/day/<vor 30 Tagen>` | 80.1 → **13.6 ms** | 190.2 → **33.4 ms** | 49 → **606** | 242 → **4.5 KB** | 13 → **0** | 93 → **100** | 3.19 → **1.38 s** |
+| `/meal/<id>?mmid=…` | 38.4 → **3.7 ms** | 71.6 → **10.5 ms** | 96 → **2 085** | 258 → **6.5 KB** | 4 → **1**¹ | 94 → **100** | 2.96 → **1.38 s** |
+| `/datenschutz` | 7.9 → **2.7 ms** | 12.8 → **6.2 ms** | 956 → **3 171** | 326 → **96 KB**² | 0 → **0** | 95 → **100** | 2.82 → **1.38 s** |
+
+¹ Die Angebotshistorie (Server Island) wird beim ersten Abruf nach einem neuen Render einmal berechnet und dann gecacht.
+² Cookie-Einstellungen als React-Island, unverändert seit Phase 3.
+
+- **Zielwerte aus §9:**
+  - TTFB p95 bei HIT < 30 ms: auf den Tages- und Startseiten mit 31–33 ms knapp verfehlt, sonst erreicht. Grund ist die Komprimierung, ohne sie sind es 13–14 ms (Phase 6); für die Nutzer überwiegt die kleinere Übertragung.
+  - 0 DB-Queries bei HIT: erreicht.
+  - JS −70 %: erreicht, −98 %.
+  - Lighthouse ≥ 95: erreicht, 100.
+  - LCP < 2,5 s: erreicht.
+  - Kein Hydration-Warning: erreicht.
+- **Hardware:** Der Container lief bei der Schlussmessung auf anderer Hardware als in Phase 6. Der reine Astro-Server ohne Wrapper schafft hier ~800 statt ~1 650 req/s. Absolute Durchsätze sind deshalb nur innerhalb eines Laufs vergleichbar, das Verhältnis zu Next gilt aber (Next lief zur Baseline unter denselben Bedingungen ebenfalls komprimiert).
+- **Serverlast im Alltag:**
+  - Ohne Sync rendert der Server eine Tagesseite höchstens einmal pro Tag oder nach Änderungen; alles andere sind Cache-Treffer ohne DB.
+  - Prefetches lösen keine DB-Last mehr aus.
+  - Der Sync einer neuen Woche braucht 7 statt ~1 250 Queries.
+  - Bilder werden einmal pro Bild berechnet, nicht pro Größe und Request.
+
+**Offene Punkte für später** (nicht Teil der Migration):
+- **HTML-Größe:** 315 KB roh. Darin stecken 111 KB Tailwind-Klassen und 102 KB Inline-SVG-Icons (238 Stück). Ein SVG-Sprite (`<use href>`) würde das Rohgewicht etwa halbieren; komprimiert sind es heute 10–20 KB.
+- **Schutzregel im Sync:** Liefert die API für einen Zeitraum gar keine Daten, werden wie bisher alle Ausgaben darin gelöscht, per Cascade inklusive Bewertungen (siehe Phase 8).
+- **Mehrere Instanzen:** Der Route Cache ist pro Prozess. Bei mehreren Instanzen braucht man einen gemeinsamen Cache-Provider und Cron nur auf einer Instanz (`CRON_DISABLED=1` auf den anderen).
+- **„Stand“ auf `/datenschutz`:** zeigt das Build-Datum (wie bei Next, dort ebenfalls `new Date()` in einer statischen Seite).

@@ -14,6 +14,7 @@ import { createSyncHandler } from "@/server/sync-endpoint";
  *   POST /api/sync?scope=today     Speiseplan von heute (tagsüber)
  *   POST /api/sync?scope=week      heute bis +7 Tage (nachts)
  *   POST /api/sync?scope=midnight  kein Sync: nur Startseite neu + Pre-Warm
+ *   POST /api/sync?scope=warm      nur Pre-Warm (nach dem Serverstart)
  *
  * Authorization: Bearer <API_BEARER_TOKEN>
  * Content-Type: application/json  (ohne Content-Type blockt Astros

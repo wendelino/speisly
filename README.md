@@ -19,9 +19,9 @@ Speisly wurde entwickelt, um Studierenden der MLU Halle einen einfachen und schn
 
 ## 🛠️ Tech Stack
 
-- **[Astro 7](https://astro.build)** – Web-Framework (Migration von Next.js läuft, siehe [`docs/astro-migration-plan.md`](docs/astro-migration-plan.md))
+- **[Astro 7](https://astro.build)** – Web-Framework: Seiten werden auf dem Server gerendert und gecacht, Server Islands für Statistiken, React nur für interaktive Dialoge (Migration von Next.js: [`docs/astro-migration-plan.md`](docs/astro-migration-plan.md))
 - **[TypeScript](https://www.typescriptlang.org/)** – Typsichere Entwicklung
-- **[React 19](https://react.dev/)** – für interaktive Islands
+- **[React 19](https://react.dev/)** – für Filter-, Kalender- und Bewertungsdialog (erst bei Bedarf geladen)
 - **[Tailwind CSS](https://tailwindcss.com/)** – Utility-first CSS Framework
 - **[Drizzle ORM](https://orm.drizzle.team/)** – TypeScript ORM für Datenbankzugriffe
 - **[PostgreSQL](https://www.postgresql.org/)** – Datenbank
@@ -80,69 +80,72 @@ bun scripts/dev/seed.ts
 ## 📁 Projektstruktur
 
 ```
-speisly-app/
+speisly/
+├── server/                # Produktionsstart: HTTP-Server, Komprimierung, Cron
 ├── src/
-│   ├── actions/           # Server Actions
-│   ├── app/               # Next.js App Router Seiten
-│   ├── components/        # React-Komponenten
-│   ├── contexts/          # React Contexts
-│   ├── dal/               # Data Access Layer für externe APIs
-│   │   ├── index.ts       # Haupt-Export
-│   │   ├── meine-mensa.ts # Integration mit meine-mensa.de API
-│   │   └── types.ts       # TypeScript-Typen
-│   ├── lib/               # Utility-Funktionen und Konfiguration
-│   │   ├── db/            # Datenbank-Konfiguration und Schema
-│   │   ├── cookie/        # Cookie-Consent Management
-│   │   └── telegram/      # Telegram-Integration
-│   └── lnio/              # Shared Components & Hooks
+│   ├── actions/           # Astro Actions (Bewertungen, Feedback)
+│   ├── components/        # Astro-Komponenten, React nur für Dialoge
+│   ├── layouts/
+│   ├── middleware.ts      # Tages-Routen, Browser-Cache-Header
+│   ├── pages/             # Routen (/, /day/[date], /meal/[mealId], /api/*, /img/*)
+│   ├── server/            # nur Server: DB, Queries, Cache-Regeln, Sync, Bilder
+│   │   ├── sync/          # Abgleich mit der meine-mensa.de API
+│   │   └── images/        # Bildvarianten (AVIF/WebP) aus dem Sync
+│   ├── stores/            # nanostores (Filter, Dialog-Zustand)
+│   └── lib/               # gemeinsame Hilfsfunktionen, DB-Schema
 ├── drizzle/               # Datenbank-Migrationen
-├── public/                # Statische Assets
-└── _boot.ts               # Production Server mit Cron-Jobs
+├── scripts/               # Seed-Daten, Bild-Backfill, Messung, E2E-Smoke-Test
+├── tests/                 # Tests außerhalb von src/
+└── public/                # Statische Assets
 ```
 
 ## 🔌 Datensync (`src/server/sync`)
 
-Der Sync in `src/server/sync` kapselt die Kommunikation mit externen APIs. Aktuell wird die API von [meine-mensa.de](https://meine-mensa.de) verwendet, um Speiseplandaten abzurufen.
+Der Sync gleicht den Speiseplan mit der API von [meine-mensa.de](https://meine-mensa.de) ab: API lesen, Änderungen im Speicher planen (`plan.ts`), dann alles in einer Transaktion schreiben (`db.ts`). Danach erzeugt er fehlende Bildvarianten und invalidiert genau die gecachten Seiten, die sich geändert haben.
 
-### Verwendung
-
-```typescript
-import getMealData from "@/server/sync/meine-mensa";
-
-const { data } = await getMealData({
-  date: { from: "2025-01-01", to: "2025-01-31" },
-  locationId: "1", // Optional
-});
-```
-
-Die API liefert strukturierte Daten zu:
-- Gerichten mit Namen, Preisen und Zutaten
-- Verfügbarkeiten nach Datum, Location und Counter
-- Zusatzinformationen (Extras, Bilder, etc.)
-
-## 🏗️ Build & Deployment
-
-### Production Build
-
-```bash
-bun build
-```
-
-### Production Server starten
-
-```bash
-bun run start
-```
-
-Startet den Standalone-Server von `@astrojs/node` (Port über `PORT`, Default 4321). Hinweis: Während der Migration enthält dieser Branch **noch keine Cron-Jobs** für die Datensynchronisation (bisher `src/_boot.ts`). Sie kommen in Phase 9 des Migrationsplans zurück. Bis dahin lässt sich der Sync manuell auslösen:
+Ausgelöst wird er per Cron im Server-Prozess (siehe unten) oder manuell:
 
 ```bash
 curl -X POST -H "Authorization: Bearer $API_BEARER_TOKEN" \
   -H "Content-Type: application/json" \
-  "http://localhost:4321/api/sync?scope=week"   # today | week | midnight
+  "http://localhost:4321/api/sync?scope=week"   # today | week | midnight | warm
 ```
 
-Seiten werden im Speicher des Servers gecacht (Route Cache) und nach dem Sync gezielt invalidiert, siehe `src/server/cache-policy.ts`.
+| Scope | Was passiert |
+|---|---|
+| `today` | Speiseplan von heute abgleichen |
+| `week` | heute bis +7 Tage abgleichen |
+| `midnight` | kein Sync; Startseite neu, Seiten vorwärmen |
+| `warm` | nur Seiten vorwärmen (nach dem Serverstart) |
+
+`Content-Type: application/json` ist Pflicht, sonst blockt Astros CSRF-Schutz den POST (403).
+
+## 🏗️ Build & Betrieb
+
+### Production Build und Start
+
+```bash
+bun run build
+bun run start        # Bun (empfohlen); bun run start:node für Node ≥ 22
+```
+
+`bun run start` startet `server/index.mjs`:
+
+- **HTTP-Server** mit dem Handler von `@astrojs/node` (statische Dateien + SSR) auf `HOST`:`PORT` (Default `0.0.0.0:4321`).
+- **Komprimierung** (Brotli/gzip) für HTML, JS, CSS, JSON. Komprimierte Fassungen gecachter Seiten werden wiederverwendet. Ein Reverse Proxy davor muss nicht zusätzlich komprimieren.
+- **Pre-Warm** direkt nach dem Start: `/` und `/day/<heute…+7>` werden gerendert, damit der erste Besucher nicht wartet.
+- **Cron** (Europe/Berlin, wie bisher): `today` um 7:17, 10:17 und 17:17 (Mo–Fr), `week` um 2:17 (So–Do), `midnight` um 0:01.
+- `CRON_DISABLED=1` schaltet Cron und Pre-Warm ab, z. B. für eine zweite Instanz.
+- Beendet sich sauber bei `SIGTERM`/`SIGINT`.
+
+### Caching
+
+- **Route Cache:** Gerenderte Seiten und Server Islands liegen im Speicher des Server-Prozesses (Astro Route Cache).
+  - Ein Treffer kostet keine DB-Abfrage.
+  - Regeln und Laufzeiten: `src/server/cache-policy.ts`. Alles „heute“-Abhängige läuft um Mitternacht ab.
+  - Invalidiert wird gezielt nach dem Sync und bei Bewertungen.
+  - Nach einem Neustart ist der Cache leer, der Pre-Warm füllt ihn wieder.
+- **Browser:** Der Browser fragt HTML immer neu an (`max-age=0, must-revalidate`). Assets unter `/_astro/` und Bilder unter `/img/` sind `immutable`.
 
 ### Bilder
 
@@ -153,6 +156,36 @@ Der Sync deckt heute bis +7 Tage ab. Für ältere Gerichte (z. B. nach dem Umzug
 ```bash
 IMAGE_DIR=/data/img bun scripts/images/backfill.ts   # optional: --since 2026-01-01
 ```
+
+### Umgebungsvariablen
+
+Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`--env-file-if-exists`).
+
+| Variable | Pflicht | Bedeutung |
+|---|---|---|
+| `DATABASE_URL` | ja | PostgreSQL |
+| `API_BEARER_TOKEN` | ja | Schutz für `/api/sync`; ohne Token startet kein Cron |
+| `JWT_SECRET`, `JWT_ALGORITHM` | ja | Signatur des Nutzer-Cookies |
+| `IMAGE_DIR` | empfohlen | Bildvarianten, persistentes Volume |
+| `ASTRO_KEY` | empfohlen, **beim Build** | Schlüssel für Server-Island-Props (`bunx astro create-key`). Ohne ihn erzeugt jeder Build einen neuen; offene Tabs können nach einem Deploy die Angebotshistorie dann nicht nachladen |
+| `HOST`, `PORT` | nein | Default `0.0.0.0:4321` |
+| `PUBLIC_COOKIE_CONSENT_NAME` | nein | **muss** dem bisherigen `NEXT_PUBLIC_COOKIE_CONSENT_NAME` entsprechen, sonst ist der Cookie-Consent aller Nutzer weg |
+| `PUBLIC_PRIVACY_POLICY_PATH`, `PUBLIC_UMAMI_WEBSITE_ID` | nein | |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | nein | Fehler- und Kontaktnachrichten per Telegram |
+| `CRON_DISABLED` | nein | `1` = kein Cron, kein Pre-Warm |
+
+### Deployment (Umstieg von der Next-Version)
+
+1. `.env` anpassen:
+   - `NEXT_PUBLIC_*` wird zu `PUBLIC_*` (gleiche Werte, vor allem `PUBLIC_COOKIE_CONSENT_NAME`).
+   - `NEXT_PUBLIC_URL` entfällt.
+   - `IMAGE_DIR` und `ASTRO_KEY` setzen.
+2. `bun install && bun db:migrate`. Die Migration `0005` legt zwei Indizes an.
+3. `bun run build`. Der Build liest `.env`: `ASTRO_KEY` und die `PUBLIC_*`-Werte werden dabei fest eingebaut. Ändern sie sich, ist ein neuer Build nötig.
+4. Einmalig: `bun scripts/images/backfill.ts` (lädt alle Gerichtsbilder, dauert einige Minuten).
+5. `bun run start` statt bisher `bun --bun src/_boot.ts`. Ein Reverse Proxy kann davor bleiben, Komprimierung übernimmt der Server.
+6. Prüfen: `curl -sI https://speisly.de/ -H 'Accept-Encoding: br'` zeigt `content-encoding: br` und nach dem zweiten Aufruf `x-astro-cache: HIT`.
+   - Optional gegen eine Staging-Instanz mit Seed-Daten: `API_BEARER_TOKEN=… bun scripts/e2e/smoke.ts --base https://staging…`. Der Test schreibt Testdaten, also **nicht gegen Produktion** laufen lassen.
 
 ## 🤝 Beitragen
 
@@ -179,6 +212,8 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 - `bun run start` – Startet den Production Server (Bun; `start:node` für Node)
 - `bun run check` – Typecheck (`astro check`)
 - `bun run test` – Tests (Integrationstests brauchen `DATABASE_URL` + Seed-Daten)
+- `bun scripts/e2e/smoke.ts` – End-to-End-Smoke-Test gegen einen laufenden Server
+- `bun scripts/perf/measure.ts` – Performance-Messung (siehe `docs/perf-baseline.md`)
 - `bun lint` – Führt Biome Linting aus
 - `bun format` – Formatiert Code mit Biome
 - `bun db:generate` – Generiert Drizzle-Migrationen

@@ -31,7 +31,7 @@ Bilder sind in den Seed-Daten `null`, weil meine-mensa.de aus der Messumgebung n
 
 ### Browser: ein echter Seitenaufruf
 
-JS roh und gzip werden vom Messskript selbst ermittelt (Skripte nachgeladen und komprimiert). Das ist unabhängig davon, ob der Server komprimiert: Next tut es, `@astrojs/node` nicht, dort übernimmt das in Produktion der Reverse Proxy.
+JS roh und gzip werden vom Messskript selbst ermittelt (Skripte nachgeladen und komprimiert). Das ist unabhängig davon, ob und wie der Server komprimiert (Next: gzip, Astro ab Phase 9: Brotli/gzip im Start-Wrapper).
 
 | Seite | JS-Dateien | JS roh | **JS gzip** | Folge-Requests an den eigenen Server | **DB-Queries pro Seitenaufruf** |
 |---|---|---|---|---|---|
@@ -87,11 +87,9 @@ bun db:migrate
 bun scripts/dev/seed.ts
 
 # 3) Production-Build starten
-#    Astro: bun run build && bun run start   (Port 4321)
-
-#    Astro komprimiert nicht selbst; für realistische Browser-Werte gzip-Proxy davor:
-#    bun scripts/perf/compress-proxy.ts --upstream http://127.0.0.1:4321 --port 4322
-#    und beim Messen zusätzlich --browser-base http://localhost:4322
+#    Astro: bun run build && bun run start   (Port 4321, komprimiert selbst)
+#    (Phasen 3–8 wurden noch hinter einem gzip-Proxy gemessen, weil die
+#    Komprimierung erst mit dem Start-Wrapper in Phase 9 kam)
 
 # 4) Messen (ohne BUN_OPTIONS=--smol, falls in der Umgebung gesetzt)
 env -u BUN_OPTIONS bun scripts/perf/measure.ts --base http://localhost:3000 --label <name> \

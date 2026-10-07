@@ -28,7 +28,7 @@ import { chromium } from "playwright-core";
 const { values: args } = parseArgs({
   options: {
     base: { type: "string", default: "http://localhost:3000" },
-    // optional: Browser und Lighthouse über diese URL (z. B. compress-proxy.ts),
+    // optional: Browser und Lighthouse über eine andere URL (z. B. Reverse Proxy),
     // Server-Latenz wird weiterhin direkt gegen --base gemessen
     "browser-base": { type: "string" },
     label: { type: "string", default: "run" },

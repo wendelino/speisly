@@ -129,4 +129,15 @@ describe("POST /api/sync", () => {
     expect(invalidated).toEqual([["home"]]);
     expect(body.invalidatedTags).toEqual(["home"]);
   });
+
+  test("warm: no sync, no invalidation, only prewarm", async () => {
+    syncCalls.length = 0;
+    imageCalls.length = 0;
+    const { res, body, invalidated } = await call("warm");
+    expect(res.status).toBe(200);
+    expect(syncCalls).toHaveLength(0);
+    expect(imageCalls).toHaveLength(0);
+    expect(invalidated).toEqual([]);
+    expect(body.invalidatedTags).toEqual([]);
+  });
 });

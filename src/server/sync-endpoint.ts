@@ -7,7 +7,7 @@ import { addDays, todayBerlin } from "./dates";
 import { logError } from "./log";
 import type { SyncResult } from "./sync";
 
-export const SYNC_SCOPES = ["today", "week", "midnight"] as const;
+export const SYNC_SCOPES = ["today", "week", "midnight", "warm"] as const;
 type Scope = (typeof SYNC_SCOPES)[number];
 
 type Deps = {
