@@ -63,7 +63,7 @@ describe("image store", () => {
     expect(isAllowedImageUrl("kein url")).toBe(false);
   });
 
-  test("creates AVIF and WebP in 400 and 800 px, once", async () => {
+  test("creates AVIF and WebP in 240 and 800 px, once", async () => {
     const store = createImageStore({ dir, fetch: fakeFetch });
     expect(store.variants(URL_A)).toBeNull();
 
@@ -75,29 +75,29 @@ describe("image store", () => {
     const files = (await readdir(dir)).sort();
     const key = imageKey(URL_A);
     expect(files).toEqual([
-      `${key}-400.avif`,
-      `${key}-400.webp`,
+      `${key}-240.avif`,
+      `${key}-240.webp`,
       `${key}-800.avif`,
       `${key}-800.webp`,
     ]);
     for (const f of files) {
       expect(IMAGE_FILE_PATTERN.test(f)).toBe(true);
     }
-    const small = await sharp(join(dir, `${key}-400.webp`)).metadata();
+    // alte 400er-Dateien bleiben erreichbar, fremde Breiten nicht
+    expect(IMAGE_FILE_PATTERN.test(`${key}-400.avif`)).toBe(true);
+    expect(IMAGE_FILE_PATTERN.test(`${key}-300.avif`)).toBe(false);
+    const small = await sharp(join(dir, `${key}-240.webp`)).metadata();
     expect([small.width, small.height, small.format]).toEqual([
-      400,
-      300,
+      240,
+      180,
       "webp",
     ]);
     const avif = await sharp(join(dir, `${key}-800.avif`)).metadata();
     expect(avif.width).toBe(800);
 
     expect(store.variants(URL_A)).toEqual({
-      srcset: {
-        avif: `/img/${key}-400.avif 400w, /img/${key}-800.avif 800w`,
-        webp: `/img/${key}-400.webp 400w, /img/${key}-800.webp 800w`,
-      },
-      src: `/img/${key}-800.webp`,
+      small: { avif: `/img/${key}-240.avif`, webp: `/img/${key}-240.webp` },
+      large: { avif: `/img/${key}-800.avif`, webp: `/img/${key}-800.webp` },
     });
   });
 

@@ -9,6 +9,10 @@
  * `meal-<rolle>-<mmid>` entsteht erst hier: auf der Liste innerhalb der Karte
  * mit dieser mmid, auf der Detailseite aus der mmid der URL. Das spart pro
  * Karte ~150 Byte gegenüber fertigen Namen im HTML.
+ * Kommt man per Transition von der Liste auf die Detailseite, bekommt dort der
+ * Bild-Platzhalter (`data-meal-lowres`, meal-image.astro) seine `src`: die URL
+ * des Kartenbilds, also ein Cache-Treffer. So steht nach dem Morph sofort ein
+ * Bild da, während das große noch lädt.
  * Die Funktion läuft als Inline-Script im <head>, damit `pagereveal` vor dem
  * ersten Rendern registriert ist; sie muss daher in sich geschlossen sein
  * (wird per toString eingebettet).
@@ -36,6 +40,15 @@ export function viewTransitionBoot() {
         : null,
       mmid
     );
+
+  // Detailseite: Kartenbild als Platzhalter unter dem großen Bild
+  const showLowRes = () => {
+    for (const img of document.querySelectorAll<HTMLImageElement>(
+      "img[data-meal-lowres]"
+    )) {
+      img.src = img.dataset.mealLowres ?? "";
+    }
+  };
 
   type NavEvent = Event & {
     viewTransition?: unknown;
@@ -69,6 +82,9 @@ export function viewTransitionBoot() {
     }
     if (isMealPage(location.href)) {
       nameDetail();
+      if (!isMealPage(from)) {
+        showLowRes();
+      }
     } else if (isMealPage(from)) {
       nameCard(mmidOf(from));
     }

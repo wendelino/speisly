@@ -8,13 +8,19 @@ import sharp from "sharp";
  * Vorab berechnete Bildvarianten der Gerichtsbilder (Phase 7).
  *
  * Der Sync lädt jedes neue Bild einmal von meine-mensa.de und legt AVIF und
- * WebP in zwei Breiten ab: `<dir>/<key>-<breite>.<format>`. Der Key ist ein
+ * WebP in zwei Breiten ab: `<dir>/<key>-<breite>.<format>`. Die kleine Breite
+ * nutzt die Karte (~90–105 CSS-px, auch auf 3×-Displays scharf genug), die
+ * große die Detailseite (max. 384 CSS-px). Feste URLs je Ansicht statt
+ * `srcset`: Mit `srcset` würde die Karte auf Retina die große Datei wählen,
+ * und die Detailseite könnte die Karten-URL nicht sicher aus dem Cache
+ * wiederverwenden (meal-image.astro). Der Key ist ein
  * Hash der Original-URL, eine neue URL ergibt also neue Dateinamen (Cache-
  * Busting ohne DB-Feld). Im Request-Pfad rechnet niemand mehr: Seiten fragen
  * nur ab, ob die Dateien existieren, `/img/<datei>` liefert sie aus.
  */
 
-export const IMAGE_WIDTHS = [400, 800] as const;
+export const IMAGE_WIDTHS = [240, 800] as const;
+const [SMALL_WIDTH, LARGE_WIDTH] = IMAGE_WIDTHS;
 export const IMAGE_FORMATS = ["avif", "webp"] as const;
 export const IMAGE_ROUTE = "/img";
 
@@ -25,8 +31,12 @@ export const IMAGE_CONTENT_TYPES: Record<Format, string> = {
   webp: "image/webp",
 };
 
-/** Gültige Dateinamen unter `/img/` (alles andere ist 404) */
-export const IMAGE_FILE_PATTERN = /^[0-9a-f]{16}-(400|800)\.(avif|webp)$/;
+/**
+ * Gültige Dateinamen unter `/img/` (alles andere ist 404). `400` stammt aus
+ * der Zeit vor den 240er-Varianten: Die Dateien liegen noch auf der Platte
+ * und gecachtes HTML verweist evtl. noch darauf. Kann später raus.
+ */
+export const IMAGE_FILE_PATTERN = /^[0-9a-f]{16}-(240|400|800)\.(avif|webp)$/;
 
 const MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 20_000;
@@ -60,10 +70,10 @@ function variantFiles(key: string): string[] {
 }
 
 export type ImageVariants = {
-  /** `srcset` je Format, größte Breite zuletzt */
-  srcset: Record<Format, string>;
-  /** Fallback für `<img src>` */
-  src: string;
+  /** Karte: URL je Format */
+  small: Record<Format, string>;
+  /** Detailseite: URL je Format */
+  large: Record<Format, string>;
 };
 
 export type EnsureResult = "exists" | "created" | "skipped" | "failed";
@@ -99,14 +109,11 @@ export function createImageStore({
     if (!hasVariants(key)) {
       return null;
     }
-    const srcsetFor = (format: Format) =>
-      IMAGE_WIDTHS.map(
-        (w) => `${IMAGE_ROUTE}/${fileName(key, w, format)} ${w}w`
-      ).join(", ");
-    return {
-      srcset: { avif: srcsetFor("avif"), webp: srcsetFor("webp") },
-      src: `${IMAGE_ROUTE}/${fileName(key, IMAGE_WIDTHS.at(-1) ?? 800, "webp")}`,
-    };
+    const urls = (width: number) => ({
+      avif: `${IMAGE_ROUTE}/${fileName(key, width, "avif")}`,
+      webp: `${IMAGE_ROUTE}/${fileName(key, width, "webp")}`,
+    });
+    return { small: urls(SMALL_WIDTH), large: urls(LARGE_WIDTH) };
   }
 
   async function download(url: string): Promise<Buffer> {

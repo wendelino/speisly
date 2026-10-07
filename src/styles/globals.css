@@ -140,6 +140,39 @@
 @view-transition {
   navigation: auto;
 }
+/* Kein Crossfade der ganzen Seite: Der Snapshot des kompletten Viewports ist
+   der teuerste Teil (Safari ruckelt sonst). Der Rest der Seite wechselt hart,
+   nur die benannten Teile des Gerichts morphen. `normal` statt des Standard-
+   `plus-lighter`, sonst addieren sich die beiden voll deckenden Snapshots. */
+/* biome-ignore lint/correctness/noUnknownTypeSelector: `root` ist der Name der View Transition, kein Element */
+::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+/* biome-ignore lint/correctness/noUnknownTypeSelector: s. o. */
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 250ms;
+  animation-timing-function: ease-out;
+}
+/* Bild: Der alte Snapshot (Kartenfoto) bleibt voll sichtbar, der neue blendet
+   darüber ein. Ist das Bild der Detailseite noch nicht geladen, sieht man so
+   weiter das Foto statt des Skeletons. `normal` wie bei root. */
+[data-vt="image"] {
+  view-transition-class: meal-image;
+}
+::view-transition-old(*.meal-image) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(*.meal-image) {
+  mix-blend-mode: normal;
+}
 @media (prefers-reduced-motion: reduce) {
   @view-transition {
     navigation: none;
