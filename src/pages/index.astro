@@ -22,7 +22,7 @@ const [groups, mensen] = await Promise.all([
 Astro.cache.set(homePolicy(today));
 ---
 
-<BaseLayout>
+<BaseLayout mealAssets>
   <FilterHead slot="head" />
   <main class="bg-primary/5">
     <AppHero />

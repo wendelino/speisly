@@ -2,7 +2,10 @@
 // Ersetzt src/app/layout.tsx (Metadaten 1:1 übernommen)
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
+import IconSprite from "@/components/icons/icon-sprite.astro";
+import type { SpriteIconName } from "@/components/icons/sprite-icons";
 import Footer from "@/components/layout/footer.astro";
+import { mealImageBoot } from "@/lib/meal-assets";
 import { viewTransitionBoot } from "@/lib/view-transitions";
 import ToastProvider from "@/lnio/components/toast/provider";
 import "@/styles/globals.css";
@@ -22,6 +25,12 @@ type Props = {
    * damit alle anderen Seiten ohne React-Runtime auskommen.
    */
   withToasts?: boolean;
+  /**
+   * Seiten mit Gerichten (Speiseplan, Detail): SVG-Sprite für
+   * components/icons/icon.astro und Load-Listener für die Gerichtsbilder.
+   * `true` = alle Sprite-Icons, sonst nur die übergebenen.
+   */
+  mealAssets?: boolean | readonly SpriteIconName[];
 };
 
 const DEFAULT_DESCRIPTION =
@@ -35,9 +44,11 @@ const {
   description = DEFAULT_DESCRIPTION,
   og = {},
   withToasts = false,
+  mealAssets = false,
 } = Astro.props;
 const fullTitle = title ? `${title} | Speisly` : "Speisly";
 const viewTransitionScript = `(${viewTransitionBoot.toString()})();`;
+const mealImageScript = `(${mealImageBoot.toString()})();`;
 const ogTitle = og.title ?? "Speisly";
 const ogDescription = og.description ?? DEFAULT_DESCRIPTION;
 const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
@@ -55,6 +66,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <title>{fullTitle}</title>
     <slot name="head" />
     <script is:inline set:html={viewTransitionScript} />
+    {mealAssets && <script is:inline set:html={mealImageScript} />}
     <meta name="description" content={description}>
     <meta name="author" content="Speisly">
     <link rel="manifest" href="/manifest.webmanifest">
@@ -99,6 +111,9 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     }
   </head>
   <body class="relative flex min-h-screen flex-col antialiased">
+    {mealAssets && (
+      <IconSprite icons={mealAssets === true ? undefined : mealAssets} />
+    )}
     <slot/>
     <div class="flex-1"></div>
     <Footer/>

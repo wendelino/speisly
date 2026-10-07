@@ -27,6 +27,9 @@ const DAY_URL = /\/day\/\d{4}-\d{2}-\d{2}$/;
 const MEAL_URL = /\/meal\//;
 const SERVING_STATS_TEXT = /Angebot(e)?$|Noch keine Angebotsdaten/;
 const CONTACT_SENT_TEXT = /Nachricht erhalten/;
+const MEAL_HREF = /href="(\/meal\/[^"]+)"/;
+const SYMBOL_ID = /<symbol id="([^"]+)"/g;
+const USE_HREF = /<use href="#([^"]+)"/g;
 const TOKEN = process.env.API_BEARER_TOKEN ?? "";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
@@ -79,6 +82,24 @@ await check("ungültige Tage und unbekannte Seiten → 404", async () => {
     const res = await get(p);
     assert(res.status === 404, `${p}: ${res.status}`);
   }
+});
+await check("Sprite-Icons: jede Referenz hat ein Symbol", async () => {
+  const meal = await fetch(`${BASE}/`).then((r) => r.text());
+  const firstMeal = MEAL_HREF.exec(meal)?.[1];
+  const paths = [
+    "/",
+    ...(firstMeal ? [firstMeal, firstMeal.split("?")[0]] : []),
+  ];
+  let refs = 0;
+  for (const p of paths) {
+    const html = await (await get(p)).text();
+    const symbols = new Set([...html.matchAll(SYMBOL_ID)].map((m) => m[1]));
+    for (const [, id] of html.matchAll(USE_HREF)) {
+      refs += 1;
+      assert(symbols.has(id), `${p}: #${id} fehlt im Sprite`);
+    }
+  }
+  return `${refs} Referenzen auf ${paths.length} Seiten`;
 });
 await check("Manifest", async () => {
   const res = await get("/manifest.webmanifest");

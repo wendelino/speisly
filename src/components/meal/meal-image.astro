@@ -1,9 +1,11 @@
 ---
-// Astro-Port von MealImage (meal-comp.tsx). Skeleton + Einblenden per CSS,
-// der Ladezustand kommt über ein Inline-onload statt React-State.
-// Bilder: vorberechnete AVIF/WebP-Varianten aus dem Sync (src/server/images),
-// solange es keine gibt, das Original von meine-mensa.de.
-import { ImageOff } from "@lucide/astro";
+// Astro-Port von MealImage (meal-comp.tsx). Skeleton + Einblenden per CSS;
+// `data-loaded` setzt ein einziger Load-Listener im <head> (lib/meal-assets.ts)
+// statt onload/onerror an jedem Bild.
+// Klassen m-*: src/styles/meal.css.
+// Bilder: vorberechnete Varianten aus dem Sync (src/server/images), AVIF per
+// <source>, WebP als Fallback im <img>; ohne Varianten das Original.
+import Icon from "@/components/icons/icon.astro";
 import { cn } from "@/lib/utils";
 import { images } from "@/server/images";
 
@@ -20,8 +22,8 @@ type Props = {
   priority?: boolean;
   view?: "card" | "detail";
   sizes?: string;
-  /** für View Transitions (lib/view-transitions.ts) */
-  vtId?: string;
+  /** Teil der View Transition (lib/view-transitions.ts) */
+  vt?: boolean;
 };
 
 const {
@@ -31,46 +33,39 @@ const {
   priority = false,
   view = "card",
   sizes = CARD_SIZES,
-  vtId,
+  vt = false,
 } = Astro.props;
 const variants = src ? images.variants(src) : null;
 ---
 
 <div
-  class={cn(
-    "relative aspect-4/3 overflow-hidden rounded-lg transition-all duration-300",
-    className
-  )}
+  class={
+    view === "card"
+      ? "m-img"
+      : cn(
+          "relative aspect-4/3 overflow-hidden rounded-lg transition-all duration-300",
+          className
+        )
+  }
   data-meal-image
-  data-vt={vtId ? `meal-image-${vtId}` : undefined}
+  data-vt={vt ? "image" : undefined}
 >
   {
     src ? (
       <>
-        <div
-          class={cn(
-            "animate-pulse rounded-md bg-accent",
-            "absolute inset-0 h-full w-full rounded-lg"
-          )}
-          data-slot="skeleton"
-        />
+        <div class="m-skel" />
         <picture class="contents">
           {variants && (
             <source sizes={sizes} srcset={variants.srcset.avif} type="image/avif" />
           )}
-          {variants && (
-            <source sizes={sizes} srcset={variants.srcset.webp} type="image/webp" />
-          )}
         <img
           alt={alt}
-          class="h-full w-full object-contain transition-opacity duration-300"
+          class="m-photo"
           data-meal-img
           decoding="async"
-          fetchpriority={priority ? "high" : "auto"}
+          fetchpriority={priority ? "high" : undefined}
           height="375"
           loading={priority ? "eager" : "lazy"}
-          onerror="this.dataset.loaded=''"
-          onload="this.dataset.loaded=''"
           sizes={variants ? undefined : sizes}
           src={variants?.src ?? src}
           width="500"
@@ -78,9 +73,10 @@ const variants = src ? images.variants(src) : null;
         </picture>
       </>
     ) : (
-      <div class="flex h-full w-full items-center justify-center rounded-lg border border-border/30 bg-muted/50">
-        <ImageOff
+      <div class="m-noimg">
+        <Icon
           class={cn("size-16 text-border", view === "detail" ? "size-32" : "")}
+          name="image-off"
         />
       </div>
     )
@@ -91,7 +87,7 @@ const variants = src ? images.variants(src) : null;
   img[data-meal-img]:not([data-loaded]) {
     opacity: 0;
   }
-  [data-meal-image]:has(img[data-loaded]) > [data-slot="skeleton"] {
+  [data-meal-image]:has(img[data-loaded]) > .m-skel {
     display: none;
   }
 </style>

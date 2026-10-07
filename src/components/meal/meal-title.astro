@@ -6,12 +6,13 @@ type Props = {
   name: string;
   subtitle: string;
   h1?: boolean;
-  vtId?: string;
+  /** Teil der View Transition (lib/view-transitions.ts) */
+  vt?: boolean;
 };
 
-const { name, subtitle, h1 = false, vtId } = Astro.props;
+const { name, subtitle, h1 = false, vt: inTransition = false } = Astro.props;
 const text = `${name} ${subtitle}`;
-const vt = vtId ? `meal-title-${vtId}` : undefined;
+const vt = inTransition ? "title" : undefined;
 ---
 
 {
@@ -20,13 +21,7 @@ const vt = vtId ? `meal-title-${vtId}` : undefined;
       {text}
     </Title>
   ) : (
-    <Title
-      class="my-0 line-clamp-2 text-sm transition-colors group-hover:text-primary"
-      data-vt={vt}
-      noBorder
-      variant="h4"
-    >
-      {text}
-    </Title>
+    // = <Title variant="h4" noBorder class="my-0 line-clamp-2 …"> (meal.css)
+    <h4 class="m-title" data-vt={vt}>{text}</h4>
   )
 }

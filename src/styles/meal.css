@@ -1,0 +1,79 @@
+/*
+ * Kurze Klassen für Elemente, die sich pro Gerichtskarte wiederholen (~90× pro
+ * Seite). Jede Klasse enthält per @apply exakt die Utilities, die vorher direkt
+ * am Element standen; das HTML wird dadurch ~60 KB kleiner, das Aussehen bleibt
+ * gleich (pixelgenau geprüft, siehe docs/astro-migration-plan.md).
+ * In @layer components, damit zusätzliche Utilities am Element weiter gewinnen.
+ */
+@layer components {
+  /* meal-card.astro */
+  .m-card {
+    @apply flex-col rounded-xl border bg-card text-card-foreground grid grid-cols-3 gap-4 border-none p-4 shadow-sm;
+  }
+  .m-body {
+    @apply col-span-2 flex h-full flex-col justify-between gap-3 p-0;
+  }
+  .m-badges {
+    @apply flex flex-wrap gap-2;
+  }
+  .m-foot {
+    @apply mt-auto flex items-center justify-between;
+  }
+  .m-arrow {
+    @apply h-5 w-5 text-primary transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary;
+  }
+
+  /* meal-title.astro (Karte) */
+  .m-title {
+    @apply font-semibold my-0 line-clamp-2 text-sm transition-colors group-hover:text-primary;
+  }
+
+  /* meal-price.astro */
+  .m-prices {
+    @apply grid grid-cols-3 gap-2;
+  }
+  .m-pricecol {
+    @apply flex flex-col items-center justify-center gap-1;
+  }
+  .m-price {
+    @apply font-extrabold text-lg text-primary tabular-nums leading-tight tracking-tight;
+  }
+  .m-cur {
+    @apply ml-1 text-base text-primary/80;
+  }
+
+  /* meal-image.astro (Karte) */
+  .m-img {
+    @apply relative aspect-4/3 overflow-hidden transition-all duration-300 h-full w-full rounded-lg object-contain p-1;
+  }
+  .m-skel {
+    @apply animate-pulse bg-accent absolute inset-0 h-full w-full rounded-lg;
+  }
+  .m-photo {
+    @apply h-full w-full object-contain transition-opacity duration-300;
+  }
+  .m-noimg {
+    @apply flex h-full w-full items-center justify-center rounded-lg border border-border/30 bg-muted/50;
+  }
+
+  /* ingredient-badge.astro: INGREDIENT_BADGE_BASE + INGREDIENT_STYLES aus
+     lib/ingredients.ts (dort weiter für Filter-Chips und React) */
+  .ib {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold text-xs;
+  }
+  .ib-vegan {
+    @apply bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400 border border-green-200 dark:border-green-800;
+  }
+  .ib-veggie {
+    @apply bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800;
+  }
+  .ib-meat {
+    @apply bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400 border border-red-200 dark:border-red-800;
+  }
+  .ib-fish {
+    @apply bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-400 border border-blue-200 dark:border-blue-800;
+  }
+  .ib-notVeggie {
+    @apply bg-gray-50 text-gray-700 dark:bg-gray-950 dark:text-gray-400 border border-gray-200 dark:border-gray-800;
+  }
+}

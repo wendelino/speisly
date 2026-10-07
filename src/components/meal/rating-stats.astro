@@ -1,7 +1,7 @@
 ---
 // Astro-Port von rating-stats.tsx. Teil der (gecachten) Seite; die Seite wird
 // beim Bewerten über den Tag ratings:<id> invalidiert.
-import { Star } from "@lucide/astro";
+import Icon from "@/components/icons/icon.astro";
 import Title from "@/components/astro/title.astro";
 import { badgeVariants } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ const items = [
 ---
 
 <Title class="flex items-center gap-2" variant="h2">
-  <Star class="size-4.5 fill-yellow-400 text-yellow-400" />
+  <Icon class="size-4.5 fill-yellow-400 text-yellow-400" name="star" />
   <span class="font-semibold">Bewertungsübersicht</span>
 </Title>
 <div class="relative space-y-3 rounded-lg border bg-muted p-5">
@@ -55,16 +55,16 @@ const items = [
                 <div class="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((star) =>
                     star <= item.full ? (
-                      <Star class="size-4 fill-yellow-400 text-yellow-400" />
+                      <Icon class="size-4 fill-yellow-400 text-yellow-400" name="star" />
                     ) : star === item.full + 1 && item.half ? (
                       <div class="relative size-4">
-                        <Star class="absolute size-4 fill-background text-muted-foreground" />
+                        <Icon class="absolute size-4 fill-background text-muted-foreground" name="star" />
                         <div class="absolute overflow-hidden" style="width:50%;height:100%">
-                          <Star class="size-4 fill-yellow-400 text-yellow-400" />
+                          <Icon class="size-4 fill-yellow-400 text-yellow-400" name="star" />
                         </div>
                       </div>
                     ) : (
-                      <Star class="size-4 fill-background text-muted-foreground" />
+                      <Icon class="size-4 fill-background text-muted-foreground" name="star" />
                     )
                   )}
                 </div>

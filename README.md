@@ -120,6 +120,8 @@ curl -X POST -H "Authorization: Bearer $API_BEARER_TOKEN" \
 
 `Content-Type: application/json` ist Pflicht, sonst blockt Astros CSRF-Schutz den POST (403).
 
+**Schutz vor Datenverlust:** Gerichte, die die API nicht mehr liefert, entfernt der Sync nur an Tagen, für die die API überhaupt Einträge hat, und nie, wenn sie bewertet wurden. Würde ein Sync mehr als die Hälfte der Ausgaben im Zeitraum entfernen, entfernt er nichts und meldet sich per Telegram. Nach Prüfung lässt sich die Löschung mit `&force=1` erzwingen.
+
 ## 🏗️ Build & Betrieb
 
 ### Production Build und Start

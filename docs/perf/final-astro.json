@@ -2,7 +2,7 @@
   "label": "final-astro",
   "base": "http://127.0.0.1:4321",
   "browserBase": "http://127.0.0.1:4321",
-  "date": "2026-10-07T01:25:04.124Z",
+  "date": "2026-10-07T02:21:44.910Z",
   "concurrency": 10,
   "durationS": 15,
   "pages": {
@@ -10,23 +10,23 @@
       "path": "/",
       "server": {
         "status": 200,
-        "htmlBytes": 312295,
-        "htmlGzipBytes": 20659,
+        "htmlBytes": 120365,
+        "htmlGzipBytes": 10681,
         "cacheControl": "public, max-age=0, must-revalidate",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 9961,
-          "rps": 663,
-          "ttfbP50": 12.6,
-          "ttfbP95": 30.8,
-          "ttfbP99": 38.7,
+          "requests": 17494,
+          "rps": 1166,
+          "ttfbP50": 6.8,
+          "ttfbP95": 21.4,
+          "ttfbP99": 30.7,
           "statuses": {
-            "200": 9961
+            "200": 17494
           }
         }
       },
       "browser": {
-        "loadMs": 685,
+        "loadMs": 691,
         "jsFiles": 9,
         "jsBytes": 8439,
         "jsGzipBytes": 4615,
@@ -36,8 +36,8 @@
       },
       "lighthouse": {
         "score": 100,
-        "fcpMs": 1137,
-        "lcpMs": 1389,
+        "fcpMs": 1204,
+        "lcpMs": 1385,
         "tbtMs": 0,
         "cls": 0,
         "scriptTransferBytes": 8241
@@ -47,23 +47,23 @@
       "path": "/day/2026-10-08",
       "server": {
         "status": 200,
-        "htmlBytes": 311214,
-        "htmlGzipBytes": 20502,
+        "htmlBytes": 119798,
+        "htmlGzipBytes": 10519,
         "cacheControl": "public, max-age=0, must-revalidate",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 9684,
-          "rps": 645,
-          "ttfbP50": 12.9,
-          "ttfbP95": 31.2,
-          "ttfbP99": 39.3,
+          "requests": 17222,
+          "rps": 1148,
+          "ttfbP50": 7.1,
+          "ttfbP95": 19.7,
+          "ttfbP99": 27.4,
           "statuses": {
-            "200": 9684
+            "200": 17222
           }
         }
       },
       "browser": {
-        "loadMs": 675,
+        "loadMs": 688,
         "jsFiles": 9,
         "jsBytes": 8439,
         "jsGzipBytes": 4615,
@@ -73,8 +73,8 @@
       },
       "lighthouse": {
         "score": 100,
-        "fcpMs": 979,
-        "lcpMs": 1383,
+        "fcpMs": 1122,
+        "lcpMs": 1388,
         "tbtMs": 0,
         "cls": 0,
         "scriptTransferBytes": 8241
@@ -84,23 +84,23 @@
       "path": "/day/2026-09-07",
       "server": {
         "status": 200,
-        "htmlBytes": 311166,
-        "htmlGzipBytes": 19941,
+        "htmlBytes": 119821,
+        "htmlGzipBytes": 10470,
         "cacheControl": "public, max-age=0, must-revalidate",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 9105,
-          "rps": 606,
-          "ttfbP50": 13.6,
-          "ttfbP95": 33.4,
-          "ttfbP99": 41.3,
+          "requests": 16663,
+          "rps": 1110,
+          "ttfbP50": 7.3,
+          "ttfbP95": 20.7,
+          "ttfbP99": 27.7,
           "statuses": {
-            "200": 9105
+            "200": 16663
           }
         }
       },
       "browser": {
-        "loadMs": 655,
+        "loadMs": 682,
         "jsFiles": 9,
         "jsBytes": 8439,
         "jsGzipBytes": 4615,
@@ -110,8 +110,8 @@
       },
       "lighthouse": {
         "score": 100,
-        "fcpMs": 1157,
-        "lcpMs": 1384,
+        "fcpMs": 1120,
+        "lcpMs": 1383,
         "tbtMs": 0,
         "cls": 0,
         "scriptTransferBytes": 8241
@@ -121,23 +121,23 @@
       "path": "/meal/meal_0000000000000000000000000uy?mmid=mm_00000000000000000000000000exi",
       "server": {
         "status": 200,
-        "htmlBytes": 27724,
-        "htmlGzipBytes": 5455,
+        "htmlBytes": 20659,
+        "htmlGzipBytes": 5487,
         "cacheControl": "public, max-age=0, must-revalidate",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 31285,
-          "rps": 2085,
-          "ttfbP50": 3.7,
-          "ttfbP95": 10.5,
-          "ttfbP99": 17.8,
+          "requests": 33369,
+          "rps": 2224,
+          "ttfbP50": 3.4,
+          "ttfbP95": 9.9,
+          "ttfbP99": 17,
           "statuses": {
-            "200": 31285
+            "200": 33369
           }
         }
       },
       "browser": {
-        "loadMs": 667,
+        "loadMs": 625,
         "jsFiles": 7,
         "jsBytes": 14515,
         "jsGzipBytes": 6639,
@@ -147,8 +147,8 @@
       },
       "lighthouse": {
         "score": 100,
-        "fcpMs": 1118,
-        "lcpMs": 1382,
+        "fcpMs": 1157,
+        "lcpMs": 1505,
         "tbtMs": 0,
         "cls": 0,
         "scriptTransferBytes": 8655
@@ -158,23 +158,23 @@
       "path": "/datenschutz",
       "server": {
         "status": 200,
-        "htmlBytes": 27951,
-        "htmlGzipBytes": 8273,
+        "htmlBytes": 28087,
+        "htmlGzipBytes": 8337,
         "cacheControl": "public, max-age=0",
         "dbQueriesPerRequest": 0,
         "load": {
-          "requests": 47571,
-          "rps": 3171,
-          "ttfbP50": 2.7,
-          "ttfbP95": 6.2,
-          "ttfbP99": 11.7,
+          "requests": 49906,
+          "rps": 3326,
+          "ttfbP50": 2.5,
+          "ttfbP95": 6,
+          "ttfbP99": 11.5,
           "statuses": {
-            "200": 47571
+            "200": 49906
           }
         }
       },
       "browser": {
-        "loadMs": 701,
+        "loadMs": 704,
         "jsFiles": 17,
         "jsBytes": 298675,
         "jsGzipBytes": 98072,
@@ -184,9 +184,9 @@
       },
       "lighthouse": {
         "score": 100,
-        "fcpMs": 1023,
-        "lcpMs": 1382,
-        "tbtMs": 3,
+        "fcpMs": 1031,
+        "lcpMs": 1381,
+        "tbtMs": 0,
         "cls": 0,
         "scriptTransferBytes": 98620
       }

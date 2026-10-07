@@ -9,7 +9,7 @@
  * data-only-diet / data-hide-diet umgeschaltet. So bleibt das Markup identisch
  * zur React-Version, ohne JS und ohne Flackern.
  */
-import { ChevronDown } from "@lucide/astro";
+import Icon from "@/components/icons/icon.astro";
 import InfoCard from "@/components/info-card.astro";
 import { cn } from "@/lib/utils";
 import EmptyState from "./empty-state.astro";
@@ -145,7 +145,7 @@ const triggerClass = cn(
                                 ))}
                               </span>
                             </div>
-                            <ChevronDown class="pointer-events-none size-4 shrink-0 translate-y-0.5 text-muted-foreground transition-transform duration-200" />
+                            <Icon name="chevron-down" class="pointer-events-none size-4 shrink-0 translate-y-0.5 text-muted-foreground transition-transform duration-200" />
                           </button>
                         </h3>
                         <div

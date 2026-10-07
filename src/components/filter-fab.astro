@@ -2,7 +2,8 @@
 // Astro-Port des Filter-Buttons aus mensa-filter.tsx. Die Chips erscheinen per
 // CSS (lib/filters/boot.ts setzt die Attribute vor dem ersten Paint), der
 // Dialog wird erst bei Bedarf geladen (filter-dialog.mount.tsx).
-import { Funnel, X } from "@lucide/astro";
+import { Funnel } from "@lucide/astro";
+import Icon from "@/components/icons/icon.astro";
 import { buttonVariants } from "@/components/ui/button";
 import {
   INGREDIENT_BADGE_BASE,
@@ -30,10 +31,10 @@ const dietChips = (["vegan", "veggie"] as const).map((type) => ({
     )}
     data-chip="mensen"
     type="button"
-  ><span data-chip-label></span><X class="ml-1 size-4" /></button>
+  ><span data-chip-label></span><Icon class="ml-1 size-4" name="x" /></button>
   {
     dietChips.map((chip) => (
-      <button class={chip.class} data-chip={chip.type} type="button"> Nur  {chip.label} <X class="ml-1 size-4" /></button>
+      <button class={chip.class} data-chip={chip.type} type="button"> Nur  {chip.label} <Icon class="ml-1 size-4" name="x" /></button>
     ))
   }
   <button

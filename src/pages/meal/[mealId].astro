@@ -7,6 +7,10 @@ import { UtensilsCrossed } from "@lucide/astro";
 import Title from "@/components/astro/title.astro";
 import IngredientBadge from "@/components/meal/ingredient-badge.astro";
 import IngredientsList from "@/components/meal/ingredients-list.astro";
+import {
+  INGREDIENT_ICONS,
+  type SpriteIconName,
+} from "@/components/icons/sprite-icons";
 import MealImage from "@/components/meal/meal-image.astro";
 import MealPrice from "@/components/meal/meal-price.astro";
 import MealTitle from "@/components/meal/meal-title.astro";
@@ -49,16 +53,26 @@ const description = `${meal.name} in der Mensa. ${ingredientsText}${priceText}${
 const images = meal.imgPath
   ? [{ url: meal.imgPath, width: 1200, height: 630 }]
   : [];
+// Sprite nur mit den Icons, die diese Seite zeigt (Badges, Platzhalter,
+// Sterne der Bewertung, Ladeanzeige des Bewerten-Buttons)
+const badgeTypes = visibleIngredientTypes(meal.flags);
+const spriteIcons: SpriteIconName[] = [
+  ...new Set(badgeTypes.map((type) => INGREDIENT_ICONS[type])),
+  ...(meal.imgPath ? [] : (["image-off"] as const)),
+  "star",
+  ...(mmid ? (["loader-circle"] as const) : []),
+];
 ---
 
 <BackLayout
+  mealAssets={spriteIcons}
   description={description}
   og={{ title: meal.name, description, images }}
   title={meal.name}
 >
   {mmid && <RatingButtonScript slot="head" />}
   <div class="space-y-6">
-    <MealTitle h1 name={meal.name} subtitle={meal.subtitle} vtId={mmid} />
+    <MealTitle h1 name={meal.name} subtitle={meal.subtitle} vt={Boolean(mmid)} />
     <div class="px-8 py-2">
       <MealImage
         alt={meal.name}
@@ -67,17 +81,17 @@ const images = meal.imgPath
         sizes="(max-width: 448px) 100vw, 384px"
         src={meal.imgPath}
         view="detail"
-        vtId={mmid}
+        vt={Boolean(mmid)}
       />
     </div>
     <div
       class="flex flex-wrap gap-2"
-      data-vt={mmid ? `meal-ingredients-${mmid}` : undefined}
+      data-vt={mmid ? "ingredients" : undefined}
     >
-      {visibleIngredientTypes(meal.flags).map((type) => <IngredientBadge type={type} />)}
+      {badgeTypes.map((type) => <IngredientBadge type={type} />)}
     </div>
     <div class="border-t pt-4">
-      <MealPrice expanded meal={meal} vtId={mmid} />
+      <MealPrice expanded meal={meal} vt={Boolean(mmid)} />
     </div>
 
     <RatingStats mealId={meal.id} mensaMealId={mmid} stats={ratingStats} />

@@ -787,23 +787,52 @@ Insgesamt 68 Tests.
 
 Der Test hat beim Schreiben zwei falsche Annahmen in ihm selbst aufgedeckt. Die Mensa-Auswahl funktioniert wie bei Next („keine Auswahl = alle“), und das Löschen hat eine Sicherheitsabfrage. Einen Fehler in der App hat er nicht gefunden.
 
+## Nachtrag: Sync-Schutz und HTML-Größe
+
+**Sync-Schutz** (`src/server/sync/plan.ts`, `guardRemovals`): Ausgaben, die die API nicht mehr liefert, werden nur noch unter drei Bedingungen entfernt. Mit einer Ausgabe verschwinden per Cascade auch ihre Bewertungen.
+1. **Nur an Tagen, für die die API überhaupt Einträge geliefert hat** (`getMealData` gibt dafür `dates` zurück, vor allen Filtern). Eine leere oder lückenhafte Antwort, etwa bei einer Störung oder einem Feiertag, löscht nichts mehr.
+   - **Kehrseite:** Streicht meine-mensa.de einen ganzen Tag nachträglich, bleibt der alte Plan dieses Tages stehen. Das ist der harmlosere Fehler.
+2. **Nie Ausgaben mit Bewertungen:** Wer bewertet hat, hat das Gericht gegessen. Solche Fälle werden geloggt, ohne Telegram.
+3. **Notbremse:** Würden mehr als 50 % der bestehenden Ausgaben im Zeitraum entfernt (und mindestens 20), entfernt der Sync gar nichts und meldet sich per Telegram. Wer prüft und die Löschung will, ruft `POST /api/sync?scope=…&force=1` auf.
+
+Tests: `plan.test.ts` mit 4 neuen Fällen, `sync.test.ts` mit leerer und lückenhafter API sowie einer bewerteten Ausgabe gegen die DB, `tests/api-sync.test.ts` für `force=1`.
+
+**HTML-Größe:** Die Startseite schrumpft von 312 KB auf 117 KB roh (mit Bildern: 316 → 135 KB). Brotli: 11,9 → 10,5 KB.
+- **SVG-Sprite** (`src/components/icons/`): Die 14 Icons, die sich pro Karte wiederholen (Pfeil, Badges, Platzhalter, Sterne, Chevron, Info, X …), stehen einmal als `<symbol>` am Anfang von `<body>`. Die Karten verweisen per `<use href="#i-…">` darauf.
+  - Pfaddaten stammen aus lucide-react 0.556.0, also genau die bisherigen Icons.
+  - Lucides `fill`/`stroke`-Attribute stehen als CSS in `@layer base`. So überschreiben Klassen wie `fill-yellow-400` (Sterne) sie wie vorher.
+  - Die Detailseite bekommt nur die Symbole, die sie wirklich zeigt. Sonst wäre sie komprimiert größer geworden: Wiederholte Inline-Icons komprimieren fast vollständig, ungenutzte Pfaddaten nicht.
+  - Einzelne Icons bleiben `@lucide/astro`-Komponenten.
+- **Komponentenklassen** (`src/styles/meal.css`): Die langen Tailwind-Ketten pro Karte (Karte, Bild, Titel, Preis, Badges …) sind kurze Klassen wie `m-card` oder `ib-vegan`. Sie stehen per `@apply` in `@layer components` und enthalten exakt die Utilities, die vorher am Element standen.
+- **View Transitions:** `data-vt` trägt nur noch die Rolle (`image`, `title` …). Der Name `meal-<rolle>-<mmid>` entsteht erst beim Klick aus der Karte bzw. der URL. Geprüft: Die vergebenen Namen sind in beide Richtungen identisch mit vorher.
+- **Bilder:**
+  - Statt `onload`/`onerror` an jedem Bild gibt es einen Capture-Listener am `document` (`src/lib/meal-assets.ts`). Am `window` funktioniert er nicht: `load`-Events von Elementen erreichen es laut Spezifikation nicht.
+  - Die WebP-`<source>` entfällt, AVIF können alle aktuellen Browser. WebP bleibt Fallback im `<img>`.
+  - `fetchpriority="auto"` und `data-slot="skeleton"` entfallen.
+
+**Prüfung: pixelgleich.** 12 Zustände je Mobil und Desktop: Start, Tag, vergangener Tag, Detail mit und ohne mmid, Datenschutz, 404, Hover, Vegan- und Vegetarisch-Filter, Accordion, Filterdialog.
+- **Zweimal geprüft:** einmal ohne Bilder, einmal mit Bildern, alter gegen neuen Build nebeneinander.
+- **Abweichung:** Einzige Abweichung sind 44 Pixel Kantenglättung am 18-px-Info-Icon (maximal 7/255 pro Farbkanal), mit bloßem Auge nicht sichtbar.
+- **Smoke-Test:** Er prüft zusätzlich, dass jede Sprite-Referenz ein Symbol hat (270 Referenzen auf 3 Seiten). 20/20 Prüfungen bestanden.
+
 ## Abschluss: Next.js 16 → Astro 7.3
 
 Gleiche Maschine und Messmethode wie die Baseline (`docs/perf-baseline.md`). Die Seiten sind beim Lasttest gecacht und werden komprimiert ausgeliefert. Rohdaten: `docs/perf/baseline-next.json` gegen `docs/perf/final-astro.json`.
 
-| Seite | TTFB p50 | TTFB p95 | Req/s | JS (gzip) | DB-Queries pro Seitenaufruf | Lighthouse | LCP (mobil) |
-|---|---|---|---|---|---|---|---|
-| `/` | 18 → **12.6 ms** | 31.4 → **30.8 ms** | 436 → **663** | 242 → **4.5 KB** | 11 → **0** | 93 → **100** | 3.16 → **1.39 s** |
-| `/day/<morgen>` | 79.9 → **12.9 ms** | 190.3 → **31.2 ms** | 54 → **645** | 242 → **4.5 KB** | 13 → **0** | 89 → **100** | 3.64 → **1.38 s** |
-| `/day/<vor 30 Tagen>` | 80.1 → **13.6 ms** | 190.2 → **33.4 ms** | 49 → **606** | 242 → **4.5 KB** | 13 → **0** | 93 → **100** | 3.19 → **1.38 s** |
-| `/meal/<id>?mmid=…` | 38.4 → **3.7 ms** | 71.6 → **10.5 ms** | 96 → **2 085** | 258 → **6.5 KB** | 4 → **1**¹ | 94 → **100** | 2.96 → **1.38 s** |
-| `/datenschutz` | 7.9 → **2.7 ms** | 12.8 → **6.2 ms** | 956 → **3 171** | 326 → **96 KB**² | 0 → **0** | 95 → **100** | 2.82 → **1.38 s** |
+| Seite | TTFB p50 | TTFB p95 | Req/s | HTML (roh) | JS (gzip) | DB-Queries pro Seitenaufruf | Lighthouse | LCP (mobil) |
+|---|---|---|---|---|---|---|---|---|
+| `/` | 18 → **6.8 ms** | 31.4 → **21.4 ms** | 436 → **1 166** | 323 → **118 KB** | 242 → **4.5 KB** | 11 → **0** | 93 → **100** | 3.16 → **1.39 s** |
+| `/day/<morgen>` | 79.9 → **7.1 ms** | 190.3 → **19.7 ms** | 54 → **1 148** | 320 → **117 KB** | 242 → **4.5 KB** | 13 → **0** | 89 → **100** | 3.64 → **1.39 s** |
+| `/day/<vor 30 Tagen>` | 80.1 → **7.3 ms** | 190.2 → **20.7 ms** | 49 → **1 110** | 320 → **117 KB** | 242 → **4.5 KB** | 13 → **0** | 93 → **100** | 3.19 → **1.38 s** |
+| `/meal/<id>?mmid=…` | 38.4 → **3.4 ms** | 71.6 → **9.9 ms** | 96 → **2 224** | 82 → **20 KB** | 258 → **6.5 KB** | 4 → **1**¹ | 94 → **100** | 2.96 → **1.51 s** |
+| `/datenschutz` | 7.9 → **2.5 ms** | 12.8 → **6.0 ms** | 956 → **3 326** | 59 → **27 KB** | 326 → **96 KB**² | 0 → **0** | 95 → **100** | 2.82 → **1.38 s** |
 
 ¹ Die Angebotshistorie (Server Island) wird beim ersten Abruf nach einem neuen Render einmal berechnet und dann gecacht.
 ² Cookie-Einstellungen als React-Island, unverändert seit Phase 3.
 
 - **Zielwerte aus §9:**
-  - TTFB p95 bei HIT < 30 ms: auf den Tages- und Startseiten mit 31–33 ms knapp verfehlt, sonst erreicht. Grund ist die Komprimierung, ohne sie sind es 13–14 ms (Phase 6); für die Nutzer überwiegt die kleinere Übertragung.
+  - TTFB p95 bei HIT < 30 ms: erreicht, 10–21 ms. Vor der HTML-Verkleinerung lagen Start- und Tagesseiten mit Komprimierung knapp darüber (31–33 ms).
+  - HTML `/` < 120 KB roh: erreicht, 118 KB statt 323 KB.
   - 0 DB-Queries bei HIT: erreicht.
   - JS −70 %: erreicht, −98 %.
   - Lighthouse ≥ 95: erreicht, 100.
@@ -817,7 +846,5 @@ Gleiche Maschine und Messmethode wie die Baseline (`docs/perf-baseline.md`). Die
   - Bilder werden einmal pro Bild berechnet, nicht pro Größe und Request.
 
 **Offene Punkte für später** (nicht Teil der Migration):
-- **HTML-Größe:** 315 KB roh. Darin stecken 111 KB Tailwind-Klassen und 102 KB Inline-SVG-Icons (238 Stück). Ein SVG-Sprite (`<use href>`) würde das Rohgewicht etwa halbieren; komprimiert sind es heute 10–20 KB.
-- **Schutzregel im Sync:** Liefert die API für einen Zeitraum gar keine Daten, werden wie bisher alle Ausgaben darin gelöscht, per Cascade inklusive Bewertungen (siehe Phase 8).
 - **Mehrere Instanzen:** Der Route Cache ist pro Prozess. Bei mehreren Instanzen braucht man einen gemeinsamen Cache-Provider und Cron nur auf einer Instanz (`CRON_DISABLED=1` auf den anderen).
 - **„Stand“ auf `/datenschutz`:** zeigt das Build-Datum (wie bei Next, dort ebenfalls `new Date()` in einer statischen Seite).

@@ -27,7 +27,7 @@ const [groups, mensen] = await Promise.all([
 Astro.cache.set(dayPolicy(date, today));
 ---
 
-<BaseLayout>
+<BaseLayout mealAssets>
   <FilterHead slot="head" />
   <main class="bg-primary/5">
     <DaySelector selected={date} today={today} />

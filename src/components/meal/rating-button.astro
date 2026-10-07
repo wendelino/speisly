@@ -3,7 +3,7 @@
 // Statisch gerendert; das Verhalten steckt in rating-button-script.astro, das
 // im <head> eingebunden wird (ein <script> hier wäre ein zusätzliches Kind der
 // Box und würde die space-y-Abstände verändern).
-import { LoaderCircle, Star } from "@lucide/astro";
+import Icon from "@/components/icons/icon.astro";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ const classFor = (variant: "default" | "outline") =>
   data-slot="dialog-trigger"
   data-state="closed"
   type="button"
-><span data-rate-label="new"><Star class="h-4 w-4" />Jetzt bewerten</span><span data-rate-label="existing"><Star class="h-4 w-4" />Bewertung aktualisieren</span><span data-rate-label="loading"><LoaderCircle class="size-4 animate-spin" />Laden...</span></button>
+><span data-rate-label="new"><Icon class="h-4 w-4" name="star" />Jetzt bewerten</span><span data-rate-label="existing"><Icon class="h-4 w-4" name="star" />Bewertung aktualisieren</span><span data-rate-label="loading"><Icon class="size-4 animate-spin" name="loader-circle" />Laden...</span></button>
 
 <style is:global>
   /* Spans sind layout-neutral: Icon und Text stehen wie bisher direkt im Button */

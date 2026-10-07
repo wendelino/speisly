@@ -1,0 +1,26 @@
+---
+// SVG-Sprite mit den Symbolen für icon.astro. Wird einmal pro Seite direkt am
+// Anfang von <body> eingebunden (BaseLayout `mealAssets`). Seiten, die nur
+// wenige Icons brauchen, übergeben eine Auswahl: Ein Symbol, das die Seite
+// nicht nutzt, kostet nur Bytes (komprimiert sind wiederholte Inline-Icons
+// fast gratis, ungenutzte Pfaddaten nicht).
+import { SPRITE_ICONS, type SpriteIconName } from "./sprite-icons";
+
+type Props = { icons?: readonly SpriteIconName[] };
+const { icons = Object.keys(SPRITE_ICONS) as SpriteIconName[] } = Astro.props;
+
+const symbols = icons
+  .map(
+    (name) =>
+      `<symbol id="i-${name}" viewBox="0 0 24 24">${SPRITE_ICONS[name]}</symbol>`
+  )
+  .join("");
+---
+
+<svg
+  aria-hidden="true"
+  height="0"
+  set:html={symbols}
+  style="position:absolute;overflow:hidden"
+  width="0"
+/>

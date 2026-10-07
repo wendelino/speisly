@@ -1,26 +1,16 @@
 ---
 // Statische Variante von IngredientBadge (variant="default")
-import { Beef, EggFried, Fish, Leaf } from "@lucide/astro";
-import {
-  INGREDIENT_BADGE_BASE,
-  INGREDIENT_STYLES,
-  type IngredientType,
-} from "@/lib/ingredients";
-import { cn } from "@/lib/utils";
+import Icon from "@/components/icons/icon.astro";
+import { INGREDIENT_ICONS } from "@/components/icons/sprite-icons";
+import { INGREDIENT_STYLES, type IngredientType } from "@/lib/ingredients";
 
 type Props = { type: IngredientType };
 
-const ICONS = {
-  vegan: Leaf,
-  veggie: EggFried,
-  meat: Beef,
-  fish: Fish,
-  notVeggie: Beef,
-} as const;
 
 const { type } = Astro.props;
-const { label, tailwind } = INGREDIENT_STYLES[type];
-const Icon = ICONS[type];
+const { label } = INGREDIENT_STYLES[type];
+const icon = INGREDIENT_ICONS[type];
 ---
 
-<button class={cn(INGREDIENT_BADGE_BASE, tailwind)} type="button"><Icon class="size-3.5" /> {label} </button>
+{/* ib/ib-*: INGREDIENT_BADGE_BASE + INGREDIENT_STYLES[type].tailwind (meal.css) */}
+<button class={`ib ib-${type}`} type="button"><Icon class="size-3.5" name={icon} /> {label} </button>
