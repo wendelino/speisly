@@ -48,9 +48,7 @@
         "data_source_slug_unique": {
           "name": "data_source_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -275,12 +273,8 @@
           "name": "meal_data_source_slug_data_source_slug_fk",
           "tableFrom": "meal",
           "tableTo": "data_source",
-          "columnsFrom": [
-            "data_source_slug"
-          ],
-          "columnsTo": [
-            "slug"
-          ],
+          "columnsFrom": ["data_source_slug"],
+          "columnsTo": ["slug"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -392,12 +386,8 @@
           "name": "meal_rating_meal_id_meal_id_fk",
           "tableFrom": "meal_rating",
           "tableTo": "meal",
-          "columnsFrom": [
-            "meal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["meal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -405,12 +395,8 @@
           "name": "meal_rating_mensa_meal_id_mensa_meal_id_fk",
           "tableFrom": "meal_rating",
           "tableTo": "mensa_meal",
-          "columnsFrom": [
-            "mensa_meal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["mensa_meal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -418,12 +404,8 @@
           "name": "meal_rating_user_id_user_id_fk",
           "tableFrom": "meal_rating",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -489,12 +471,8 @@
           "name": "meal_update_meal_id_meal_id_fk",
           "tableFrom": "meal_update",
           "tableTo": "meal",
-          "columnsFrom": [
-            "meal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["meal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -549,16 +527,12 @@
         "mensa_slug_unique": {
           "name": "mensa_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         },
         "mensa_name_unique": {
           "name": "mensa_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -707,12 +681,8 @@
           "name": "mensa_meal_mensa_id_mensa_id_fk",
           "tableFrom": "mensa_meal",
           "tableTo": "mensa",
-          "columnsFrom": [
-            "mensa_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["mensa_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -720,12 +690,8 @@
           "name": "mensa_meal_meal_id_meal_id_fk",
           "tableFrom": "mensa_meal",
           "tableTo": "meal",
-          "columnsFrom": [
-            "meal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["meal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

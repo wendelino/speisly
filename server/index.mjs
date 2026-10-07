@@ -3,13 +3,14 @@
  *
  * - startet den Astro-Server (`@astrojs/node`, Build in dist/) mit eigenem
  *   HTTP-Server, damit Antworten komprimiert werden (./compress.mjs)
- * - wärmt nach dem Start die wichtigsten Seiten vor (der Route Cache lebt im
+ * - synchronisiert nach dem Start heute bis +7 Tage (Daten und Bildvarianten)
+ *   und wärmt danach die wichtigsten Seiten vor (der Route Cache lebt im
  *   Speicher und ist nach jedem Neustart leer)
  * - registriert die Cron-Jobs für den Daten-Sync (./cron.mjs)
  *
  * Umgebung: PORT (Default 4321), HOST (Default 0.0.0.0), API_BEARER_TOKEN,
  * SITE_HOST (Default speisly.de, einheitlicher Host für den Cache-Schlüssel),
- * CRON_DISABLED=1 schaltet Cron und Pre-Warm ab (z. B. für eine zweite
+ * CRON_DISABLED=1 schaltet Cron und den Start-Sync ab (z. B. für eine zweite
  * Instanz oder lokale Tests).
  */
 import http from "node:http";
@@ -48,16 +49,18 @@ let cron;
 server.listen(port, host, () => {
   console.log(`[server] listening on http://${host}:${port}`);
   if (process.env.CRON_DISABLED === "1") {
-    console.log("[server] CRON_DISABLED=1: kein Cron, kein Pre-Warm");
+    console.log("[server] CRON_DISABLED=1: kein Cron, kein Start-Sync");
     return;
   }
   const token = process.env.API_BEARER_TOKEN;
   if (!token) {
-    console.error("[server] API_BEARER_TOKEN fehlt: kein Cron, kein Pre-Warm");
+    console.error(
+      "[server] API_BEARER_TOKEN fehlt: kein Cron, kein Start-Sync"
+    );
     return;
   }
-  // Pre-Warm im Hintergrund, der Server nimmt sofort Anfragen an
-  triggerSync({ baseUrl, token, scope: "warm" });
+  // Sync heute…+7 und Pre-Warm im Hintergrund, der Server nimmt sofort Anfragen an
+  triggerSync({ baseUrl, token, scope: "week" });
   cron = startCron({ baseUrl, token });
 });
 
