@@ -1,68 +1,76 @@
 ---
-// Astro-Port von footer.tsx: identisches Markup, kein Client-JS
-import { Copyright, MessageCircle } from "@lucide/astro";
-import Separator from "@/components/astro/separator.astro";
-import { buttonVariants } from "@/components/ui/button";
+// Fußzeile: Wellenkante, Marke, Links und Feedback-Aufruf. Kein Client-JS.
+import { Heart, MessageCircleHeart } from "@lucide/astro";
+import Button from "@/components/ui/button.astro";
+import Brand from "./brand.astro";
+
+const LINKS = [
+  { href: "/", label: "Speiseplan" },
+  { href: "/kontakt", label: "Kontakt" },
+  { href: "/feedback", label: "Feedback" },
+  { href: "/datenschutz", label: "Datenschutz" },
+];
 ---
 
-<footer class="border-t bg-primary/15">
-  <div
-    class="container mx-auto flex flex-col items-center justify-center gap-8 px-4 py-12"
+<footer class="relative mt-20 bg-secondary/70 text-sm">
+  <svg
+    aria-hidden="true"
+    class="-top-6 absolute inset-x-0 h-6 w-full text-secondary/70"
+    preserveAspectRatio="none"
+    viewBox="0 0 1200 24"
   >
-    <a class="transition-opacity hover:opacity-80" href="/">
-      <img
-        alt="Speisly Logo"
-        class="h-auto w-32 rounded-xl shadow-md"
-        decoding="async"
-        height="80"
-        loading="eager"
-        src="/logo_full.png"
-        width="200"
-      >
-    </a>
+    <path
+      d="M0 24V12C100 0 200 0 300 12s200 12 300 0 200-12 300 0 200 12 300 0v12Z"
+      fill="currentColor"
+    ></path>
+  </svg>
+  <div class="container-page grid gap-10 py-12 md:grid-cols-[1.2fr_1fr_1.2fr] md:items-start">
+    <div class="space-y-3">
+      <a class="inline-flex items-center gap-2.5" href="/">
+        <Brand />
+      </a>
+      <p class="max-w-xs text-muted-foreground leading-relaxed">
+        Die Speisepläne der Mensen in Halle – schnell, übersichtlich und mit
+        euren Bewertungen.
+      </p>
+    </div>
 
-    <nav class="flex flex-wrap items-center justify-center gap-4 pt-2">
-      <a
-        class="flex items-center gap-2 text-primary transition-colors hover:text-primary/80"
-        href="/"
-      >
-        <span class="font-medium text-sm">Startseite</span>
-      </a>
-      <Separator class="h-4" orientation="vertical"/>
-      <a
-        class="flex items-center gap-2 text-primary transition-colors hover:text-primary/80"
-        href="/kontakt"
-      >
-        <span class="font-medium text-sm">Kontakt</span>
-      </a>
-      <Separator class="h-4" orientation="vertical"/>
-      <a
-        class="font-medium text-primary text-sm transition-colors hover:text-primary/80"
-        href="/datenschutz"
-      >
-        Datenschutz
-      </a>
+    <nav aria-label="Fußzeile">
+      <ul class="grid grid-cols-2 gap-x-6 gap-y-2.5">
+        {
+          LINKS.map((link) => (
+            <li>
+              <a
+                class="font-medium text-foreground/80 underline-offset-4 transition-colors hover:text-primary hover:underline"
+                href={link.href}
+              >
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
     </nav>
 
-    <p
-      class="max-w-2xl px-4 text-center text-muted-foreground text-sm leading-relaxed"
-    >
-      Dieses Projekt befindet sich noch in der Entwicklung. Es wird ständig
-      verbessert und erweitert. Wir freuen uns über Feedback :)
-    </p>
-
-    <a
-      class={`${buttonVariants({ variant: "ghost" })} flex items-center gap-2 text-primary`}
-      data-slot="button"
-      href="/feedback"
-    >
-      <MessageCircle class="h-4 w-4"/>
-      <span>Hilf uns, Speisly zu verbessern!</span>
-    </a>
-
-    <div class="flex items-center gap-2 text-muted-foreground">
-      <Copyright class="size-4"/>
-      <span class="text-sm">{`${new Date().getFullYear()} Speisly`}</span>
+    <div class="rounded-3xl bg-card p-5 shadow-soft ring-1 ring-border/60">
+      <p class="font-bold font-display text-base">Fehlt dir was?</p>
+      <p class="mt-1 text-muted-foreground">
+        Speisly ist noch in Entwicklung und wird ständig besser. Wir freuen uns
+        über jede Idee!
+      </p>
+      <Button class="mt-4" href="/feedback" size="sm" variant="secondary">
+        <MessageCircleHeart class="size-4" />
+        Feedback geben
+      </Button>
     </div>
+  </div>
+  <div class="border-border/70 border-t">
+    <p class="container-page flex flex-wrap items-center justify-center gap-1.5 py-5 text-muted-foreground text-xs">
+      <span>{`© ${new Date().getFullYear()} Speisly`}</span>
+      <span aria-hidden="true">·</span>
+      <span class="inline-flex items-center gap-1">
+        Mit <Heart class="size-3.5 fill-primary text-primary" /><span class="sr-only">Liebe</span> für die Studis in Halle
+      </span>
+    </p>
   </div>
 </footer>

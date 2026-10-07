@@ -1,15 +1,17 @@
 import { and, desc, eq } from "drizzle-orm";
-import { meal, mensaMeal } from "@/lib/db/schema/schema";
-import { generateFlags } from "@/lib/helpers";
-import { toIsoDay } from "../dates";
+import { toIsoDay } from "@/lib/dates";
+import { meal, mensa, mensaMeal } from "@/lib/db/schema/schema";
+import { generateFlags } from "@/lib/meal-flags";
 import { db } from "../db";
 import { logError } from "../log";
 
-/** Gericht inkl. Zutaten einer Ausgabe – ohne Bewertungen (die kommen per Island). */
-export type MealDetail = Omit<DetailedMeal, keyof MealRatingStats> & {
-  /** Die Ausgabe, deren Zutaten/Extras angezeigt werden */
-  mensaMealId: string;
+/**
+ * Gericht inkl. Zutaten einer Ausgabe (`mensaMealId`: die Ausgabe, deren
+ * Zutaten/Extras angezeigt werden) – ohne Bewertungen (eigene Query).
+ */
+export type MealDetail = Meal & {
   servedOn: string;
+  mensaName: string;
 };
 
 /**
@@ -40,9 +42,11 @@ export async function findMeal(
         extras: mensaMeal.extras,
         mensaMealId: mensaMeal.id,
         date: mensaMeal.date,
+        mensaName: mensa.name,
       })
       .from(meal)
       .innerJoin(mensaMeal, eq(meal.id, mensaMeal.mealId))
+      .innerJoin(mensa, eq(mensa.id, mensaMeal.mensaId))
       .where(and(...conditions))
       .orderBy(desc(mensaMeal.date))
       .limit(1);

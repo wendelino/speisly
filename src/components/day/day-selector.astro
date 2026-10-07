@@ -1,0 +1,104 @@
+---
+// Tagesauswahl: heute und die nächsten Werktage als Links, dahinter der
+// Kalender (react-day-picker in einem Dialog, wird erst beim Öffnen geladen:
+// calendar-dialog.mount.tsx). Ein Tag außerhalb der Leiste steht im
+// Kalender-Button.
+import { CalendarDays } from "@lucide/astro";
+import { addDays } from "@/lib/dates";
+import { formatDay, isoDayToLocalDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  /** heute in Berlin (`YYYY-MM-DD`) */
+  today: string;
+  /** ausgewählter Tag (`YYYY-MM-DD`), Default: heute */
+  selected?: string;
+};
+
+const DAYS_IN_STRIP = 5;
+const { today, selected = today } = Astro.props;
+
+const isWeekend = (isoDay: string) =>
+  [0, 6].includes(isoDayToLocalDate(isoDay).getDay());
+const days = [today];
+for (let d = addDays(today, 1); days.length < DAYS_IN_STRIP; d = addDays(d, 1)) {
+  if (!isWeekend(d)) {
+    days.push(d);
+  }
+}
+const isCustomDate = !days.includes(selected);
+const fullDate = (day: string) => formatDay(day, "EEEE, d. MMMM");
+const weekday = (day: string) => formatDay(day, "EEEEEE");
+const dayOfMonth = (day: string) => formatDay(day, "dd");
+
+const PILL =
+  "relative flex h-14 min-w-0 flex-col items-center justify-center rounded-2xl leading-tight outline-none ring-1 transition-[background-color,color,box-shadow] duration-200 focus-visible:ring-[3px] focus-visible:ring-ring md:w-14";
+const pillState = (active: boolean) =>
+  active
+    ? "bg-primary text-primary-foreground shadow-pop ring-primary"
+    : "bg-card shadow-soft ring-border/70 hover:bg-accent hover:ring-primary/30";
+---
+
+<nav aria-label="Tag wählen" data-selected={selected} id="day-selector">
+  <ul class="grid grid-cols-6 gap-1.5 md:flex md:gap-2">
+    {
+      days.map((day) => {
+        const active = day === selected;
+        const isToday = day === today;
+        return (
+          <li class="min-w-0">
+            <a
+              aria-current={active ? "date" : undefined}
+              aria-label={`${isToday ? "Heute, " : ""}${fullDate(day)}`}
+              class={cn(PILL, pillState(active))}
+              data-astro-prefetch
+              data-day
+              href={isToday ? "/" : `/day/${day}`}
+            >
+              <span class="font-semibold text-[0.7rem] opacity-75">{isToday ? "Heute" : weekday(day)}</span>
+              <span class="font-bold font-display text-lg tabular-nums">{dayOfMonth(day)}</span>
+            </a>
+          </li>
+        );
+      })
+    }
+    <li class="min-w-0 md:ml-1">
+      <button
+        aria-haspopup="dialog"
+        aria-label={isCustomDate ? `Kalender, gewählt: ${fullDate(selected)}` : "Anderen Tag im Kalender wählen"}
+        class={cn(PILL, "w-full", isCustomDate ? pillState(true) : "bg-transparent text-primary ring-border hover:bg-accent")}
+        data-calendar-trigger
+        type="button"
+      >
+        {
+          isCustomDate ? (
+            <>
+              <span class="font-semibold text-[0.7rem] opacity-75">{weekday(selected)}</span>
+              <span class="font-bold font-display text-lg tabular-nums">{dayOfMonth(selected)}</span>
+            </>
+          ) : (
+            <>
+              <CalendarDays class="size-5" />
+              <span class="mt-0.5 font-semibold text-[0.7rem]">Mehr</span>
+            </>
+          )
+        }
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<script>
+  import { loadOnIntent } from "@/lib/load-on-intent";
+
+  const nav = document.getElementById("day-selector");
+  const trigger = nav?.querySelector<HTMLElement>("[data-calendar-trigger]");
+
+  if (nav && trigger) {
+    loadOnIntent(
+      trigger,
+      () => import("./calendar-dialog.mount"),
+      ({ openCalendar }) => openCalendar(nav.dataset.selected as string)
+    );
+  }
+</script>

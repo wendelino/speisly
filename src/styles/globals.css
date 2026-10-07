@@ -1,132 +1,171 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./meal.css";
+@import "./components.css";
 
-@custom-variant dark (&:is(.dark *));
-
+/*
+ * Design-Tokens. Farben in OKLCH: warme Creme-Flächen, die Marken-Beere als
+ * Primärfarbe und ein paar verspielte Akzente (Sonne, Minze, Himmel, Pfirsich)
+ * für Badges, Deko und leere Zustände.
+ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Systemschrift: entspricht dem bisherigen Rendering. In der Next-Version war
-     --font-geist-sans nur am <body> gesetzt, Tailwind liest --font-sans aber am
-     <html> aus, dadurch fiel die Seite immer auf diesen Stack zurück. */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sun: var(--sun);
+  --color-sun-soft: var(--sun-soft);
+  --color-gold: var(--gold);
+  --color-mint: var(--mint);
+  --color-mint-soft: var(--mint-soft);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-peach: var(--peach);
+  --color-peach-soft: var(--peach-soft);
+  --color-rose: var(--rose);
+  --color-rose-soft: var(--rose-soft);
+  --color-stone: var(--stone);
+  --color-stone-soft: var(--stone-soft);
+
+  /* Fließtext in der Systemschrift (schnell, kein Layout-Shift), Überschriften
+     und Preise in Bricolage Grotesque (astro.config.mjs) */
   --font-sans:
     ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
     "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --font-display: var(--font-bricolage), var(--font-sans);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 14px);
+
+  --shadow-soft:
+    0 1px 2px oklch(0.3 0.05 350 / 0.06), 0 4px 16px -4px
+    oklch(0.3 0.05 350 / 0.1);
+  --shadow-lift:
+    0 2px 4px oklch(0.3 0.05 350 / 0.06), 0 16px 32px -12px
+    oklch(0.4 0.1 2 / 0.28);
+  --shadow-pop: 0 10px 30px -8px oklch(0.44 0.16 2 / 0.55);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-wiggle: wiggle 0.5s ease-in-out;
+  --animate-pop-in: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-skeleton: skeleton 1.6s ease-in-out 0.3s infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-3deg);
+    }
+    50% {
+      transform: translateY(-10px) rotate(3deg);
+    }
+  }
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(-3deg);
+    }
+    40% {
+      transform: rotate(4deg) scale(1.06);
+    }
+    70% {
+      transform: rotate(-5deg);
+    }
+  }
+  @keyframes skeleton {
+    50% {
+      background-color: var(--muted);
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.4375 0.1541 2.1);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  --radius: 1rem;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.985 0.008 75);
+  --foreground: oklch(0.25 0.03 350);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.46 0.16 2);
+  --primary-foreground: oklch(0.99 0.005 2);
+  --secondary: oklch(0.95 0.03 2);
+  --secondary-foreground: oklch(0.42 0.15 2);
+  --muted: oklch(0.955 0.012 70);
+  --muted-foreground: oklch(0.5 0.025 350);
+  --accent: oklch(0.95 0.025 2);
+  --accent-foreground: oklch(0.38 0.13 2);
+  --destructive: oklch(0.58 0.21 25);
+  --border: oklch(0.91 0.014 60);
+  --input: oklch(0.88 0.016 60);
+  --ring: oklch(0.46 0.16 2 / 0.45);
+
+  --sun: oklch(0.55 0.12 70);
+  --sun-soft: oklch(0.95 0.07 92);
+  --gold: oklch(0.82 0.16 80);
+  --mint: oklch(0.5 0.12 155);
+  --mint-soft: oklch(0.95 0.05 155);
+  --sky: oklch(0.5 0.13 245);
+  --sky-soft: oklch(0.95 0.035 240);
+  --peach: oklch(0.6 0.15 45);
+  --peach-soft: oklch(0.94 0.045 55);
+  --rose: oklch(0.52 0.18 18);
+  --rose-soft: oklch(0.95 0.035 15);
+  --stone: oklch(0.45 0.02 60);
+  --stone-soft: oklch(0.94 0.008 60);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground;
   }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+    text-wrap: balance;
+  }
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+  }
   /* Sprite-Icons (components/icons): Lucide-Standardattribute. In base, damit
-     Utilities (fill-*, stroke-*, …) wie bei den Inline-Attributen gewinnen. */
+     Utilities (fill-*, stroke-*, …) sie überschreiben. */
   svg.ic {
     fill: none;
     stroke: currentColor;
@@ -136,6 +175,10 @@
   }
 }
 
+@utility container-page {
+  @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+}
+
 /* Cross-Document View Transitions (Karte ↔ Detailseite, siehe lib/view-transitions.ts) */
 @view-transition {
   navigation: auto;
@@ -143,5 +186,41 @@
 @media (prefers-reduced-motion: reduce) {
   @view-transition {
     navigation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* organische Blob-Form für Icons (ui/icon-blob.astro, Consent-Dialog) */
+@utility rounded-blob {
+  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Drawer (ui/drawer.tsx): Der Finger scrollt den Body nur, wenn es dort etwas
+   zu scrollen gibt; sonst zieht er den Drawer */
+[data-drawer-body] {
+  touch-action: none;
+}
+[data-drawer-body][data-scrollable] {
+  touch-action: pan-y;
+}
+@media (min-width: 640px) {
+  [data-drawer-body] {
+    touch-action: auto;
   }
 }

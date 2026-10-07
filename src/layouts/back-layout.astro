@@ -1,16 +1,27 @@
 ---
-// Ersetzt src/app/(static)/layout.tsx: Container mit Zurück-Button
+// Unterseiten: Container mit Zurück-Button über dem Inhalt
 import type { ComponentProps } from "astro/types";
 import BackButton from "@/components/layout/back-button.astro";
+import { cn } from "@/lib/utils";
 import BaseLayout from "./base-layout.astro";
 
-type Props = ComponentProps<typeof BaseLayout>;
+type Props = ComponentProps<typeof BaseLayout> & {
+  /** Breite des Inhalts: `narrow` für Formulare und Texte */
+  width?: "narrow" | "wide";
+};
+
+const { width = "narrow", ...props } = Astro.props;
 ---
 
-<BaseLayout {...Astro.props}>
+<BaseLayout {...props}>
   <slot name="head" slot="head" />
-  <div class="container mx-auto max-w-4xl p-3 pt-6">
-    <BackButton />
-    <div class="space-y-4 p-3"><slot /></div>
-  </div>
+  <main
+    class={cn(
+      "container-page pt-2 pb-8",
+      width === "narrow" ? "max-w-3xl" : "max-w-5xl"
+    )}
+  >
+    <BackButton class="mb-6" />
+    <slot />
+  </main>
 </BaseLayout>

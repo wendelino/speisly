@@ -19,6 +19,8 @@ plugin({
         JWT_SECRET: env.JWT_SECRET ?? "test-secret",
         JWT_ALGORITHM: env.JWT_ALGORITHM ?? "HS256",
         API_BEARER_TOKEN: env.API_BEARER_TOKEN ?? "test-token",
+        MEINE_MENSA_API_URL:
+          env.MEINE_MENSA_API_URL ?? "https://api.example.test",
         IMAGE_DIR: env.IMAGE_DIR ?? "./data/img-test",
         TELEGRAM_BOT_TOKEN: undefined,
         TELEGRAM_CHAT_ID: undefined,

@@ -1,14 +1,9 @@
 ---
-// Startseite: Speiseplan von heute (Berlin). On-demand gerendert; das Caching
-// (Route Cache bis Mitternacht) folgt in Phase 6.
-import DaySelector from "@/components/day-selector.astro";
-import FilterFab from "@/components/filter-fab.astro";
-import AppHero from "@/components/layout/app-hero.astro";
-import FilterHead from "@/components/meal/filter-head.astro";
-import MealList from "@/components/meal/meal-list.astro";
-import BaseLayout from "@/layouts/base-layout.astro";
+// Startseite: Speiseplan von heute (Berlin). Im Route Cache bis Mitternacht
+// (src/server/cache-policy.ts).
+import PlanLayout from "@/layouts/plan-layout.astro";
+import { todayBerlin } from "@/lib/dates";
 import { homePolicy } from "@/server/cache-policy";
-import { todayBerlin } from "@/server/dates";
 import { getMealsForDate } from "@/server/queries/meals";
 import { getVisibleMensen } from "@/server/queries/mensen";
 
@@ -22,12 +17,4 @@ const [groups, mensen] = await Promise.all([
 Astro.cache.set(homePolicy(today));
 ---
 
-<BaseLayout mealAssets>
-  <FilterHead slot="head" />
-  <main class="bg-primary/5">
-    <AppHero />
-    <DaySelector today={today} />
-    <MealList date={today} groups={groups} today={today} />
-    <FilterFab mensen={mensen} />
-  </main>
-</BaseLayout>
+<PlanLayout date={today} groups={groups} mensen={mensen} today={today} />

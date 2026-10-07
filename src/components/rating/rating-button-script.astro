@@ -1,0 +1,72 @@
+---
+// Verhalten des Bewerten-Buttons (rating-button.astro). Der Dialog (React)
+// wird erst beim Klick geladen; die eigene Bewertung wird nur abgefragt, wenn
+// Cookie-Consent erteilt ist.
+---
+
+<script>
+  import { actions } from "astro:actions";
+  import type { ExistingRating } from "@/components/rating/rating-dialog";
+  import { readConsent } from "@/lib/cookies";
+  import { loadOnIntent } from "@/lib/load-on-intent";
+
+  type UiState = "new" | "existing" | "loading";
+
+  const button = document.querySelector<HTMLButtonElement>("[data-rate-button]");
+  let existing: ExistingRating | null = null;
+
+  function setUi(state: UiState) {
+    if (!button) {
+      return;
+    }
+    button.dataset.rateButton = state;
+    button.disabled = state === "loading";
+    button.className =
+      (state === "existing"
+        ? button.dataset.classOutline
+        : button.dataset.classDefault) ?? button.className;
+  }
+
+  /** Bewertungsübersicht nach Änderungen frisch vom Server holen */
+  async function refreshSummary() {
+    const response = await fetch(location.href, { cache: "reload" });
+    const html = new DOMParser().parseFromString(await response.text(), "text/html");
+    const fresh = html.querySelector("[data-rating-summary]");
+    const current = document.querySelector("[data-rating-summary]");
+    if (fresh && current) {
+      current.replaceWith(fresh);
+    }
+  }
+
+  if (button) {
+    const mealId = button.dataset.mealId as string;
+    const mensaMealId = button.dataset.mensaMealId as string;
+
+    if (readConsent() === "accepted") {
+      setUi("loading");
+      actions.rating
+        .mine({ mealId })
+        .then(({ data }) => {
+          existing = data ?? null;
+          setUi(existing ? "existing" : "new");
+        })
+        .catch(() => setUi("new"));
+    }
+
+    loadOnIntent(
+      button,
+      () => import("@/components/rating/rating-dialog.mount"),
+      ({ openRatingDialog }) =>
+        openRatingDialog({
+          mealId,
+          mensaMealId,
+          existing,
+          onChange: (next) => {
+            existing = next;
+            setUi(next ? "existing" : "new");
+            refreshSummary();
+          },
+        })
+    );
+  }
+</script>

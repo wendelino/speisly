@@ -3,11 +3,12 @@
  * ist für alle gleich (gecacht), der Filterzustand lebt in Cookies.
  *
  * `filterBoot` wird als Inline-Script im <head> ausgeführt (siehe
- * filter-head.astro), also vor dem ersten Paint – kein Flackern. Es setzt
- * `data-diet` und `data-filter-veggie/-vegan` auf <html> und erzeugt CSS für
- * die Mensa-Auswahl und den Mensa-Chip. Außerdem stellt
- * es `window.speislyFilters` bereit, über das der Store (stores/filters.ts)
- * Änderungen anwendet. Die Funktion muss in sich geschlossen sein, weil sie
+ * layouts/plan-layout.astro), also vor dem ersten Paint – kein Flackern. Es
+ * setzt `data-diet`, `data-filter-veggie/-vegan` und `data-filter-active` auf
+ * <html> und erzeugt CSS für die Mensa-Auswahl (Gruppen und Sprungmarken)
+ * und den Mensa-Chip (statische Regeln: styles/components.css). Außerdem
+ * stellt es `window.speislyFilters` bereit, über das der Store
+ * (stores/filters.ts) Änderungen anwendet. Die Funktion muss in sich geschlossen sein, weil sie
  * per `toString()` inline eingebettet wird.
  */
 export function filterBoot() {
@@ -65,15 +66,21 @@ export function filterBoot() {
       const sel = ids.map((id) => `[data-mensa-id="${id}"]`).join(",");
       const none = `html:not(:has(#mealslist :is(${sel})))`;
       css =
-        `[data-mensa-group]:not(:is(${sel})){display:none!important}` +
-        `${none} #mealslist{display:none!important}` +
+        `:is([data-mensa-group],[data-mensa-jump]):not(:is(${sel})){display:none!important}` +
+        `${none} :is(#mealslist,[data-mensa-nav]){display:none!important}` +
         `${none} [data-filter-empty]{display:contents!important}`;
     }
-    // Chip „N Mensen“ – Bedingung wie bisher in mensa-filter.tsx
+    // Chip „N Mensen“ (nicht bei „alle Mensen“ ausgewählt) und Punkt am
+    // Filter-Button
     const count = next.selectedMensen.length;
-    if (count > 0 && count !== 7) {
-      css += `[data-chip="mensen"]{display:inline-flex!important}[data-chip-label]::before{content:"${count} Mensen "}`;
+    const mensaChip = count > 0 && count !== 7;
+    if (mensaChip) {
+      css += `[data-chip="mensen"]{display:inline-flex!important}[data-chip-label]::before{content:"${count} ${count === 1 ? "Mensa" : "Mensen"}"}`;
     }
+    root.toggleAttribute(
+      "data-filter-active",
+      mensaChip || next.showVeggie || next.showVegan
+    );
     let style = document.getElementById("speisly-mensa-filter");
     if (!style) {
       style = document.createElement("style");

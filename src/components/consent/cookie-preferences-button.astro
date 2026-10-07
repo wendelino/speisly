@@ -1,0 +1,24 @@
+---
+// Öffnet die Cookie-Einstellungen (Datenschutzseite). Der Dialog wird erst
+// bei Bedarf geladen (cookie-preferences.mount.tsx).
+import { Cookie } from "@lucide/astro";
+import Button from "@/components/ui/button.astro";
+---
+
+<Button aria-haspopup="dialog" class="mt-2" data-cookie-preferences variant="outline">
+  <Cookie class="size-4" />
+  Cookie-Einstellungen ändern
+</Button>
+
+<script>
+  import { loadOnIntent } from "@/lib/load-on-intent";
+
+  const button = document.querySelector<HTMLElement>("[data-cookie-preferences]");
+  if (button) {
+    loadOnIntent(
+      button,
+      () => import("./cookie-preferences.mount"),
+      ({ openCookiePreferences }) => openCookiePreferences()
+    );
+  }
+</script>

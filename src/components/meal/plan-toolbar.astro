@@ -1,0 +1,28 @@
+---
+// Tagesauswahl und Mensa-Sprungmarken über dem Speiseplan. Ab md sticky, damit
+// beides beim Scrollen erreichbar bleibt; auf dem Handy sind stattdessen die
+// Mensa-Überschriften sticky (meal.css .m-head).
+import DaySelector from "@/components/day/day-selector.astro";
+import MensaNav from "./mensa-nav.astro";
+
+type Props = {
+  /** heute in Berlin (`YYYY-MM-DD`) */
+  today: string;
+  /** angezeigter Tag (`YYYY-MM-DD`) */
+  date: string;
+  /** Mensen mit Gerichten an diesem Tag */
+  mensen: Mensa[];
+};
+
+const { today, date, mensen } = Astro.props;
+---
+
+<div
+  class="md:sticky md:top-0 md:z-30 md:border-border/60 md:border-b md:bg-background/90 md:backdrop-blur-lg"
+  data-plan-toolbar
+>
+  <div class="container-page flex flex-col gap-2 pt-1 pb-3 md:py-3">
+    <DaySelector selected={date} today={today} />
+    <MensaNav mensen={mensen} />
+  </div>
+</div>

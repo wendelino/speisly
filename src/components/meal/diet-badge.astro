@@ -1,0 +1,11 @@
+---
+// Ernährungs-Badge (vegan, vegetarisch, …); Farben: .ib-<typ> in styles/meal.css
+import Icon from "@/components/icons/icon.astro";
+import { INGREDIENT_ICONS } from "@/components/icons/sprite-icons";
+import { INGREDIENT_LABELS, type IngredientType } from "@/lib/ingredients";
+
+type Props = { type: IngredientType; size?: "sm" | "lg" };
+const { type, size = "sm" } = Astro.props;
+---
+
+<span class:list={["ib", `ib-${type}`, size === "lg" && "ib-lg"]}><Icon class={size === "lg" ? "size-3.5" : "size-3"} name={INGREDIENT_ICONS[type]} />{INGREDIENT_LABELS[type]}</span>

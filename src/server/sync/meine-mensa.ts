@@ -1,4 +1,5 @@
-import { toIsoDay } from "../dates";
+import { MEINE_MENSA_API_URL } from "astro:env/server";
+import { toIsoDay } from "@/lib/dates";
 import { logError } from "../log";
 import type {
   GetMealDataParams,
@@ -9,35 +10,31 @@ import type {
   MeineMensaResponse,
   MeineMensaResponseMeta,
 } from "./types";
-import { MEAL_SRC_ID_MAPPINGS, MEINE_MENSA_BASE_URL } from "./types";
+import { MEAL_SRC_ID_MAPPINGS } from "./types";
 import { fetchJson, normalizeDateRange, normalizeSrcId, toSlug } from "./utils";
 
 const MAX_FOOD_PLANS = 999;
+/** Standorte der API, die keine Mensen im Sinne von Speisly sind */
+const EXCLUDED_LOCATION_IDS = new Set([7, 8, 13, 16, 22]);
+/** aus der Umgebung (MEINE_MENSA_API_URL), ohne „/“ am Ende */
+const API_URL = MEINE_MENSA_API_URL.replace(/\/+$/, "");
 
 /**
  * Fetches food plans from the Meine Mensa API
  */
 function fetchFoodPlans(
   dateFrom: string,
-  dateTo: string,
-  locationId?: string
+  dateTo: string
 ): Promise<MeineMensaResponse> {
-  const params = new URLSearchParams();
-  params.set("date_from", dateFrom);
-  params.set("date_to", dateTo);
-  if (locationId) {
-    params.set("location_id", locationId);
-  }
-  const url = `${MEINE_MENSA_BASE_URL}/food_plans?${params}`;
-  return fetchJson<MeineMensaResponse>(url);
+  const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+  return fetchJson<MeineMensaResponse>(`${API_URL}/food_plans?${params}`);
 }
 
 /**
  * Fetches all locations from the Meine Mensa API
  */
 function getLocations(): Promise<Location[]> {
-  const url = `${MEINE_MENSA_BASE_URL}/locations`;
-  return fetchJson<Location[]>(url);
+  return fetchJson<Location[]>(`${API_URL}/locations`);
 }
 
 /**
@@ -104,11 +101,7 @@ function addAvailabilityToMeal(
     });
     return;
   }
-  const EXCLUDED_LOCATION_IDS = [7, 8, 13, 16, 22] as const;
-  const id = mensaInfo.id;
-  if (
-    EXCLUDED_LOCATION_IDS.includes(id as (typeof EXCLUDED_LOCATION_IDS)[number])
-  ) {
+  if (EXCLUDED_LOCATION_IDS.has(mensaInfo.id)) {
     return;
   }
 
@@ -128,7 +121,7 @@ function addAvailabilityToMeal(
 /**
  * Maps API response to internal meal data format
  */
-function existingMeals(
+function toMealData(
   foodPlans: MeineMensaResponse,
   locations: Location[]
 ): MealData[] {
@@ -149,55 +142,32 @@ function existingMeals(
 }
 
 /**
- * Validates food plans data and returns error if invalid
- */
-function validateFoodPlans(foodPlans: MeineMensaResponse): {
-  isValid: boolean;
-  error?: string;
-} {
-  if (foodPlans.data.length === 0) {
-    return { isValid: false, error: "No food plans found" };
-  }
-
-  if (foodPlans.data.length > MAX_FOOD_PLANS) {
-    return {
-      isValid: false,
-      error: "Too many food plans found",
-    };
-  }
-
-  return { isValid: true };
-}
-
-/**
- * Fetches meal data from the Meine Mensa API
+ * Fetches meal data from the Meine Mensa API. Leere und verdächtig große
+ * Antworten (> MAX_FOOD_PLANS) ergeben keine Daten.
  */
 export default async function getMealData({
   date,
-  locationId,
 }: GetMealDataParams): Promise<GetMealDataResult> {
   const { from: dateFrom, to: dateTo } = normalizeDateRange(date);
 
-  const foodPlans = await fetchFoodPlans(dateFrom, dateTo, locationId);
-
-  const validation = validateFoodPlans(foodPlans);
-  if (!validation.isValid) {
-    if (validation.error === "Too many food plans found") {
+  const foodPlans = await fetchFoodPlans(dateFrom, dateTo);
+  const count = foodPlans.data.length;
+  if (count === 0 || count > MAX_FOOD_PLANS) {
+    if (count > MAX_FOOD_PLANS) {
       logError({
-        message: validation.error,
-        ctx: { dateFrom, dateTo, locationId },
+        message: "Too many food plans found",
+        ctx: { dateFrom, dateTo, count },
       });
     }
-    return { data: [], length: 0, dates: [] };
+    return { data: [], dates: [] };
   }
 
   const locations = await getLocations();
   locations.push({ id: 20, name: "unbekannt" }); // API ist nicht korrekt und gibt keine Location für id 20 zurück
-  const meals = existingMeals(foodPlans, locations);
+  const meals = toMealData(foodPlans, locations);
 
   return {
     data: meals,
-    length: meals.flatMap((meal) => meal.availability).length,
     dates: [
       ...new Set(foodPlans.data.map((item) => toIsoDay(new Date(item.date)))),
     ].sort(),

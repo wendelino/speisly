@@ -11,7 +11,8 @@
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { dataSource } from "../../src/lib/db/schema/dataSource";
+import { todayBerlin, toUtcDate } from "../../src/lib/dates";
+import { dataSource } from "../../src/lib/db/schema/data-source";
 import {
   meal,
   mealRating,
@@ -134,14 +135,6 @@ function ingredientsFor(dish: string): string[] {
   return out;
 }
 
-function berlinToday(): Date {
-  const [y, m, d] = new Date()
-    .toLocaleDateString("en-CA", { timeZone: "Europe/Berlin" })
-    .split("-")
-    .map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
-
 async function insertChunked<T>(
   label: string,
   rows: T[],
@@ -195,7 +188,7 @@ async function main() {
 
   const regularMeals = mealRows.filter((m) => !m.small);
   const smallMeals = mealRows.filter((m) => m.small);
-  const today = berlinToday();
+  const today = toUtcDate(todayBerlin());
   const mensaMealRows: (typeof mensaMeal.$inferInsert)[] = [];
   let mmCounter = 0;
   for (let offset = -HISTORY_DAYS; offset <= FUTURE_DAYS; offset += 1) {

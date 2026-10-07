@@ -1,0 +1,34 @@
+---
+// Speiseplan eines Tages (Startseite und /day/[date]): Tagesauswahl,
+// Mensa-Sprungmarken, Gerichte und Filter. Das Inline-Script wendet die
+// Filter-Cookies vor dem ersten Paint an (lib/filters/boot.ts).
+import FilterFab from "@/components/filter/filter-fab.astro";
+import MealList from "@/components/meal/meal-list.astro";
+import PlanToolbar from "@/components/meal/plan-toolbar.astro";
+import { filterBoot } from "@/lib/filters/boot";
+import { formatLongDay } from "@/lib/format";
+import BaseLayout from "./base-layout.astro";
+
+type Props = {
+  /** angezeigter Tag (`YYYY-MM-DD`) */
+  date: string;
+  /** heute in Berlin (`YYYY-MM-DD`) */
+  today: string;
+  groups: MensaMealGroup[];
+  mensen: Mensa[];
+};
+
+const { date, today, groups, mensen } = Astro.props;
+const dayLabel = formatLongDay(date);
+const filterScript = `(${filterBoot.toString()})();`;
+---
+
+<BaseLayout mealAssets title={date === today ? undefined : `Speiseplan ${dayLabel}`}>
+  <script is:inline set:html={filterScript} slot="head" />
+  <main>
+    <h1 class="sr-only">{`Speiseplan für ${dayLabel}`}</h1>
+    <PlanToolbar date={date} mensen={groups} today={today} />
+    <MealList date={date} groups={groups} today={today} />
+    <FilterFab mensen={mensen} />
+  </main>
+</BaseLayout>

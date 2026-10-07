@@ -1,7 +1,7 @@
 import { CronJob } from "cron";
 
 /**
- * Zeitpläne für den Daten-Sync (wie bisher in src/_boot.ts, Europe/Berlin).
+ * Zeitpläne für den Daten-Sync (Europe/Berlin).
  * Alle Jobs rufen den Sync-Endpoint im selben Prozess auf: Dort lebt der
  * Route Cache, der nach dem Sync gezielt invalidiert wird.
  */
@@ -14,7 +14,7 @@ export const SCHEDULES = [
   { cron: "1 0 * * *", scope: "midnight" },
 ];
 
-export const TIME_ZONE = "Europe/Berlin";
+const TIME_ZONE = "Europe/Berlin";
 
 /**
  * @param {{ baseUrl: string, token: string, scope: string, fetch?: typeof fetch }} options

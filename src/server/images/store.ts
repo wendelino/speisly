@@ -5,7 +5,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 
 /**
- * Vorab berechnete Bildvarianten der Gerichtsbilder (Phase 7).
+ * Vorab berechnete Bildvarianten der Gerichtsbilder.
  *
  * Der Sync lädt jedes neue Bild einmal von meine-mensa.de und legt AVIF und
  * WebP in zwei Breiten ab: `<dir>/<key>-<breite>.<format>`. Die kleine Breite
@@ -18,10 +18,10 @@ import sharp from "sharp";
  * liefert sie aus.
  */
 
-export const IMAGE_WIDTHS = [240, 800] as const;
+const IMAGE_WIDTHS = [240, 800] as const;
 const [SMALL_WIDTH, LARGE_WIDTH] = IMAGE_WIDTHS;
-export const IMAGE_FORMATS = ["avif", "webp"] as const;
-export const IMAGE_ROUTE = "/img";
+const IMAGE_FORMATS = ["avif", "webp"] as const;
+const IMAGE_ROUTE = "/img";
 
 type Format = (typeof IMAGE_FORMATS)[number];
 

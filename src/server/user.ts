@@ -7,7 +7,6 @@ import { hasConsent } from "./consent";
 import { db } from "./db";
 import { decodeJwt, encodeJwt } from "./jwt";
 
-/** Ersetzt src/actions/user.ts (gleiches Cookie, gleiche Logik) */
 const USER_COOKIE_NAME = "speisly_user_id";
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 
@@ -48,48 +47,32 @@ function ipHash(ctx: RequestContext): string {
   return createHash("sha256").update(ip).digest("hex");
 }
 
-async function findUserByIpHash(hash: string) {
-  const [existing] = await db
-    .select({ id: user.id })
-    .from(user)
-    .where(eq(user.ipHash, hash))
-    .limit(1);
-  return existing ?? null;
-}
-
 /** Erkennt den Nutzer (Cookie, sonst IP-Hash mit Consent). Legt keinen an. */
 export async function getUserId(ctx: RequestContext): Promise<string | null> {
   const fromCookie = await getUserIdFromCookie(ctx);
-  if (fromCookie) {
+  if (fromCookie || !hasConsent(ctx.cookies)) {
     return fromCookie;
   }
-  if (!hasConsent(ctx.cookies)) {
+  const [existing] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.ipHash, ipHash(ctx)))
+    .limit(1);
+  if (!existing) {
     return null;
   }
-  const existing = await findUserByIpHash(ipHash(ctx));
-  if (existing) {
-    await setUserCookie(ctx, existing.id);
-    return existing.id;
-  }
-  return null;
+  await setUserCookie(ctx, existing.id);
+  return existing.id;
 }
 
 /** Wie getUserId, legt aber bei Bedarf einen Nutzer an (nur mit Consent aufrufen) */
 export async function getOrCreateUser(ctx: RequestContext): Promise<string> {
-  const fromCookie = await getUserIdFromCookie(ctx);
-  if (fromCookie) {
-    return fromCookie;
-  }
-  const hash = ipHash(ctx);
-  const existing = await findUserByIpHash(hash);
+  const existing = await getUserId(ctx);
   if (existing) {
-    await setUserCookie(ctx, existing.id);
-    return existing.id;
+    return existing;
   }
-  const newUserId = genId();
-  await db
-    .insert(user)
-    .values({ id: newUserId, ipHash: hash, cookieHash: newUserId });
-  await setUserCookie(ctx, newUserId);
-  return newUserId;
+  const id = genId();
+  await db.insert(user).values({ id, ipHash: ipHash(ctx), cookieHash: id });
+  await setUserCookie(ctx, id);
+  return id;
 }

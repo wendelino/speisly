@@ -1,7 +1,7 @@
 import { IMAGE_DIR } from "astro:env/server";
 import { and, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { toIsoDay, toUtcDate } from "@/lib/dates";
 import { meal, mensaMeal } from "@/lib/db/schema/schema";
-import { toIsoDay, toUtcDate } from "../dates";
 import { db } from "../db";
 import { logError } from "../log";
 import type { SyncResult } from "../sync";

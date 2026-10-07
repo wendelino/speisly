@@ -23,8 +23,8 @@ const stars = z.number().int().min(1).max(5);
 type RatingResult = { success: boolean; message: string; updatedAt?: Date };
 
 /**
- * Astro Actions (POST /_actions/*, nie gecacht). Ersetzen die Next Server
- * Actions. Rückgabeformate und Meldungen der Bewertungen wie bisher.
+ * Astro Actions (POST /_actions/*, nie gecacht) für Feedback und
+ * Bewertungen.
  */
 export const server = {
   feedback: {
@@ -45,7 +45,7 @@ export const server = {
           throw new ActionError({
             code: "INTERNAL_SERVER_ERROR",
             message:
-              "Ups, da ist etwas schiefgelaufen. Versuch's doch bitte nochmal! 😅",
+              "Da ist etwas schiefgelaufen. Bitte versuch es noch einmal.",
           });
         }
       },

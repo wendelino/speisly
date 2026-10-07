@@ -1,0 +1,20 @@
+---
+// Kopfzeile aller Seiten: Logo/Wortmarke (Link zur Startseite) und Feedback-Link
+import { MessageCircleHeart } from "@lucide/astro";
+import Button from "@/components/ui/button.astro";
+import Brand from "./brand.astro";
+---
+
+<header class="container-page flex items-center justify-between gap-4 py-4">
+  <a
+    aria-label="Speisly – zur Startseite"
+    class="group flex items-center gap-2.5 rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+    href="/"
+  >
+    <Brand priority />
+  </a>
+  <Button class="text-muted-foreground" href="/feedback" size="sm" variant="ghost">
+    <MessageCircleHeart class="size-4" />
+    <span class="max-sm:sr-only">Feedback</span>
+  </Button>
+</header>

@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import sharp from "sharp";
+import { toIsoDay } from "@/lib/dates";
 import { meal, mensaMeal } from "@/lib/db/schema/schema";
-import { toIsoDay } from "../dates";
 import { db } from "../db";
 import { syncImages } from ".";
 import {

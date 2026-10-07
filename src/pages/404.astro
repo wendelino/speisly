@@ -1,44 +1,31 @@
 ---
-// Ersetzt src/app/not-found.tsx (prerendered, wird auch für SSR-404 genutzt)
+// Prerendered, wird auch für SSR-404 genutzt
 import { House, UtensilsCrossed } from "@lucide/astro";
-import { buttonVariants } from "@/components/ui/button";
+import Button from "@/components/ui/button.astro";
+import EmptyState from "@/components/ui/empty-state.astro";
 import BaseLayout from "@/layouts/base-layout.astro";
-import { cn } from "@/lib/utils";
 ---
 
 <BaseLayout title="Seite nicht gefunden">
-  <div class="flex min-h-screen flex-col items-center justify-center p-4">
-    <div class="max-w-md space-y-6 text-center">
-      <div class="relative">
-        <div class="select-none font-bold text-9xl text-muted-foreground/50">
-          404
-        </div>
-        <div class="absolute inset-0 flex items-center justify-center">
-          <UtensilsCrossed class="size-24 text-muted-foreground" />
-        </div>
-      </div>
-
-      <div class="space-y-2">
-        <h1 class="font-bold text-3xl text-foreground">Seite nicht gefunden</h1>
-        <p class="text-lg text-muted-foreground">
-          Diese Seite existiert leider nicht mehr oder wurde verschoben.
-        </p>
-      </div>
-
-      <div class="pt-4">
-        <a
-          class={cn(buttonVariants({ size: "lg", className: "gap-2" }))}
-          data-slot="button"
-          href="/"
-        >
-          <House class="h-4 w-4" />
-          Zur Startseite
-        </a>
-      </div>
-
-      <div class="pt-8 text-muted-foreground text-sm">
-        <p>Vielleicht finden Sie das gesuchte Gericht auf der Startseite?</p>
-      </div>
-    </div>
-  </div>
+  <main class="container-page flex min-h-[60vh] flex-col items-center justify-center">
+    <p
+      aria-hidden="true"
+      class="-mb-6 select-none font-display font-extrabold text-[7rem] text-primary/15 leading-none sm:text-[10rem]"
+    >
+      404
+    </p>
+    <EmptyState
+      class="pt-0"
+      description="Diese Seite gibt’s leider nicht (mehr). Vielleicht findest du dein Gericht auf dem Speiseplan?"
+      headingLevel="h1"
+      title="Hier ist der Teller leer"
+      tone="peach"
+    >
+      <UtensilsCrossed slot="icon" />
+      <Button href="/" size="lg">
+        <House class="size-4" />
+        Zum Speiseplan
+      </Button>
+    </EmptyState>
+  </main>
 </BaseLayout>

@@ -1,0 +1,89 @@
+---
+// Schwebender Filter-Button mit Chips für aktive Filter. Die Chips und der
+// Punkt am Button erscheinen per CSS (styles/components.css; die Attribute
+// setzt lib/filters/boot.ts vor dem ersten Paint), der Dialog wird erst bei
+// Bedarf geladen (filter-dialog.mount.tsx).
+import { SlidersHorizontal } from "@lucide/astro";
+import Icon from "@/components/icons/icon.astro";
+import { INGREDIENT_ICONS } from "@/components/icons/sprite-icons";
+import { INGREDIENT_LABELS } from "@/lib/ingredients";
+
+type Props = { mensen: Mensa[] };
+const { mensen } = Astro.props;
+
+const CHIP =
+  "items-center gap-1.5 rounded-full px-3 py-2 font-semibold text-xs shadow-lift ring-1 ring-black/5 backdrop-blur-md transition-[translate,scale] hover:-translate-x-0.5 active:scale-95 animate-pop-in";
+---
+
+<!-- right-scroll-bar-position: Radix gleicht damit die ausgeblendete Scrollbar
+     aus, solange ein Dialog offen ist -->
+<div
+  class="right-scroll-bar-position pointer-events-none fixed right-0 bottom-0 z-40 flex flex-col items-end gap-2 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+>
+  <button
+    aria-label="Mensa-Filter entfernen"
+    class={`${CHIP} pointer-events-auto bg-card/90 text-foreground`}
+    data-chip="mensen"
+    type="button"
+  ><span data-chip-label></span><Icon class="size-3.5 opacity-60" name="x" /></button>
+  {
+    (["vegan", "veggie"] as const).map((type) => (
+      <button
+        aria-label={`Filter „${INGREDIENT_LABELS[type]}“ entfernen`}
+        class={`${CHIP} pointer-events-auto ib ib-${type}`}
+        data-chip={type}
+        type="button"
+      ><Icon class="size-3.5" name={INGREDIENT_ICONS[type]} />Nur {INGREDIENT_LABELS[type]}<Icon class="size-3.5 opacity-60" name="x" /></button>
+    ))
+  }
+  <button
+    aria-haspopup="dialog"
+    class="group pointer-events-auto relative inline-flex h-14 items-center gap-2 rounded-full bg-primary pr-6 pl-5 font-semibold text-primary-foreground shadow-pop outline-none transition-[translate,scale,box-shadow] duration-200 hover:-translate-y-0.5 focus-visible:ring-[3px] focus-visible:ring-ring active:scale-95"
+    data-filter-fab
+    type="button"
+  >
+    <SlidersHorizontal class="size-5 transition-transform duration-300 group-hover:rotate-12" />
+    Filter
+    <span
+      aria-hidden="true"
+      class="absolute -top-0.5 -right-0.5 hidden size-4 rounded-full bg-gold ring-3 ring-background"
+      data-filter-dot
+    ></span>
+  </button>
+</div>
+<script
+  data-filter-mensen
+  set:html={JSON.stringify(mensen)}
+  type="application/json"
+/>
+
+<script>
+  import { loadOnIntent } from "@/lib/load-on-intent";
+  import {
+    setSelectedMensen,
+    setShowVegan,
+    setShowVeggie,
+  } from "@/stores/filters";
+
+  const fab = document.querySelector<HTMLElement>("[data-filter-fab]");
+  const mensen = JSON.parse(
+    document.querySelector("[data-filter-mensen]")?.textContent ?? "[]"
+  ) as Mensa[];
+
+  if (fab) {
+    loadOnIntent(
+      fab,
+      () => import("./filter-dialog.mount"),
+      ({ openFilterDialog }) => openFilterDialog(mensen)
+    );
+  }
+
+  const chipActions: Record<string, () => void> = {
+    mensen: () => setSelectedMensen([]),
+    vegan: () => setShowVegan(false),
+    veggie: () => setShowVeggie(false),
+  };
+  for (const chip of document.querySelectorAll<HTMLElement>("[data-chip]")) {
+    chip.addEventListener("click", () => chipActions[chip.dataset.chip ?? ""]?.());
+  }
+</script>

@@ -1,21 +1,16 @@
 ---
 import { MessageSquareHeart } from "@lucide/astro";
-import FormPage from "@/components/astro/form-page.astro";
+import FormPage from "@/components/forms/form-page.astro";
 import BackLayout from "@/layouts/back-layout.astro";
 ---
 
-<BackLayout
-  description="Teilen Sie uns Ihr Feedback mit"
-  title="Feedback"
-  withToasts
->
+<BackLayout description="Erzähl uns, was dir an Speisly gefällt und was wir besser machen können." title="Feedback">
   <FormPage
-    cardDescription="Helfe uns, Speisly kontinuierlich zu verbessern."
-    cardTitle="Dein Feedback"
-    heading="Feedback"
-    intro="Wir freuen uns über dein Feedback! Erzähl uns, was dir gefällt oder was wir besser machen können. Alles ist anonym :)"
+    heading="Wie gefällt dir Speisly?"
+    intro="Erzähl uns, was dir gefällt oder was wir besser machen können. Alles bleibt anonym."
+    tone="sun"
     variant="feedback"
   >
-    <MessageSquareHeart class="h-8 w-8 text-primary" slot="icon" />
+    <MessageSquareHeart slot="icon" />
   </FormPage>
 </BackLayout>

@@ -1,10 +1,10 @@
 import { defineMiddleware, sequence } from "astro:middleware";
-import { parseDayParam } from "@/server/dates";
+import { parseDayParam } from "@/lib/dates";
 
 const DAY_ROUTE = /^\/day\/([^/]+)\/?$/;
 
 /**
- * - /day/heute (Altlast der Next-Version) → 301 auf /
+ * - /day/heute (alte URL) → 301 auf /
  * - /day/<ungültig oder außerhalb des Fensters> → 404, bevor gerendert wird
  */
 const dayRoute = defineMiddleware((context, next) => {

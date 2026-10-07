@@ -1,0 +1,23 @@
+---
+// Gemeinsames Gerüst für /kontakt und /feedback: Seitenkopf und Formular-Karte
+import PageHeader from "@/components/layout/page-header.astro";
+import Card from "@/components/ui/card.astro";
+import type { Tone } from "@/components/ui/tones";
+import ContactForm from "./contact-form.astro";
+
+type Props = {
+  variant: "contact" | "feedback";
+  heading: string;
+  intro: string;
+  tone?: Tone;
+};
+
+const { variant, heading, intro, tone } = Astro.props;
+---
+
+<PageHeader intro={intro} title={heading} tone={tone}>
+  <slot name="icon" slot="icon" />
+</PageHeader>
+<Card class="mx-auto max-w-xl" padding="lg">
+  <ContactForm variant={variant} />
+</Card>

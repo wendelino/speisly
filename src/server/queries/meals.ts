@@ -1,11 +1,11 @@
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
+import { toUtcDate } from "@/lib/dates";
 import { meal, mensa, mensaMeal } from "@/lib/db/schema/schema";
-import { transformMeal } from "@/lib/helpers";
-import { toUtcDate } from "../dates";
+import { generateFlags } from "@/lib/meal-flags";
 import { db } from "../db";
 import { logError } from "../log";
 
-function selectMealsOfDay(conditions: SQL[]) {
+function selectMealsOfDay(isoDay: string) {
   return db
     .select({
       mensaId: mensa.id,
@@ -21,12 +21,11 @@ function selectMealsOfDay(conditions: SQL[]) {
       priceWork: meal.priceWork,
       priceGuest: meal.priceGuest,
       mensaMealId: mensaMeal.id,
-      date: mensaMeal.date,
     })
     .from(mensaMeal)
     .innerJoin(mensa, eq(mensaMeal.mensaId, mensa.id))
     .innerJoin(meal, eq(mensaMeal.mealId, meal.id))
-    .where(and(...conditions))
+    .where(eq(mensaMeal.date, toUtcDate(isoDay)))
     .orderBy(asc(mensa.name), asc(meal.name));
 }
 
@@ -37,21 +36,15 @@ function selectMealsOfDay(conditions: SQL[]) {
  * im Route Cache landen.
  */
 export async function getMealsForDate(
-  isoDay: string,
-  mensaId?: string
+  isoDay: string
 ): Promise<MensaMealGroup[]> {
-  const conditions = [eq(mensaMeal.date, toUtcDate(isoDay))];
-  if (mensaId) {
-    conditions.push(eq(mensa.id, mensaId));
-  }
-
   let rows: Awaited<ReturnType<typeof selectMealsOfDay>>;
   try {
-    rows = await selectMealsOfDay(conditions);
+    rows = await selectMealsOfDay(isoDay);
   } catch (error) {
     logError({
       message: "Error getting meals for date",
-      ctx: { isoDay, mensaId, error },
+      ctx: { isoDay, error },
     });
     throw error;
   }
@@ -63,7 +56,7 @@ export async function getMealsForDate(
       group = { id, name: mensaName, slug: mensaSlug, meals: [] };
       groups.set(id, group);
     }
-    group.meals.push(transformMeal(row));
+    group.meals.push({ ...row, flags: generateFlags(row) });
   }
   return [...groups.values()];
 }

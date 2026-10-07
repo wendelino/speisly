@@ -1,0 +1,10 @@
+---
+// Typografie für lange Texte (z. B. Datenschutz): Überschriften, Absätze,
+// Listen. Styles: styles/components.css
+import { cn } from "@/lib/utils";
+
+type Props = { class?: string };
+const { class: className } = Astro.props;
+---
+
+<div class={cn("prose-speisly", className)}><slot /></div>
