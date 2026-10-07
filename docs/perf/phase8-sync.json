@@ -1,0 +1,57 @@
+{
+  "label": "phase8-sync",
+  "date": "2026-10-07",
+  "note": "Alter vs. neuer Sync auf identischen Szenarien (Stub-API, 6 Mensen x 5 Tage, ~460 Ausgaben). Queries = Client-Statements ohne FK-/Cascade-Trigger und error_log.",
+  "scenarios": [
+    {
+      "scenario": "initial",
+      "oldMs": 1148,
+      "newMs": 98,
+      "oldQueries": 1249,
+      "newQueries": 9,
+      "servings": 461,
+      "changedDates": 5,
+      "changedMeals": 160
+    },
+    {
+      "scenario": "idempotent",
+      "oldMs": 29,
+      "newMs": 18,
+      "oldQueries": 6,
+      "newQueries": 5,
+      "servings": 461,
+      "changedDates": 0,
+      "changedMeals": 0
+    },
+    {
+      "scenario": "changed",
+      "oldMs": 166,
+      "newMs": 52,
+      "oldQueries": 133,
+      "newQueries": 15,
+      "servings": 416,
+      "changedDates": 5,
+      "changedMeals": 89
+    },
+    {
+      "scenario": "changed-again",
+      "oldMs": 38,
+      "newMs": 15,
+      "oldQueries": 6,
+      "newQueries": 5,
+      "servings": 416,
+      "changedDates": 0,
+      "changedMeals": 0
+    },
+    {
+      "scenario": "back",
+      "oldMs": 246,
+      "newMs": 36,
+      "oldQueries": 212,
+      "newQueries": 11,
+      "servings": 461,
+      "changedDates": 5,
+      "changedMeals": 89
+    }
+  ]
+}

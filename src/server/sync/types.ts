@@ -103,23 +103,6 @@ export type GetMealDataParams = {
   locationId?: string;
 };
 
-export type GetOrCreateMealParams = {
-  mealData: MealData;
-  dataSourceSlug: string;
-  initialMeal?: MealRecord;
-};
-
-export type GetOrCreateMensaMealParams = {
-  mensaRecord: { id: string };
-  mealRecord: { id: string };
-  availability: {
-    date: string;
-    ingredients: string[];
-    extras: string[];
-  };
-  existing?: MensaMealRecord;
-};
-
 export type GetExistingMensaMealsParams = {
   date: DateInput;
 };

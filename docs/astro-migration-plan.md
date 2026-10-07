@@ -16,7 +16,8 @@
 | 5. Gericht-Detail | ✅ erledigt – siehe „Umsetzungsnotizen Phase 5“ unten |
 | 6. Caching | ✅ erledigt – siehe „Umsetzungsnotizen Phase 6“ unten |
 | 7. Bilder | ✅ erledigt – siehe „Umsetzungsnotizen Phase 7“ unten |
-| 8.–9. | offen |
+| 8. Sync-Optimierung | ✅ erledigt – siehe „Umsetzungsnotizen Phase 8“ unten |
+| 9. | offen |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -701,3 +702,45 @@ Umgesetzt ist **Option 1 aus §7: Optimierung beim Sync, nicht beim Request**. I
 | `/meal/<id>?mmid=…` | 100 | 1,51 s | 0 | 3,8 ms |
 
 Nicht testbar war hier der Download von echten meine-mensa.de-Bildern (aus der Umgebung gesperrt). Die Download-Logik ist mit einem Fake-`fetch` getestet.
+
+## Umsetzungsnotizen Phase 8
+
+Der Sync schreibt jetzt **in einer Transaktion mit Batch-Statements** statt Gericht für Gericht.
+
+**Aufbau** (`src/server/sync/`):
+- **Lesen:** API abrufen, dann drei Queries parallel: Mensen, bestehende Gerichte (per `src_id`), bestehende Ausgaben im Zeitraum.
+- **Planen** (`plan.ts`, reine Funktion ohne DB): `planSync()` berechnet neue Mensen, neue Gerichte, geänderte Gerichte (mit Änderungslog und betroffenen Tagen), neue Ausgaben und entfernte Ausgaben.
+- **Schreiben** (`db.ts`, `applySyncPlan()`): alles in **einer** Transaktion.
+  - Neue Gerichte und Ausgaben: Multi-Row-`INSERT … ON CONFLICT DO NOTHING RETURNING`.
+  - Geänderte Gerichte: ein `UPDATE … FROM (VALUES …)`.
+  - Entfernte Ausgaben: ein `DELETE … WHERE id IN (…)`.
+  - Änderungslogs: ein Multi-Row-Insert.
+  - Alles in Blöcken zu 500 Zeilen.
+- **Was als geändert gilt:** Nur Zeilen, die der Insert tatsächlich zurückgibt, zählen als neue Ausgaben. Das ist dieselbe Grundlage für die Cache-Invalidierung wie vorher.
+
+**Vergleich alt gegen neu** (gleiches Stub-Szenario, 6 Mensen × 5 Tage, ~460 Ausgaben, 5 Läufe hintereinander; Rohdaten `docs/perf/phase8-sync.json`):
+
+| Szenario | Dauer alt → neu | App-Queries alt → neu |
+|---|---|---|
+| Neue Woche (alles neu) | ~1 150 ms → **~100 ms** | 1 249 → **7** |
+| Keine Änderung | ~30 ms → ~15–25 ms | 6 → 5 |
+| ~90 Gerichte geändert, Ausgaben entfernt/neu, neue Mensa | ~160 ms → **~60 ms** | 133 → **13** |
+| zurück auf den Ausgangsstand | ~190 ms → **~35 ms** | 212 → **11** |
+
+Gezählt sind Client-Statements über `pg_stat_statements`, ohne die internen Fremdschlüssel- und Cascade-Trigger und ohne `error_log`. Lokal kostet ein Roundtrip praktisch nichts. In Produktion mit Netzwerk zur DB fällt der Unterschied deutlich größer aus, ~1 250 Roundtrips weniger pro neuer Woche.
+
+**Ergebnisse identisch:** In jedem Szenario ist nach dem Sync der DB-Stand gleich, also Gerichte, Ausgaben inklusive Zutaten und Extras, Änderungslogs und Mensen. Auch die zurückgegebenen Tage und Gerichte für die Invalidierung stimmen überein. Geprüft hat das ein temporärer Vergleichstest gegen eine Kopie des alten Syncs; die Kopie ist nicht committet. Bewusst anders sind drei Punkte, alles Fehler des alten Syncs:
+1. **Zwei API-Gerichte mit derselben `src_id`** (`MEAL_SRC_ID_MAPPINGS`, z. B. Apfelstrudel): Der alte Sync verglich das zweite gegen einen veralteten Stand. Dadurch **wechselte der Name bei jedem Sync** zwischen den beiden Varianten, jeweils mit Änderungslog und Cache-Invalidierung. Jetzt gelten die Daten des ersten, die weiteren liefern nur Ausgaben. Der Stand ist stabil, und es entstehen keine Logs.
+2. **Ein Update eines Gerichts schlägt fehl** (z. B. Konflikt auf `meal_unique`): Vorher fielen dabei die Ausgaben des Gerichts aus dem Abgleich und wurden als „nicht mehr in der API“ **gelöscht**. Weil `meal_rating` an `mensa_meal` per Cascade hängt, gingen damit auch Bewertungen verloren. Jetzt wird nur das Update übersprungen und geloggt, die Ausgaben bleiben.
+3. **Atomar:** Scheitert ein Schreibschritt, ist nichts übernommen. Vorher blieb ein halber Speiseplan stehen. Einzelne fehlerhafte neue Gerichte, z. B. mit zu langem Namen oder einem Konflikt auf `meal_unique`, werden wie bisher übersprungen und geloggt. Dafür gibt es einen Fallback mit Savepoints: erst der ganze Block, bei einem Fehler zeilenweise.
+
+**Tests:**
+- `plan.test.ts`: Planung ohne DB, 6 Fälle.
+- `sync.test.ts`: um drei Fälle erweitert:
+  - Rollback bei Fehler (DB bleibt unverändert);
+  - kaputtes neues Gericht wird übersprungen, der Rest synchronisiert;
+  - Update-Konflikt behält Gericht und Ausgaben.
+
+Insgesamt 59 Tests.
+
+**Unverändert und als Hinweis für später:** Liefert die API für den Zeitraum **gar keine** Daten (`No food plans found`), entfernt der Sync wie bisher alle Ausgaben im Zeitraum. Das ist an Feiertagen und in Schließzeiten gewollt. Bei einer API-Störung, die 200 mit leerer Liste liefert, wäre es aber gefährlich, weil per Cascade auch Bewertungen gelöscht würden. Eine Schutzregel wäre: Entfernen nur, wenn die API für den Zeitraum mindestens einen Eintrag geliefert hat, oder nur für Tage, die die API kennt. Das ändert das Verhalten und gehört deshalb nicht in diese Phase.

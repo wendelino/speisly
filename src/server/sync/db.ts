@@ -1,19 +1,29 @@
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { dataSource } from "@/lib/db/schema/dataSource";
-import { meal, mealUpdate, mensaMeal } from "@/lib/db/schema/schema";
+import { meal, mealUpdate, mensa, mensaMeal } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
+import { toIsoDay } from "../dates";
 import { db } from "../db";
 import { logError } from "../log";
+import type { MealChange, NewMeal, SyncPlan } from "./plan";
 import type {
   DataSourceRecord,
   GetExistingMensaMealsParams,
-  GetOrCreateMealParams,
-  GetOrCreateMensaMealParams,
-  MealRecord,
   MealUpdateLog,
   MensaMealRecord,
 } from "./types";
 import { normalizeDateRange, toSlug } from "./utils";
+
+/** Zeilen pro INSERT (Postgres erlaubt max. 65 535 Parameter je Statement) */
+const CHUNK = 500;
+
+function chunks<T>(items: T[], size = CHUNK): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size));
+  }
+  return out;
+}
 
 /**
  * Gets an existing data source or creates a new one
@@ -31,282 +41,22 @@ export async function getOrCreateDataSource(
     return existingSource[0];
   }
 
-  const newDataSourceId = genId();
   const newDataSource = await db
     .insert(dataSource)
-    .values({
-      id: newDataSourceId,
-      name,
-      slug: toSlug(name),
-    })
+    .values({ id: genId(), name, slug: toSlug(name) })
     .returning({ slug: dataSource.slug });
 
   return newDataSource[0];
 }
 
 /**
- * Finds an existing meal by source ID
- */
-async function findMealBySrcId(srcId: string): Promise<MealRecord | null> {
-  const result = await db
-    .select({
-      name: meal.name,
-      id: meal.id,
-      imgPath: meal.imgPath,
-      priceStud: meal.priceStud,
-      priceWork: meal.priceWork,
-      priceGuest: meal.priceGuest,
-      subtitle: meal.subtitle,
-    })
-    .from(meal)
-    .where(eq(meal.srcId, srcId))
-    .limit(1);
-
-  return result[0] ?? null;
-}
-
-/**
- * Converts price from decimal to cents
- */
-function convertPriceToCents(price: number): number {
-  return Math.round(price * 100);
-}
-
-/**
- * Detects changes between existing meal and new meal data
- */
-function detectMealChanges(
-  existing: MealRecord,
-  newData: GetOrCreateMealParams["mealData"]
-): {
-  logs: MealUpdateLog[];
-  updateFields: Partial<typeof meal.$inferSelect>;
-} {
-  const logs: MealUpdateLog[] = [];
-  const updateFields: Partial<typeof meal.$inferSelect> = {};
-
-  if (existing.imgPath !== newData.imgPath) {
-    logs.push({
-      prev: existing.imgPath ?? "",
-      new: newData.imgPath ?? "",
-      key: "imgPath",
-    });
-    updateFields.imgPath = newData.imgPath;
-  }
-
-  if (existing.name !== newData.name) {
-    logs.push({
-      prev: existing.name,
-      new: newData.name,
-      key: "name",
-    });
-    updateFields.name = newData.name;
-  }
-
-  if (existing.subtitle !== newData.subtitle) {
-    logs.push({
-      prev: existing.subtitle,
-      new: newData.subtitle,
-      key: "subtitle",
-    });
-    updateFields.subtitle = newData.subtitle;
-  }
-
-  const newPriceStud = convertPriceToCents(newData.priceStud);
-  const newPriceWork = convertPriceToCents(newData.priceWork);
-  const newPriceGuest = convertPriceToCents(newData.priceGuest);
-
-  const pricesChanged =
-    existing.priceStud !== newPriceStud ||
-    existing.priceWork !== newPriceWork ||
-    existing.priceGuest !== newPriceGuest;
-
-  if (pricesChanged) {
-    logs.push({
-      prev: `${existing.priceStud} / ${existing.priceWork} / ${existing.priceGuest}`,
-      new: `${newPriceStud} / ${newPriceWork} / ${newPriceGuest}`,
-      key: "price",
-    });
-    updateFields.priceStud = newPriceStud;
-    updateFields.priceWork = newPriceWork;
-    updateFields.priceGuest = newPriceGuest;
-  }
-
-  return { logs, updateFields };
-}
-
-/**
- * Updates an existing meal with new data and logs changes
- */
-async function updateMeal(
-  mealId: string,
-  logs: MealUpdateLog[],
-  updateFields: Partial<typeof meal.$inferSelect>
-): Promise<void> {
-  if (logs.length === 0) {
-    return;
-  }
-  await db.update(meal).set(updateFields).where(eq(meal.id, mealId));
-  await db.insert(mealUpdate).values(
-    logs.map((log) => ({
-      id: genId(),
-      prev: log.prev,
-      new: log.new,
-      key: log.key,
-      mealId,
-    }))
-  );
-}
-
-/**
- * Creates a new meal record
- */
-async function createMeal(
-  mealData: GetOrCreateMealParams["mealData"],
-  dataSourceSlug: string
-): Promise<Pick<
-  MealRecord,
-  "id" | "imgPath" | "priceStud" | "priceWork" | "priceGuest"
-> | null> {
-  try {
-    const newMeal = await db
-      .insert(meal)
-      .values({
-        id: genId(),
-        srcId: mealData.src_id,
-        dataSourceSlug,
-        name: mealData.name,
-        subtitle: mealData.subtitle,
-        imgPath: mealData.imgPath,
-        priceStud: convertPriceToCents(mealData.priceStud),
-        priceWork: convertPriceToCents(mealData.priceWork),
-        priceGuest: convertPriceToCents(mealData.priceGuest),
-      })
-      .returning({
-        id: meal.id,
-        imgPath: meal.imgPath,
-        priceStud: meal.priceStud,
-        priceWork: meal.priceWork,
-        priceGuest: meal.priceGuest,
-      });
-
-    return newMeal[0];
-  } catch (error) {
-    logError({
-      message: "Error creating meal",
-      ctx: { mealData, error },
-    });
-    return null;
-  }
-}
-
-/**
- * Gets an existing meal or creates a new one, updating if necessary
- */
-export async function getOrCreateMeal(
-  { mealData, dataSourceSlug, initialMeal }: GetOrCreateMealParams,
-  /** wird aufgerufen, wenn sich Daten eines bestehenden Gerichts geändert haben */
-  onChange?: (mealId: string) => void
-): Promise<Pick<
-  MealRecord,
-  "id" | "imgPath" | "priceStud" | "priceWork" | "priceGuest"
-> | null> {
-  const existingMeal = initialMeal ?? (await findMealBySrcId(mealData.src_id));
-
-  if (existingMeal) {
-    const { logs, updateFields } = detectMealChanges(existingMeal, mealData);
-    try {
-      await updateMeal(existingMeal.id, logs, updateFields);
-      if (logs.length > 0) {
-        onChange?.(existingMeal.id);
-      }
-    } catch (error) {
-      const ctx = { existingMeal, mealData, logs, updateFields, error };
-      logError({ message: "Error updating meal", ctx });
-      return null;
-    }
-
-    return {
-      id: existingMeal.id,
-      imgPath: existingMeal.imgPath,
-      priceStud: existingMeal.priceStud,
-      priceWork: existingMeal.priceWork,
-      priceGuest: existingMeal.priceGuest,
-    };
-  }
-
-  return createMeal(mealData, dataSourceSlug);
-}
-
-/**
- * Finds an existing mensa meal by mensa, meal, and date
- */
-async function findMensaMeal(
-  mensaId: string,
-  mealId: string,
-  date: Date
-): Promise<MensaMealRecord | null> {
-  const result = await db
-    .select()
-    .from(mensaMeal)
-    .where(
-      and(
-        eq(mensaMeal.mensaId, mensaId),
-        eq(mensaMeal.mealId, mealId),
-        eq(mensaMeal.date, date)
-      )
-    )
-    .limit(1);
-
-  return result[0] ?? null;
-}
-
-/**
- * Creates a new mensa meal entry
- */
-async function createMensaMeal(
-  props: typeof mensaMeal.$inferInsert
-): Promise<void> {
-  await db.insert(mensaMeal).values(props);
-}
-
-/**
- * Gets an existing mensa meal or creates a new one.
- * Returns true if a new entry was created.
- */
-export async function getOrCreateMensaMeal({
-  mensaRecord,
-  mealRecord,
-  availability,
-  existing,
-}: GetOrCreateMensaMealParams): Promise<boolean> {
-  const availabilityDate = new Date(availability.date);
-  const existingMensaMeal =
-    existing ??
-    (await findMensaMeal(mensaRecord.id, mealRecord.id, availabilityDate));
-
-  if (!existingMensaMeal) {
-    await createMensaMeal({
-      id: genId(),
-      mensaId: mensaRecord.id,
-      mealId: mealRecord.id,
-      date: availabilityDate,
-      ingredients: availability.ingredients,
-      extras: availability.extras,
-    });
-    return true;
-  }
-  return false;
-}
-
-/**
  * Gets all existing mensa meals within a date range
  */
-export async function getExistingMensaMeals({
+export function getExistingMensaMeals({
   date,
 }: GetExistingMensaMealsParams): Promise<MensaMealRecord[]> {
   const { from, to } = normalizeDateRange(date);
-  const existingMensaMeals = await db
+  return db
     .select()
     .from(mensaMeal)
     .where(
@@ -315,32 +65,15 @@ export async function getExistingMensaMeals({
         lte(mensaMeal.date, new Date(to))
       )
     );
-
-  return existingMensaMeals;
-}
-export async function removeMeals(mensaMeals: MensaMealRecord[]) {
-  await db.delete(mensaMeal).where(
-    inArray(
-      mensaMeal.id,
-      mensaMeals.map((m) => m.id)
-    )
-  );
-
-  await db.insert(mealUpdate).values(
-    mensaMeals.map((m) => ({
-      id: genId(),
-      mealId: m.mealId,
-      prev: m.date.toISOString().split("T")[0],
-      new: "Entfernt",
-      key: "remove",
-    }))
-  );
 }
 
 /**
  * Lädt bestehende Gerichte zu den Quell-IDs der API (nur für den Sync)
  */
 export function getMealsBySrcIds(srcIds: string[]) {
+  if (srcIds.length === 0) {
+    return Promise.resolve([]);
+  }
   return db
     .select({
       name: meal.name,
@@ -354,4 +87,196 @@ export function getMealsBySrcIds(srcIds: string[]) {
     })
     .from(meal)
     .where(inArray(meal.srcId, srcIds));
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Ein UPDATE … FROM (VALUES …) für viele Gerichte */
+function batchUpdate(tx: Tx, changes: MealChange[]) {
+  const rows = changes.map(
+    ({ mealId, values: v }) =>
+      sql`(${mealId}, ${v.name}, ${v.subtitle ?? ""}, ${v.imgPath ?? null}, ${v.priceStud}::integer, ${v.priceWork}::integer, ${v.priceGuest}::integer)`
+  );
+  return tx.execute(sql`
+    update ${meal} set
+      name = v.name, subtitle = v.subtitle, img_path = v.img_path,
+      price_stud = v.price_stud, price_work = v.price_work,
+      price_guest = v.price_guest, updated_at = now()
+    from (values ${sql.join(rows, sql`, `)})
+      as v(id, name, subtitle, img_path, price_stud, price_work, price_guest)
+    where ${meal.id} = v.id`);
+}
+
+/**
+ * Aktualisiert geänderte Gerichte, im Normalfall mit einem Statement pro
+ * 500 Gerichte. Scheitert das (z. B. Konflikt auf `meal_unique`), einzeln
+ * mit Savepoint, damit nur das betroffene Gericht ausfällt.
+ */
+async function updateMeals(
+  tx: Tx,
+  changes: MealChange[]
+): Promise<MealChange[]> {
+  const applied: MealChange[] = [];
+  for (const batch of chunks(changes)) {
+    try {
+      await tx.transaction((sp) => batchUpdate(sp, batch));
+      applied.push(...batch);
+      continue;
+    } catch {
+      // einzeln weiter
+    }
+    for (const change of batch) {
+      try {
+        await tx.transaction((sp) => batchUpdate(sp, [change]));
+        applied.push(change);
+      } catch (error) {
+        // Die Ausgaben des Gerichts werden trotzdem abgeglichen. Vorher
+        // fielen sie dabei heraus und wurden als „nicht mehr in der API“
+        // gelöscht.
+        logError({ message: "Error updating meal", ctx: { change, error } });
+      }
+    }
+  }
+  return applied;
+}
+
+function insertMealRows(tx: Tx, rows: NewMeal[]) {
+  return tx
+    .insert(meal)
+    .values(rows)
+    .onConflictDoNothing()
+    .returning({ id: meal.id });
+}
+
+/**
+ * Legt neue Gerichte an und gibt die IDs der tatsächlich angelegten zurück.
+ * Übersprungen (und geloggt) werden wie bisher Gerichte, die gegen
+ * `meal_unique` verstoßen (gleicher Name, Untertitel und Bild unter anderer
+ * src_id) oder die die DB ablehnt (z. B. zu langer Name). Ein einzelnes
+ * fehlerhaftes Gericht blockiert so nicht den ganzen Sync.
+ */
+async function insertMeals(tx: Tx, meals: NewMeal[]): Promise<Set<string>> {
+  const inserted = new Set<string>();
+  const failed = new Set<string>();
+  for (const batch of chunks(meals)) {
+    let rows: { id: string }[] = [];
+    try {
+      rows = await tx.transaction((sp) => insertMealRows(sp, batch));
+    } catch {
+      for (const row of batch) {
+        try {
+          rows.push(
+            ...(await tx.transaction((sp) => insertMealRows(sp, [row])))
+          );
+        } catch (error) {
+          failed.add(row.id);
+          logError({
+            message: "Error creating meal",
+            ctx: { meal: row, error },
+          });
+        }
+      }
+    }
+    for (const row of rows) {
+      inserted.add(row.id);
+    }
+  }
+  for (const m of meals) {
+    if (!(inserted.has(m.id) || failed.has(m.id))) {
+      logError({
+        message: "Error creating meal",
+        ctx: { meal: m, reason: "meal_unique" },
+      });
+    }
+  }
+  return inserted;
+}
+
+function updateRows(mealId: string, logs: MealUpdateLog[]) {
+  return logs.map((log) => ({ id: genId(), mealId, ...log }));
+}
+
+export type ApplyResult = {
+  dates: Set<string>;
+  mealIds: Set<string>;
+  newMensen: number;
+};
+
+/**
+ * Schreibt einen Sync-Plan in **einer** Transaktion: Entweder ist der ganze
+ * Sync übernommen oder nichts (vorher blieb bei einem Fehler ein halber
+ * Speiseplan stehen). Statt ein bis zwei Queries pro Ausgabe sind es wenige
+ * Batch-Statements.
+ */
+export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
+  return db.transaction(async (tx) => {
+    const dates = new Set<string>();
+    const mealIds = new Set<string>();
+    const changed = (day: string, mealId: string) => {
+      dates.add(day);
+      mealIds.add(mealId);
+    };
+
+    if (plan.newMensen.length > 0) {
+      await tx.insert(mensa).values(plan.newMensen);
+    }
+
+    const inserted = await insertMeals(tx, plan.newMeals);
+    const skippedMeals = new Set(
+      plan.newMeals.filter((m) => !inserted.has(m.id)).map((m) => m.id)
+    );
+
+    const logRows: ReturnType<typeof updateRows> = [];
+    for (const change of await updateMeals(tx, plan.mealChanges)) {
+      logRows.push(...updateRows(change.mealId, change.logs));
+      for (const day of change.dates) {
+        changed(day, change.mealId);
+      }
+    }
+
+    // Neue Ausgaben. ON CONFLICT: existiert die Ausgabe schon (z. B. außerhalb
+    // des abgefragten Zeitraums), bleibt sie unverändert und zählt nicht als
+    // Änderung.
+    const servings = plan.newServings.filter(
+      (s) => !skippedMeals.has(s.mealId)
+    );
+    for (const batch of chunks(servings)) {
+      const rows = await tx
+        .insert(mensaMeal)
+        .values(batch)
+        .onConflictDoNothing()
+        .returning({ mealId: mensaMeal.mealId, date: mensaMeal.date });
+      for (const row of rows) {
+        changed(toIsoDay(row.date), row.mealId);
+      }
+    }
+
+    // Ausgaben, die die API nicht mehr liefert
+    if (plan.removedServings.length > 0) {
+      for (const batch of chunks(plan.removedServings)) {
+        await tx.delete(mensaMeal).where(
+          inArray(
+            mensaMeal.id,
+            batch.map((s) => s.id)
+          )
+        );
+      }
+      for (const s of plan.removedServings) {
+        logRows.push({
+          id: genId(),
+          mealId: s.mealId,
+          prev: toIsoDay(s.date),
+          new: "Entfernt",
+          key: "remove",
+        });
+        changed(toIsoDay(s.date), s.mealId);
+      }
+    }
+
+    for (const batch of chunks(logRows)) {
+      await tx.insert(mealUpdate).values(batch);
+    }
+
+    return { dates, mealIds, newMensen: plan.newMensen.length };
+  });
 }

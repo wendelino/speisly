@@ -1,7 +1,7 @@
 /**
- * Regressionstest für den Sync mit gestubbter meine-mensa.de API.
+ * Integrationstest für den Sync mit gestubbter meine-mensa.de API.
  * Läuft gegen die Seed-DB in einem Datumsbereich ohne Seed-Daten und räumt
- * danach auf. Basis für den Batch-Umbau in Phase 8.
+ * danach auf. Die Planung selbst ist in plan.test.ts getestet.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { inArray, sql } from "drizzle-orm";
@@ -15,7 +15,7 @@ const hasDb = Boolean(process.env.DATABASE_URL);
 
 const DAY_1 = addDays(todayBerlin(), 60);
 const DAY_2 = addDays(DAY_1, 1);
-const SRC_IDS = [990_001, 990_002, 990_003];
+const SRC_IDS = [990_001, 990_002, 990_003, 990_004];
 
 const LOCATIONS = [
   { id: 1, name: "Harzmensa" },
@@ -24,10 +24,14 @@ const LOCATIONS = [
   { id: 7, name: "Ausgeschlossene Mensa" },
 ];
 
-function food(id: number, price: number): MeineMensaFoodPlanItem["food"] {
+function food(
+  id: number,
+  price: number,
+  name = `Sync-Test ${id}`
+): MeineMensaFoodPlanItem["food"] {
   return {
     id,
-    name: `Sync-Test ${id}`,
+    name,
     name_2: "mit Testbeilage",
     ingredients: ["51", "A"],
     price_1: price,
@@ -57,7 +61,10 @@ function item(
   };
 }
 
-function stubApi(data: MeineMensaFoodPlanItem[]) {
+function stubApi(
+  data: MeineMensaFoodPlanItem[],
+  locations: { id: number; name: string }[] = LOCATIONS
+) {
   const response: MeineMensaResponse = {
     data,
     meta: { ingredients: { A: "Gluten" }, markers: { "51": "vegetarisch" } },
@@ -68,7 +75,7 @@ function stubApi(data: MeineMensaFoodPlanItem[]) {
       return Promise.resolve(Response.json(response));
     }
     if (url.includes("/locations")) {
-      return Promise.resolve(Response.json(structuredClone(LOCATIONS)));
+      return Promise.resolve(Response.json(structuredClone(locations)));
     }
     return Promise.reject(new Error(`unexpected fetch ${url}`));
   }) as typeof fetch;
@@ -166,6 +173,67 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
     expect(updates.rows).toEqual([
       { key: "price", new: "350 / 500 / 650" },
       { key: "remove", new: "Entfernt" },
+    ]);
+  });
+
+  test("all or nothing: a failing write leaves the DB untouched", async () => {
+    const before = await servingsInRange();
+    // Mensa-Name über 255 Zeichen: Der Insert der Mensa schlägt fehl, die
+    // Preisänderung davor darf dann ebenfalls nicht übernommen werden
+    stubApi(
+      [
+        item(1, DAY_1, 1, food(SRC_IDS[0], 9.9)),
+        item(3, DAY_2, 1, food(SRC_IDS[1], 2.5)),
+        item(5, DAY_2, 40, food(SRC_IDS[1], 2.5)),
+      ],
+      [...LOCATIONS, { id: 40, name: "x".repeat(300) }]
+    );
+    const error = await handleSync({ from: DAY_1, to: DAY_2 }).then(
+      () => null,
+      (e: unknown) => e
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(await servingsInRange()).toEqual(before);
+  });
+
+  test("a broken new meal is skipped, the rest is synced", async () => {
+    stubApi([
+      item(1, DAY_1, 1, food(SRC_IDS[0], 3.6)),
+      item(3, DAY_2, 1, food(SRC_IDS[1], 2.5)),
+      // Name zu lang für varchar(255)
+      item(6, DAY_2, 2, food(SRC_IDS[3], 4, "y".repeat(300))),
+    ]);
+    const result = await handleSync({ from: DAY_1, to: DAY_2 });
+    expect(result.changedDates).toEqual([DAY_1]);
+    const rows = await servingsInRange();
+    expect(rows.map((r) => [r.src_id, r.day, r.price_stud])).toEqual([
+      [String(SRC_IDS[0]), DAY_1, 360],
+      [String(SRC_IDS[1]), DAY_2, 250],
+    ]);
+  });
+
+  test("a meal update that clashes keeps the meal and its servings", async () => {
+    // Gericht 2 soll Name/Untertitel/Bild von Gericht 1 bekommen → meal_unique
+    const img = "https://meine-mensa.de/mediathek/same.jpg";
+    stubApi([
+      item(1, DAY_1, 1, { ...food(SRC_IDS[0], 3.6), image_url: img }),
+      item(3, DAY_2, 1, food(SRC_IDS[1], 2.5)),
+    ]);
+    await handleSync({ from: DAY_1, to: DAY_2 });
+    stubApi([
+      item(1, DAY_1, 1, { ...food(SRC_IDS[0], 3.7), image_url: img }),
+      item(3, DAY_2, 1, {
+        ...food(SRC_IDS[1], 2.5, `Sync-Test ${SRC_IDS[0]}`),
+        image_url: img,
+      }),
+    ]);
+    const result = await handleSync({ from: DAY_1, to: DAY_2 });
+    // nur Gericht 1 (Preis) gilt als geändert
+    expect(result.changedDates).toEqual([DAY_1]);
+    const rows = await servingsInRange();
+    expect(rows.map((r) => [r.src_id, r.day, r.price_stud])).toEqual([
+      [String(SRC_IDS[0]), DAY_1, 370],
+      [String(SRC_IDS[1]), DAY_2, 250],
     ]);
   });
 });
