@@ -170,13 +170,16 @@ Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`
 | `JWT_SECRET`, `JWT_ALGORITHM` | ja | Signatur des Nutzer-Cookies |
 | `IMAGE_DIR` | empfohlen | Bildvarianten, persistentes Volume |
 | `ASTRO_KEY` | empfohlen, **beim Build** | Schlüssel für Server-Island-Props (`bunx astro create-key`). Ohne ihn erzeugt jeder Build einen neuen; offene Tabs können nach einem Deploy die Angebotshistorie dann nicht nachladen |
-| `HOST`, `PORT` | nein | Default `0.0.0.0:4321` |
+| `HOST`, `PORT` | nein | Default `0.0.0.0:4321` (Next lief auf 3000: `PORT=3000` setzen, dann bleibt der Proxy gleich) |
+| `SITE_HOST` | nein | Default `speisly.de`: einheitlicher Host für den Seiten-Cache, damit Pre-Warm und Besucher dieselben Einträge treffen |
 | `PUBLIC_COOKIE_CONSENT_NAME` | nein | **muss** dem bisherigen `NEXT_PUBLIC_COOKIE_CONSENT_NAME` entsprechen, sonst ist der Cookie-Consent aller Nutzer weg |
 | `PUBLIC_PRIVACY_POLICY_PATH`, `PUBLIC_UMAMI_WEBSITE_ID` | nein | |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | nein | Fehler- und Kontaktnachrichten per Telegram |
 | `CRON_DISABLED` | nein | `1` = kein Cron, kein Pre-Warm |
 
 ### Deployment (Umstieg von der Next-Version)
+
+Ausführliche Schritt-für-Schritt-Anleitung mit allen Änderungen an `.env`, Datenbank, Startbefehl und Proxy: [`migrate-to-astro.md`](migrate-to-astro.md). Kurzfassung:
 
 1. `.env` anpassen:
    - `NEXT_PUBLIC_*` wird zu `PUBLIC_*` (gleiche Werte, vor allem `PUBLIC_COOKIE_CONSENT_NAME`).

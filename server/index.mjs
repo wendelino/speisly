@@ -8,6 +8,7 @@
  * - registriert die Cron-Jobs für den Daten-Sync (./cron.mjs)
  *
  * Umgebung: PORT (Default 4321), HOST (Default 0.0.0.0), API_BEARER_TOKEN,
+ * SITE_HOST (Default speisly.de, einheitlicher Host für den Cache-Schlüssel),
  * CRON_DISABLED=1 schaltet Cron und Pre-Warm ab (z. B. für eine zweite
  * Instanz oder lokale Tests).
  */
@@ -27,8 +28,16 @@ const baseUrl = `http://${localHost.includes(":") ? `[${localHost}]` : localHost
 // der Sync-Endpoint wärmt über PORT vor (src/server/sync-endpoint.ts)
 process.env.PORT = String(port);
 
+// Astros Route Cache verwendet den Host als Teil des Schlüssels. Ohne
+// Vereinheitlichung landen Pre-Warm und Cron (127.0.0.1) und Besucher (über den
+// Reverse Proxy, je nach Proxy mit `speisly.de` oder der Upstream-Adresse) in
+// verschiedenen Einträgen, und das Vorwärmen wäre wirkungslos. Die App nutzt
+// den Host sonst nirgends (absolute URLs kommen aus `site` in astro.config).
+const canonicalHost = process.env.SITE_HOST || "speisly.de";
+
 const compression = createCompression();
 const server = http.createServer((req, res) => {
+  req.headers.host = canonicalHost;
   compression(req, res, () => handler(req, res));
 });
 server.keepAliveTimeout = 65_000;

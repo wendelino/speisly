@@ -759,6 +759,8 @@ Insgesamt 59 Tests.
 - **Herunterfahren:** Bei `SIGTERM`/`SIGINT` stoppt erst der Cron, dann schließt der Server. Laufende Requests haben 10 s.
 - **Node:** `bun run start:node` (`node --env-file-if-exists=.env`) funktioniert ebenso. Geprüft unter Node 22.22.
 
+**Einheitlicher Host (nachträglich behoben):** Astros Route Cache verwendet `url.origin` als Teil des Schlüssels. Pre-Warm und Cron rufen `127.0.0.1` auf, Besucher kommen über den Proxy mit `speisly.de` (oder bei nginx ohne `proxy_set_header Host` mit der Upstream-Adresse). Das Vorwärmen hätte in Produktion also die falschen Einträge gefüllt. Der Wrapper setzt deshalb für jede Anfrage `Host` auf `SITE_HOST` (Default `speisly.de`). Geprüft: Vorgewärmte Seiten sind für `speisly.de`, `127.0.0.1` und `localhost` ein HIT. Die App nutzt den Host sonst nirgends, absolute URLs kommen aus `site`. Actions (JSON) sind von Astros Origin-Prüfung nicht betroffen, auch nicht mit HTTPS-Origin hinter dem Proxy.
+
 **`ASTRO_KEY`** wird von Astro **beim Build** gelesen (`core/build`), nicht zur Laufzeit. Ohne ihn erzeugt jeder Build einen neuen Schlüssel. Folge: Offene Tabs aus der Zeit vor einem Deploy können die Angebotshistorie (Server Island) nicht mehr nachladen. Deshalb ist er empfohlen, aber nicht zwingend. Dasselbe gilt für alle `PUBLIC_*`-Werte: Sie werden beim Build eingebaut.
 
 **Aufgeräumt:**
