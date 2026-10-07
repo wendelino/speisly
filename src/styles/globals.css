@@ -160,18 +160,19 @@
   animation-duration: 250ms;
   animation-timing-function: ease-out;
 }
-/* Bild: Der alte Snapshot (Kartenfoto) bleibt voll sichtbar, der neue blendet
-   darüber ein. Ist das Bild der Detailseite noch nicht geladen, sieht man so
-   weiter das Foto statt des Skeletons. `normal` wie bei root. */
+/* Bild: Nur der alte Snapshot (Kartenfoto) morpht, der neue bleibt
+   unsichtbar. Sonst liegen während der Transition zwei Bilder übereinander,
+   die nicht deckungsgleich sind. Am Ende übernimmt das echte Element, das
+   bis dahin das Kartenbild aus dem Cache zeigt (lib/view-transitions.ts). */
 [data-vt="image"] {
   view-transition-class: meal-image;
 }
 ::view-transition-old(*.meal-image) {
   animation: none;
-  mix-blend-mode: normal;
 }
 ::view-transition-new(*.meal-image) {
-  mix-blend-mode: normal;
+  animation: none;
+  opacity: 0;
 }
 @media (prefers-reduced-motion: reduce) {
   @view-transition {

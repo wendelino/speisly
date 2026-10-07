@@ -9,10 +9,10 @@
  * `meal-<rolle>-<mmid>` entsteht erst hier: auf der Liste innerhalb der Karte
  * mit dieser mmid, auf der Detailseite aus der mmid der URL. Das spart pro
  * Karte ~150 Byte gegenüber fertigen Namen im HTML.
- * Kommt man per Transition von der Liste auf die Detailseite, bekommt dort der
- * Bild-Platzhalter (`data-meal-lowres`, meal-image.astro) seine `src`: die URL
- * des Kartenbilds, also ein Cache-Treffer. So steht nach dem Morph sofort ein
- * Bild da, während das große noch lädt.
+ * Kommt man per Transition von der Liste auf die Detailseite, zeigt das Bild
+ * dort zuerst die URL des Kartenbilds (`data-meal-small`, meal-image.astro),
+ * also einen Cache-Treffer, und tauscht auf das große, sobald es dekodiert
+ * ist. So steht nach dem Morph sofort ein Bild da.
  * Die Funktion läuft als Inline-Script im <head>, damit `pagereveal` vor dem
  * ersten Rendern registriert ist; sie muss daher in sich geschlossen sein
  * (wird per toString eingebettet).
@@ -41,13 +41,31 @@ export function viewTransitionBoot() {
       mmid
     );
 
-  // Detailseite: Kartenbild als Platzhalter unter dem großen Bild
-  const showLowRes = () => {
-    for (const img of document.querySelectorAll<HTMLImageElement>(
-      "img[data-meal-lowres]"
-    )) {
-      img.src = img.dataset.mealLowres ?? "";
+  // Detailseite: erst das Kartenbild (Cache), dann das große
+  const showSmallFirst = () => {
+    const img = document.querySelector<HTMLImageElement>(
+      "img[data-meal-small]"
+    );
+    const source = img?.parentElement?.querySelector("source");
+    const small = img?.dataset.mealSmall;
+    if (!(img && source && small) || img.complete) {
+      return;
     }
+    const large = source.srcset;
+    // zuerst anfordern, damit die laufende Anfrage weiterverwendet wird
+    const hi = new Image();
+    hi.src = large;
+    if (hi.complete) {
+      return;
+    }
+    // ohne Einblenden: Das Bild soll beim Ende der Transition voll da sein
+    img.style.transition = "none";
+    source.srcset = small;
+    const restore = () => {
+      // bis das neue Bild verfügbar ist, zeigt der Browser weiter das kleine
+      source.srcset = large;
+    };
+    hi.decode().then(restore, restore);
   };
 
   type NavEvent = Event & {
@@ -83,7 +101,7 @@ export function viewTransitionBoot() {
     if (isMealPage(location.href)) {
       nameDetail();
       if (!isMealPage(from)) {
-        showLowRes();
+        showSmallFirst();
       }
     } else if (isMealPage(from)) {
       nameCard(mmidOf(from));

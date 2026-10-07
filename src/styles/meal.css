@@ -52,10 +52,6 @@
   .m-photo {
     @apply h-full w-full object-contain transition-opacity duration-300;
   }
-  /* meal-image.astro (Detail): Kartenbild als Platzhalter unter dem großen */
-  .m-lowres {
-    @apply absolute inset-0 h-full w-full object-contain;
-  }
   .m-noimg {
     @apply flex h-full w-full items-center justify-center rounded-lg border border-border/30 bg-muted/50;
   }
