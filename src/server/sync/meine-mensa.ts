@@ -1,3 +1,4 @@
+import { toIsoDay } from "../dates";
 import { logError } from "../log";
 import type {
   GetMealDataParams,
@@ -187,7 +188,7 @@ export default async function getMealData({
         ctx: { dateFrom, dateTo, locationId },
       });
     }
-    return { data: [], length: 0 };
+    return { data: [], length: 0, dates: [] };
   }
 
   const locations = await getLocations();
@@ -197,5 +198,8 @@ export default async function getMealData({
   return {
     data: meals,
     length: meals.flatMap((meal) => meal.availability).length,
+    dates: [
+      ...new Set(foodPlans.data.map((item) => toIsoDay(new Date(item.date)))),
+    ].sort(),
   };
 }

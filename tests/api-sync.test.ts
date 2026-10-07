@@ -10,6 +10,7 @@ import { createSyncHandler } from "@/server/sync-endpoint";
 
 const TOKEN = "test-token";
 const syncCalls: unknown[] = [];
+const syncOptions: unknown[] = [];
 const imageCalls: unknown[] = [];
 let imagesResult: () => Promise<{
   changedDates: string[];
@@ -25,8 +26,9 @@ let imagesResult: () => Promise<{
   });
 const POST = createSyncHandler({
   token: TOKEN,
-  handleSync: (date) => {
+  handleSync: (date, options) => {
     syncCalls.push(date);
+    syncOptions.push(options);
     return Promise.resolve({
       changedDates: ["2026-10-07"],
       changedMealIds: ["m1"],
@@ -139,5 +141,15 @@ describe("POST /api/sync", () => {
     expect(imageCalls).toHaveLength(0);
     expect(invalidated).toEqual([]);
     expect(body.invalidatedTags).toEqual([]);
+  });
+
+  test("force=1 lifts the mass-removal brake", async () => {
+    syncOptions.length = 0;
+    await call("today");
+    await call("today&force=1");
+    expect(syncOptions).toEqual([
+      { allowMassRemoval: false },
+      { allowMassRemoval: true },
+    ]);
   });
 });

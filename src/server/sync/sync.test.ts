@@ -236,4 +236,49 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
       [String(SRC_IDS[1]), DAY_2, 250],
     ]);
   });
+
+  test("guard: empty or partial API answers delete nothing", async () => {
+    const before = await servingsInRange();
+    expect(before.length).toBeGreaterThan(0);
+
+    // Störung: API liefert gar nichts
+    stubApi([]);
+    const empty = await handleSync({ from: DAY_1, to: DAY_2 });
+    expect(empty).toEqual({ changedDates: [], changedMealIds: [] });
+    expect(await servingsInRange()).toEqual(before);
+
+    // lückenhaft: nur DAY_2, DAY_1 bleibt unangetastet
+    stubApi([item(3, DAY_2, 1, food(SRC_IDS[1], 2.5))]);
+    await handleSync({ from: DAY_1, to: DAY_2 });
+    expect(await servingsInRange()).toEqual(before);
+  });
+
+  test("guard: a rated serving survives its removal from the API", async () => {
+    const [target] = (
+      await db.execute(sql`
+        select mm.id, mm.meal_id from mensa_meal mm join meal m on m.id = mm.meal_id
+         where m.src_id = ${String(SRC_IDS[0])} limit 1`)
+    ).rows as { id: string; meal_id: string }[];
+    const userId = "sync-test-user";
+    await db.execute(sql`
+      insert into "user" (id, ip_hash) values (${userId}, 'sync-test') on conflict do nothing`);
+    await db.execute(sql`
+      insert into meal_rating (id, meal_id, mensa_meal_id, user_id, value)
+      values ('sync-test-rating', ${target.meal_id}, ${target.id}, ${userId}, 5)`);
+    try {
+      // DAY_1 ist bekannt (anderes Gericht), Gericht 1 fehlt aber
+      stubApi([
+        item(7, DAY_1, 2, food(SRC_IDS[1], 2.5)),
+        item(3, DAY_2, 1, food(SRC_IDS[1], 2.5)),
+      ]);
+      await handleSync({ from: DAY_1, to: DAY_2 });
+      const rows = await servingsInRange();
+      expect(rows.some((r) => r.src_id === String(SRC_IDS[0]))).toBe(true);
+    } finally {
+      await db.execute(
+        sql`delete from meal_rating where id = 'sync-test-rating'`
+      );
+      await db.execute(sql`delete from "user" where id = ${userId}`);
+    }
+  });
 });

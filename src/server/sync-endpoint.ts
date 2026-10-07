@@ -13,7 +13,8 @@ type Scope = (typeof SYNC_SCOPES)[number];
 type Deps = {
   token: string;
   handleSync: (
-    date: string | { from: string; to: string }
+    date: string | { from: string; to: string },
+    options?: { allowMassRemoval?: boolean }
   ) => Promise<SyncResult>;
   /** Bildvarianten für den Zeitraum erzeugen (src/server/images) */
   syncImages: (range: {
@@ -78,7 +79,8 @@ export function createSyncHandler(deps: Deps) {
     try {
       if (range) {
         result = await deps.handleSync(
-          range.from === range.to ? range.from : range
+          range.from === range.to ? range.from : range,
+          { allowMassRemoval: url.searchParams.get("force") === "1" }
         );
       }
     } catch (error) {

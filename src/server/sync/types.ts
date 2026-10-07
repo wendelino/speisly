@@ -51,6 +51,8 @@ export type MensaMealRecord = {
   date: Date;
   ingredients: string[];
   extras: string[];
+  /** hat Bewertungen (nur beim Laden für den Sync gesetzt) */
+  rated?: boolean;
 };
 
 export type DataSourceRecord = {
@@ -111,6 +113,11 @@ export type GetExistingMensaMealsParams = {
 export type GetMealDataResult = {
   data: MealData[];
   length: number;
+  /**
+   * Tage (`YYYY-MM-DD`), für die die API überhaupt Einträge geliefert hat
+   * (vor allen Filtern). Nur an diesen Tagen darf der Sync Ausgaben entfernen.
+   */
+  dates: string[];
 };
 
 export type MealUpdateLog = {

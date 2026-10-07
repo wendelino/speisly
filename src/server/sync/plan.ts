@@ -20,8 +20,20 @@ import type {
  *   Name, Untertitel oder Preise geändert haben, jeweils mit Änderungslog.
  * - Neue Ausgaben (Mensa + Gericht + Tag) werden angelegt, bestehende nicht
  *   verändert (Zutaten/Extras bleiben wie beim ersten Sync).
- * - Ausgaben im Zeitraum, die die API nicht mehr liefert, werden entfernt.
+ * - Ausgaben im Zeitraum, die die API nicht mehr liefert, werden entfernt –
+ *   aber nur mit Schutzregeln (siehe `guardRemovals`), denn mit einer Ausgabe
+ *   verschwinden per Cascade auch ihre Bewertungen.
  */
+
+/**
+ * Notbremse: Würde ein Sync mehr als diesen Anteil der bestehenden Ausgaben
+ * im Zeitraum entfernen (und mindestens `MASS_REMOVAL_MIN`), wird gar nichts
+ * entfernt und Alarm geschlagen. Überschreiben: `/api/sync?force=1`.
+ */
+export const MASS_REMOVAL_RATIO = 0.5;
+export const MASS_REMOVAL_MIN = 20;
+
+export type KeptReason = "day-not-in-api" | "rated" | "mass-removal";
 
 type ExistingMeal = MealRecord & { srcId: string };
 
@@ -61,6 +73,10 @@ export type SyncPlan = {
   mealChanges: MealChange[];
   newServings: NewServing[];
   removedServings: MensaMealRecord[];
+  /** fehlen in der API, werden aber zum Schutz nicht entfernt */
+  keptServings: { serving: MensaMealRecord; reason: KeptReason }[];
+  /** Notbremse gezogen: wie viele wären entfernt worden, von wie vielen */
+  massRemoval: { wouldRemove: number; existing: number } | null;
   /** Gerichte mit Preis 0 (werden geloggt, nicht übernommen) */
   invalidMeals: MealData[];
 };
@@ -129,18 +145,71 @@ function servingKey(mealId: string, mensaId: string, date: Date): string {
   return `${mealId}|${mensaId}|${date.toISOString()}`;
 }
 
+/**
+ * Entscheidet, welche fehlenden Ausgaben wirklich entfernt werden:
+ * 1. nur an Tagen, für die die API überhaupt Einträge geliefert hat. Eine
+ *    leere oder lückenhafte Antwort (Störung, Feiertag) löscht nichts.
+ * 2. nie Ausgaben mit Bewertungen: Wer bewertet hat, hat das Gericht gegessen.
+ * 3. Notbremse bei Massenlöschung (siehe `MASS_REMOVAL_RATIO`).
+ */
+export function guardRemovals(
+  missing: MensaMealRecord[],
+  {
+    apiDates,
+    existingCount,
+    allowMassRemoval = false,
+  }: {
+    apiDates: Set<string>;
+    existingCount: number;
+    allowMassRemoval?: boolean;
+  }
+): Pick<SyncPlan, "removedServings" | "keptServings" | "massRemoval"> {
+  const kept: SyncPlan["keptServings"] = [];
+  let candidates: MensaMealRecord[] = [];
+  for (const serving of missing) {
+    if (!apiDates.has(toIsoDay(serving.date))) {
+      kept.push({ serving, reason: "day-not-in-api" });
+    } else if (serving.rated) {
+      kept.push({ serving, reason: "rated" });
+    } else {
+      candidates.push(serving);
+    }
+  }
+  let massRemoval: SyncPlan["massRemoval"] = null;
+  if (
+    !allowMassRemoval &&
+    candidates.length >= MASS_REMOVAL_MIN &&
+    candidates.length > existingCount * MASS_REMOVAL_RATIO
+  ) {
+    massRemoval = { wouldRemove: candidates.length, existing: existingCount };
+    kept.push(
+      ...candidates.map((serving) => ({
+        serving,
+        reason: "mass-removal" as const,
+      }))
+    );
+    candidates = [];
+  }
+  return { removedServings: candidates, keptServings: kept, massRemoval };
+}
+
 export function planSync({
   data,
   dataSourceSlug,
   mensen,
   existingMeals,
   existingServings,
+  apiDates,
+  allowMassRemoval = false,
 }: {
   data: MealData[];
   dataSourceSlug: string;
   mensen: MensaRecord[];
   existingMeals: ExistingMeal[];
   existingServings: MensaMealRecord[];
+  /** Tage mit API-Einträgen; Default: alle Tage aus `data` */
+  apiDates?: Set<string>;
+  allowMassRemoval?: boolean;
 }): SyncPlan {
   const plan: SyncPlan = {
     newMensen: [],
@@ -148,6 +217,8 @@ export function planSync({
     mealChanges: [],
     newServings: [],
     removedServings: [],
+    keptServings: [],
+    massRemoval: null,
     invalidMeals: [],
   };
 
@@ -236,6 +307,18 @@ export function planSync({
     }
   }
 
-  plan.removedServings = [...unmatched.values()];
+  const knownDates =
+    apiDates ??
+    new Set(
+      data.flatMap((m) => m.availability.map((a) => toIsoDay(new Date(a.date))))
+    );
+  Object.assign(
+    plan,
+    guardRemovals([...unmatched.values()], {
+      apiDates: knownDates,
+      existingCount: existingServings.length,
+      allowMassRemoval,
+    })
+  );
   return plan;
 }
