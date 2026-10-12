@@ -46,7 +46,7 @@
   .m-badges {
     @apply absolute top-1.5 right-1.5 flex flex-col items-end gap-1 empty:hidden;
   }
-  .m-badges > .ib {
+  .m-badges > * {
     @apply shadow-sm ring-1 ring-white/80;
   }
   /* Preis groß unten links, Pfeil rechts als Hinweis auf die Detailseite */
