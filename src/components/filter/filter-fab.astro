@@ -1,7 +1,8 @@
 ---
 // Schwebender Filter-Button mit Chips für aktive Filter. Die Chips und der
 // Punkt am Button erscheinen per CSS (styles/components.css; die Attribute
-// setzt lib/filters/boot.ts vor dem ersten Paint), der Dialog wird erst bei
+// setzt lib/filters/boot.ts vor dem ersten Paint; bei aktivem Filter ist der
+// Button gefüllt), der Dialog wird erst bei
 // Bedarf geladen (filter-dialog.mount.tsx).
 import { SlidersHorizontal } from "@lucide/astro";
 import Icon from "@/components/icons/icon.astro";
@@ -38,19 +39,12 @@ const CHIP =
   }
   <button
     aria-haspopup="dialog"
-    class="group pointer-events-auto inline-flex h-12 items-center gap-2.5 rounded-full bg-foreground/90 pr-5 pl-1.5 font-semibold text-background text-sm shadow-lift ring-1 ring-white/10 outline-none backdrop-blur-md transition-[translate,scale,background-color] duration-200 hover:-translate-y-0.5 hover:bg-foreground focus-visible:ring-[3px] focus-visible:ring-ring active:scale-95"
+    class="group pointer-events-auto inline-flex h-12 items-center gap-2 rounded-full bg-card/90 pr-5 pl-4 font-semibold text-foreground text-sm shadow-lift ring-1 ring-border outline-none backdrop-blur-md transition-[translate,scale,background-color,color] duration-200 hover:-translate-y-0.5 hover:ring-primary/40 focus-visible:ring-[3px] focus-visible:ring-ring active:scale-95"
     data-filter-fab
     type="button"
   >
-    <span class="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground">
-      <SlidersHorizontal class="size-4 transition-transform duration-300 group-hover:rotate-12" />
-    </span>
+    <SlidersHorizontal class="size-[1.1rem] text-primary transition-[rotate,color] duration-300 group-hover:rotate-12" />
     Filter
-    <span
-      aria-hidden="true"
-      class="hidden size-2 rounded-full bg-gold"
-      data-filter-dot
-    ></span>
   </button>
 </div>
 <script

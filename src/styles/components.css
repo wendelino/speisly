@@ -60,7 +60,7 @@ html[data-diet="vegan"] [data-only-diet="vegan"] {
   display: revert-layer;
 }
 
-/* Filter-Chips und Punkt am Filter-Button (filter-fab.astro) */
+/* Filter-Chips und gefüllter Filter-Button bei aktivem Filter (filter-fab.astro) */
 [data-chip] {
   display: none;
 }
@@ -68,8 +68,14 @@ html[data-filter-vegan] [data-chip="vegan"],
 html[data-filter-veggie] [data-chip="veggie"] {
   display: inline-flex;
 }
-html[data-filter-active] [data-filter-dot] {
-  display: block;
+html[data-filter-active] [data-filter-fab] {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  --tw-ring-color: transparent;
+  --tw-shadow: var(--shadow-pop);
+}
+html[data-filter-active] [data-filter-fab] svg {
+  color: inherit;
 }
 
 /* Bewerten-Button (rating-button.astro): eine Beschriftung je Zustand. Die

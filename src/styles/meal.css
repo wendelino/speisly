@@ -39,16 +39,12 @@
   .m-title {
     @apply line-clamp-2 font-display font-semibold text-[0.95rem] leading-snug tracking-tight transition-colors group-hover:text-primary;
   }
-  /* Bild mit Ernährungs-Badges oben rechts darüber */
-  .m-media {
-    @apply relative;
-  }
+  /* Ernährungs-Badges in der linken oberen Ecke der Karte: ein Reiter in
+     Kartenfarbe, der die Bildecke überdeckt */
   .m-badges {
-    @apply absolute top-1.5 right-1.5 flex flex-col items-end gap-1 empty:hidden;
+    @apply absolute top-0 left-0 z-10 flex gap-1 rounded-tl-3xl rounded-br-2xl bg-card py-1.5 pr-1.5 pl-2 empty:hidden;
   }
-  .m-badges > * {
-    @apply shadow-sm ring-1 ring-white/80;
-  }
+
   /* Preis groß unten links, Pfeil rechts als Hinweis auf die Detailseite */
   .m-foot {
     @apply mt-auto flex items-end justify-between gap-2 pt-1;
