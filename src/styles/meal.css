@@ -34,24 +34,20 @@
     @apply relative grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 rounded-3xl bg-card p-2 shadow-soft ring-1 ring-border/60 outline-none transition-[translate,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lift focus-visible:ring-[3px] focus-visible:ring-ring sm:grid-cols-[8.5rem_minmax(0,1fr)];
   }
   .m-body {
-    @apply flex min-w-0 flex-col gap-1.5 self-stretch py-1.5 pr-2;
+    @apply flex min-w-0 flex-col gap-2 self-stretch py-1 pr-1.5;
   }
   .m-title {
     @apply line-clamp-2 font-display font-semibold text-[0.95rem] leading-snug tracking-tight transition-colors group-hover:text-primary;
   }
-  /* Ernährungs-Badges oben über dem Titel */
-  .m-badges {
-    @apply flex flex-wrap gap-1 empty:hidden;
-  }
-  /* Preis groß unten links, Pfeil rechts als Hinweis auf die Detailseite */
+  /* Preis links, Ernährungs-Badges rechts daneben */
   .m-foot {
-    @apply mt-auto flex items-end justify-between gap-2 pt-1;
+    @apply mt-auto flex flex-wrap items-center justify-between gap-1.5;
+  }
+  .m-badges {
+    @apply flex flex-wrap justify-end gap-1 empty:hidden;
   }
   .m-price {
-    @apply inline-flex items-baseline gap-0.5 font-bold font-display text-[1.35rem] text-primary tabular-nums leading-none tracking-tight;
-  }
-  .m-go {
-    @apply grid size-7 shrink-0 place-items-center rounded-full bg-secondary font-bold text-primary text-sm leading-none transition-[translate,background-color,color] duration-300 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground;
+    @apply inline-flex items-baseline gap-0.5 rounded-full bg-secondary px-2.5 py-1 font-bold font-display text-[0.95rem] text-primary tabular-nums leading-none;
   }
 
   /* meal-image.astro */
