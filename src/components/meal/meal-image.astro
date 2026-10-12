@@ -1,11 +1,13 @@
 ---
-// Astro-Port von MealImage (meal-comp.tsx). Skeleton + Einblenden per CSS;
-// `data-loaded` setzt ein einziger Load-Listener im <head> (lib/meal-assets.ts)
-// statt onload/onerror an jedem Bild.
-// Klassen m-*: src/styles/meal.css.
+// Gerichtsbild. Das Bild ist nie ausgeblendet: Aus dem Cache steht es sofort
+// da, ohne Ein- und Ausblenden beim Seitenwechsel. Nur wenn es nach 300 ms
+// noch lädt, pulsiert ein Skeleton (meal.css .m-photo); `data-loaded` setzt
+// ein einziger Load-Listener im <head> (lib/meal-assets.ts).
 // Bilder: vorberechnete Varianten aus dem Sync (src/server/images), feste URL
 // je Ansicht (Karte klein, Detail groß), AVIF per <source>, WebP als Fallback
-// im <img>; ohne Varianten das Original.
+// im <img>; ohne Varianten das Original. Ohne Bild: Kochmützen-Platzhalter.
+// Klassen m-*: src/styles/meal.css. Die Seite braucht das Sprite-Icon
+// "chef-hat", wenn Gerichte ohne Bild vorkommen.
 import Icon from "@/components/icons/icon.astro";
 import { cn } from "@/lib/utils";
 import { images } from "@/server/images";
@@ -33,52 +35,19 @@ const urls = variants?.[view === "card" ? "small" : "large"];
 ---
 
 <div
-  class={
-    view === "card"
-      ? "m-img"
-      : cn(
-          "relative aspect-4/3 overflow-hidden rounded-lg transition-all duration-300",
-          className
-        )
-  }
-  data-meal-image
+  class={view === "card" ? "m-img" : cn("m-img m-img-lg rounded-3xl", className)}
   data-vt={vt ? "image" : undefined}
 >
   {
     src ? (
-      <>
-        <div class="m-skel" />
-        <picture class="contents">
-          {urls && <source srcset={urls.avif} type="image/avif" />}
-        <img
-          alt={alt}
-          class="m-photo"
-          data-meal-img
-          decoding="async"
-          fetchpriority={priority ? "high" : undefined}
-          height="375"
-          loading={priority ? "eager" : "lazy"}
-          src={urls?.webp ?? src}
-          width="500"
-        />
-        </picture>
-      </>
+      <picture class="contents">
+        {urls && <source srcset={urls.avif} type="image/avif" />}
+        <img alt={alt} class="m-photo" decoding={priority ? "sync" : "async"} fetchpriority={priority ? "high" : undefined} height="375" loading={priority ? "eager" : "lazy"} src={urls?.webp ?? src} width="500" />
+      </picture>
     ) : (
       <div class="m-noimg">
-        <Icon
-          class={cn("size-16 text-border", view === "detail" ? "size-32" : "")}
-          name="image-off"
-        />
+        <Icon class={view === "detail" ? "size-24 -rotate-12" : "size-10 -rotate-12"} name="chef-hat" />
       </div>
     )
   }
 </div>
-
-<style is:global>
-  img[data-meal-img]:not([data-loaded]) {
-    opacity: 0;
-  }
-  [data-meal-image]:has(img[data-loaded]) > .m-skel {
-    display: none;
-  }
-</style>

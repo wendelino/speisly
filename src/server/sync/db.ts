@@ -1,8 +1,8 @@
 import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { dataSource } from "@/lib/db/schema/dataSource";
+import { toIsoDay } from "@/lib/dates";
+import { dataSource } from "@/lib/db/schema/data-source";
 import { meal, mealUpdate, mensa, mensaMeal } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
-import { toIsoDay } from "../dates";
 import { db } from "../db";
 import { logError } from "../log";
 import type { MealChange, NewMeal, SyncPlan } from "./plan";
@@ -159,7 +159,7 @@ function insertMealRows(tx: Tx, rows: NewMeal[]) {
 
 /**
  * Legt neue Gerichte an und gibt die IDs der tatsächlich angelegten zurück.
- * Übersprungen (und geloggt) werden wie bisher Gerichte, die gegen
+ * Übersprungen (und geloggt) werden Gerichte, die gegen
  * `meal_unique` verstoßen (gleicher Name, Untertitel und Bild unter anderer
  * src_id) oder die die DB ablehnt (z. B. zu langer Name). Ein einzelnes
  * fehlerhaftes Gericht blockiert so nicht den ganzen Sync.

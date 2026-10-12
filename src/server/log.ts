@@ -1,4 +1,4 @@
-import { errorLog } from "@/lib/db/schema/errorLog";
+import { errorLog } from "@/lib/db/schema/error-log";
 import { genId } from "@/lib/db/utils";
 import { db } from "./db";
 import { sendTelegramMessage } from "./telegram";

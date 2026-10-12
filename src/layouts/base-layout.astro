@@ -1,13 +1,12 @@
 ---
-// Ersetzt src/app/layout.tsx (Metadaten 1:1 übernommen)
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
 import IconSprite from "@/components/icons/icon-sprite.astro";
 import type { SpriteIconName } from "@/components/icons/sprite-icons";
 import Footer from "@/components/layout/footer.astro";
+import SiteHeader from "@/components/layout/site-header.astro";
 import { mealImageBoot } from "@/lib/meal-assets";
 import { viewTransitionBoot } from "@/lib/view-transitions";
-import ToastProvider from "@/lnio/components/toast/provider";
 import "@/styles/globals.css";
 
 type Props = {
@@ -21,13 +20,8 @@ type Props = {
     images?: { url: string; width?: number; height?: number; alt?: string }[];
   };
   /**
-   * Toaster (sonner) als Island einbinden. Nur auf Seiten, die Toasts zeigen,
-   * damit alle anderen Seiten ohne React-Runtime auskommen.
-   */
-  withToasts?: boolean;
-  /**
-   * Seiten mit Gerichten (Speiseplan, Detail): SVG-Sprite für
-   * components/icons/icon.astro und Load-Listener für die Gerichtsbilder.
+   * SVG-Sprite für components/icons/icon.astro. Seiten mit Gerichten
+   * bekommen außerdem den Load-Listener für die Gerichtsbilder.
    * `true` = alle Sprite-Icons, sonst nur die übergebenen.
    */
   mealAssets?: boolean | readonly SpriteIconName[];
@@ -36,14 +30,13 @@ type Props = {
 const DEFAULT_DESCRIPTION =
   "Aktuelle Speisepläne der Mensen der Martin-Luther-Universität Halle-Wittenberg";
 const DEFAULT_OG_IMAGES = [
-  { url: "/logo_512.png", width: 512, height: 512, alt: "Speisly Logo" },
+  { url: "/icons/icon-512x512.png", width: 512, height: 512, alt: "Speisly Logo" },
 ];
 
 const {
   title,
   description = DEFAULT_DESCRIPTION,
   og = {},
-  withToasts = false,
   mealAssets = false,
 } = Astro.props;
 const fullTitle = title ? `${title} | Speisly` : "Speisly";
@@ -62,7 +55,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <Font cssVariable="--font-geist-mono"/>
+    <Font cssVariable="--font-bricolage" preload />
     <title>{fullTitle}</title>
     <slot name="head" />
     <script is:inline set:html={viewTransitionScript} />
@@ -77,6 +70,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Speisly">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#fcf9f4">
     <meta property="og:title" content={ogTitle}>
     <meta property="og:description" content={ogDescription}>
     {
@@ -115,9 +109,8 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     {mealAssets && (
       <IconSprite icons={mealAssets === true ? undefined : mealAssets} />
     )}
-    <slot/>
-    <div class="flex-1"></div>
+    <SiteHeader />
+    <div class="flex-1"><slot/></div>
     <Footer/>
-    {withToasts && <ToastProvider client:idle position="top-right" />}
   </body>
 </html>

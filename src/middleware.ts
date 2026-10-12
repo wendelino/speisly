@@ -1,10 +1,10 @@
 import { defineMiddleware, sequence } from "astro:middleware";
-import { parseDayParam } from "@/server/dates";
+import { parseDayParam } from "@/lib/dates";
 
 const DAY_ROUTE = /^\/day\/([^/]+)\/?$/;
 
 /**
- * - /day/heute (Altlast der Next-Version) → 301 auf /
+ * - /day/heute (alte URL) → 301 auf /
  * - /day/<ungültig oder außerhalb des Fensters> → 404, bevor gerendert wird
  */
 const dayRoute = defineMiddleware((context, next) => {
@@ -24,7 +24,8 @@ const dayRoute = defineMiddleware((context, next) => {
 /**
  * Browser-Caching für on-demand gerenderte Antworten. Gecacht wird
  * serverseitig (Route Cache, Treffer kosten ~1 ms); der Browser soll HTML
- * immer neu anfragen, damit z. B. eine neue Bewertung sofort sichtbar ist.
+ * immer neu anfragen, damit z. B. eine neue Bewertung sofort sichtbar ist
+ * (unveränderte Seiten kosten dank ETag nur ein 304, server/compress.mjs).
  * Hashed Assets (/_astro/*) und prerenderte Seiten liefert der Node-Adapter
  * mit eigenen Headern aus, sie laufen nicht durch diese Middleware.
  */
@@ -35,12 +36,16 @@ const browserCaching = defineMiddleware(async (context, next) => {
   }
   const path = context.url.pathname;
   const isApi = path.startsWith("/api/") || path.startsWith("/_actions/");
-  response.headers.set(
-    "Cache-Control",
-    isApi || context.request.method !== "GET"
-      ? "no-store"
-      : "public, max-age=0, must-revalidate"
-  );
+  let cacheControl = "public, max-age=0, must-revalidate";
+  if (isApi || context.request.method !== "GET") {
+    cacheControl = "no-store";
+  } else if (path.startsWith("/_server-islands/")) {
+    // Island-URLs enthalten die (verschlüsselten) Props, der Inhalt ändert
+    // sich nur durch den Sync: eine Stunde Browser-Cache spart den Request
+    // beim erneuten Öffnen eines Gerichts
+    cacheControl = "public, max-age=3600";
+  }
+  response.headers.set("Cache-Control", cacheControl);
   return response;
 });
 

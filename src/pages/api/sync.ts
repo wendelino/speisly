@@ -7,7 +7,6 @@ import { createSyncHandler } from "@/server/sync-endpoint";
 
 /**
  * Daten-Sync mit meine-mensa.de und gezielte Cache-Invalidierung.
- * Ersetzt src/app/api/sync und src/app/api/revalidate.
  *
  * Danach erzeugt er fehlende Bildvarianten (src/server/images).
  *

@@ -1,0 +1,18 @@
+---
+// Inhalt eines Tabs (siehe tabs.astro); `id` wie beim Tab
+import { cn } from "@/lib/utils";
+
+type Props = { id: string; active?: boolean; class?: string };
+const { id, active = false, class: className } = Astro.props;
+---
+
+<div
+  aria-labelledby={`tab-${id}`}
+  class={cn("rounded-3xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring", className)}
+  hidden={!active}
+  id={`panel-${id}`}
+  role="tabpanel"
+  tabindex="0"
+>
+  <slot />
+</div>

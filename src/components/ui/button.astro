@@ -1,0 +1,25 @@
+---
+// Button oder Link im Button-Stil (Varianten: ui/variants.ts, wie der React-Button)
+import type { HTMLAttributes } from "astro/types";
+import { cn } from "@/lib/utils";
+import { type ButtonVariants, buttonVariants } from "./variants";
+
+type Props = ButtonVariants &
+  Omit<HTMLAttributes<"button"> & HTMLAttributes<"a">, "type"> & {
+    /** mit href ein <a>, sonst ein <button> */
+    href?: string;
+    type?: "button" | "submit" | "reset";
+  };
+
+const { variant, size, href, type = "button", class: className, ...rest } =
+  Astro.props;
+const classes = cn(buttonVariants({ variant, size }), className);
+---
+
+{
+  href ? (
+    <a class={classes} data-slot="button" href={href} {...rest}><slot /></a>
+  ) : (
+    <button class={classes} data-slot="button" type={type} {...rest}><slot /></button>
+  )
+}

@@ -1,0 +1,43 @@
+---
+// Leerer Speiseplan: keine Gerichte an diesem Tag oder keine nach dem Filter.
+// Der Button „Filter zurücksetzen“ wird über data-filter-reset angebunden
+// (meal-list.astro).
+import { CalendarX2, SearchX } from "@lucide/astro";
+import Button from "@/components/ui/button.astro";
+import EmptyState from "@/components/ui/empty-state.astro";
+import { formatRelativeDay } from "@/lib/format";
+
+type Props = {
+  type?: "date" | "filter";
+  /** `YYYY-MM-DD` (nur für type="date") */
+  date?: string;
+  /** heutiges Datum in Berlin, für „Heute“/„Morgen“ */
+  today?: string;
+};
+
+const { type = "date", date, today } = Astro.props;
+
+const day = date && today ? formatRelativeDay(date, today) : null;
+const isFilter = type === "filter";
+const title = isFilter ? "Nichts gefunden" : "Die Küche bleibt kalt";
+const description = isFilter
+  ? "Keine Gerichte passen zu deinen Filtern. Probier’s mit einer anderen Auswahl!"
+  : `Für ${day ?? "diesen Tag"} gibt es keine Gerichte. Schau doch an einem anderen Tag vorbei.`;
+---
+
+<div class="container-page">
+  <EmptyState
+    description={description}
+    title={title}
+    tone={isFilter ? "sky" : "peach"}
+  >
+    {isFilter ? <SearchX slot="icon" /> : <CalendarX2 slot="icon" />}
+    {
+      isFilter && (
+        <Button data-filter-reset variant="outline">
+          Filter zurücksetzen
+        </Button>
+      )
+    }
+  </EmptyState>
+</div>

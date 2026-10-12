@@ -1,0 +1,29 @@
+---
+// Logo und Wortmarke (Kopf- und Fußzeile). Das Logo liegt gehasht unter
+// /_astro/ (immutable) und bleibt beim Seitenwechsel im Cache.
+import logoUrl from "@/assets/logo.png?url&no-inline";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  /** im Kopf: sofort laden und dekodieren, beim Hover wackeln */
+  priority?: boolean;
+};
+const { priority = false } = Astro.props;
+---
+
+<img
+  alt=""
+  class={cn(
+    "size-10 rounded-[0.6rem] shadow-soft",
+    priority && "transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105"
+  )}
+  decoding={priority ? "sync" : "async"}
+  fetchpriority={priority ? "high" : undefined}
+  height="40"
+  loading={priority ? undefined : "lazy"}
+  src={logoUrl}
+  width="40"
+>
+<span class="font-bold font-display text-xl tracking-tight">
+  Speisly<span class="text-primary">.de</span>
+</span>

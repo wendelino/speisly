@@ -1,14 +1,12 @@
 ---
-// Astro-Port von meal-card.tsx – statisches HTML, kein JS.
-// data-meal/-veggie/-vegan steuern den CSS-Filter (siehe lib/filters/boot.ts).
+// Gerichtskarte im Speiseplan – statisches HTML, kein JS.
+// data-meal/-veggie/-vegan steuern den CSS-Filter (lib/filters/boot.ts).
 // Klassen m-*: src/styles/meal.css. data-vt: Rolle für die View Transition,
 // der Name entsteht erst beim Klick (lib/view-transitions.ts).
-import Icon from "@/components/icons/icon.astro";
 import { visibleIngredientTypes } from "@/lib/ingredients";
-import IngredientBadge from "./ingredient-badge.astro";
+import DietBadge from "./diet-badge.astro";
 import MealImage from "./meal-image.astro";
-import MealPrice from "./meal-price.astro";
-import MealTitle from "./meal-title.astro";
+import PriceTag from "./price-tag.astro";
 
 type Props = {
   meal: Meal;
@@ -18,27 +16,4 @@ type Props = {
 const { meal, priority = false } = Astro.props;
 ---
 
-<a
-  class="group block"
-  data-astro-prefetch
-  data-meal
-  data-vegan={meal.flags.isVegan ? "" : undefined}
-  data-veggie={meal.flags.isVeggie ? "" : undefined}
-  href={`/meal/${meal.id}?mmid=${meal.mensaMealId}`}
->
-  <div class="m-card">
-    <MealImage alt={meal.name} priority={priority} src={meal.imgPath} vt />
-    <div class="m-body">
-      <div class="m-badges" data-vt="ingredients">
-        {visibleIngredientTypes(meal.flags).map((type) => (
-          <IngredientBadge type={type} />
-        ))}
-      </div>
-      <MealTitle name={meal.name} subtitle={meal.subtitle} vt />
-      <div class="m-foot">
-        <MealPrice meal={meal} vt />
-        <Icon class="m-arrow" name="arrow-right" />
-      </div>
-    </div>
-  </div>
-</a>
+<a class="m-card group" data-astro-prefetch data-meal data-vegan={meal.flags.isVegan ? "" : undefined} data-veggie={meal.flags.isVeggie ? "" : undefined} href={`/meal/${meal.id}?mmid=${meal.mensaMealId}`}><MealImage alt={meal.name} priority={priority} src={meal.imgPath} vt /><div class="m-body"><h3 class="m-title" data-vt="title">{`${meal.name} ${meal.subtitle}`}</h3><div class="m-foot"><PriceTag cents={meal.priceStud} vt /><div class="m-badges" data-vt="ingredients">{visibleIngredientTypes(meal.flags).map((type) => <DietBadge type={type} />)}</div></div></div></a>

@@ -1,6 +1,6 @@
 import { count, desc, eq, max, min } from "drizzle-orm";
+import { toIsoDay } from "@/lib/dates";
 import { mensa, mensaMeal } from "@/lib/db/schema/schema";
-import { toIsoDay } from "../dates";
 import { db } from "../db";
 import { logError } from "../log";
 
@@ -12,9 +12,7 @@ export type MealServingStats = {
   /** `YYYY-MM-DD` */
   lastServed: string | null;
   byMensa: {
-    mensaId: string;
     mensaName: string;
-    mensaSlug: string;
     servingCount: number;
     firstServed: string;
     lastServed: string;
@@ -26,9 +24,7 @@ export async function getMealServingStats(
   mealId: string
 ): Promise<MealServingStats> {
   let rows: {
-    mensaId: string;
     mensaName: string;
-    mensaSlug: string;
     servingCount: number;
     firstServed: Date | null;
     lastServed: Date | null;
@@ -36,9 +32,7 @@ export async function getMealServingStats(
   try {
     rows = await db
       .select({
-        mensaId: mensa.id,
         mensaName: mensa.name,
-        mensaSlug: mensa.slug,
         servingCount: count(mensaMeal.id),
         firstServed: min(mensaMeal.date),
         lastServed: max(mensaMeal.date),
@@ -46,7 +40,7 @@ export async function getMealServingStats(
       .from(mensaMeal)
       .innerJoin(mensa, eq(mensaMeal.mensaId, mensa.id))
       .where(eq(mensaMeal.mealId, mealId))
-      .groupBy(mensa.id, mensa.name, mensa.slug)
+      .groupBy(mensa.id, mensa.name)
       .orderBy(desc(count(mensaMeal.id)), mensa.name);
   } catch (error) {
     logError({
@@ -60,9 +54,7 @@ export async function getMealServingStats(
     row.firstServed && row.lastServed
       ? [
           {
-            mensaId: row.mensaId,
             mensaName: row.mensaName,
-            mensaSlug: row.mensaSlug,
             servingCount: row.servingCount,
             firstServed: toIsoDay(row.firstServed),
             lastServed: toIsoDay(row.lastServed),

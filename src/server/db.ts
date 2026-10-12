@@ -26,9 +26,3 @@ if (!globalForDb.__speislyPool) {
 }
 
 export const db = drizzle({ client: pool });
-
-/** Schließt den Pool (für Skripte und Tests, nicht im Server verwenden). */
-export function closeDb(): Promise<void> {
-  globalForDb.__speislyPool = undefined;
-  return pool.end();
-}

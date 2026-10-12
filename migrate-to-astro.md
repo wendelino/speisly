@@ -66,6 +66,7 @@ Bearbeite dieselbe Datei wie bisher. Diese Dateien werden automatisch geladen:
 
 | Variable | Pflicht? | Wert | Wofür |
 |---|---|---|---|
+| `MEINE_MENSA_API_URL` | **ja** | Basis-URL der Speiseplan-API (bisher fest im Code, jetzt privat in der `.env`) | Daten-Sync. Fehlt sie, schlägt jeder Sync fehl |
 | `IMAGE_DIR` | **empfohlen** | absoluter Pfad auf dem dauerhaften Verzeichnis aus Schritt 1, z. B. `/var/lib/speisly/img` | Bildvarianten. Default `./data/img` im Projektordner, das überlebt aber kein frisches Deploy |
 | `ASTRO_KEY` | empfohlen | einmal erzeugen mit `bunx astro create-key`, dann **fest** in der `.env` lassen | Schlüssel für die Server Island (Angebotshistorie). Wird **beim Build** gelesen. Ohne festen Schlüssel erzeugt jeder Build einen neuen, und Tabs, die vor einem Deploy geöffnet wurden, können die Angebotshistorie nicht mehr nachladen |
 | `HOST` | nein | Default `0.0.0.0` | Adresse, auf der der Server lauscht. Mit `127.0.0.1` ist er nur noch für den Proxy auf derselben Maschine erreichbar |
@@ -93,6 +94,7 @@ PORT=3000                        # oder der bisherige Wert, sonst Default 4321
 HOST=0.0.0.0
 
 # neu
+MEINE_MENSA_API_URL=…            # Basis-URL der Speiseplan-API
 IMAGE_DIR=/var/lib/speisly/img
 ASTRO_KEY=…                      # bunx astro create-key, einmalig
 

@@ -1,6 +1,6 @@
+import { toIsoDay } from "@/lib/dates";
 import type { meal } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
-import { toIsoDay } from "../dates";
 import type {
   MealData,
   MealRecord,
@@ -30,14 +30,14 @@ import type {
  * im Zeitraum entfernen (und mindestens `MASS_REMOVAL_MIN`), wird gar nichts
  * entfernt und Alarm geschlagen. Überschreiben: `/api/sync?force=1`.
  */
-export const MASS_REMOVAL_RATIO = 0.5;
+const MASS_REMOVAL_RATIO = 0.5;
 export const MASS_REMOVAL_MIN = 20;
 
-export type KeptReason = "day-not-in-api" | "rated" | "mass-removal";
+type KeptReason = "day-not-in-api" | "rated" | "mass-removal";
 
 type ExistingMeal = MealRecord & { srcId: string };
 
-export type MealValues = Pick<
+type MealValues = Pick<
   typeof meal.$inferInsert,
   "name" | "subtitle" | "imgPath" | "priceStud" | "priceWork" | "priceGuest"
 >;
@@ -58,7 +58,7 @@ export type MealChange = {
   dates: string[];
 };
 
-export type NewServing = {
+type NewServing = {
   id: string;
   mensaId: string;
   mealId: string;
@@ -97,7 +97,7 @@ function valuesFrom(data: MealData): MealValues {
 }
 
 /** Unterschiede zwischen DB-Stand und API-Daten (Felder + Logeinträge) */
-export function diffMeal(
+function diffMeal(
   current: MealValues,
   next: MealValues
 ): { fields: Partial<MealValues>; logs: MealUpdateLog[] } {
@@ -152,7 +152,7 @@ function servingKey(mealId: string, mensaId: string, date: Date): string {
  * 2. nie Ausgaben mit Bewertungen: Wer bewertet hat, hat das Gericht gegessen.
  * 3. Notbremse bei Massenlöschung (siehe `MASS_REMOVAL_RATIO`).
  */
-export function guardRemovals(
+function guardRemovals(
   missing: MensaMealRecord[],
   {
     apiDates,

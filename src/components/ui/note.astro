@@ -1,0 +1,17 @@
+---
+// Kurzer Hinweis in einer Zeile (z. B. „3 Gerichte ausgeblendet“)
+import type { HTMLAttributes } from "astro/types";
+import Icon from "@/components/icons/icon.astro";
+import { cn } from "@/lib/utils";
+
+type Props = HTMLAttributes<"p">;
+const { class: className, ...rest } = Astro.props;
+---
+
+<p
+  class={cn("flex items-center gap-2 rounded-2xl bg-sun-soft px-4 py-2.5 text-foreground/80 text-sm", className)}
+  {...rest}
+>
+  <Icon class="size-4 shrink-0 text-sun" name="info" />
+  <slot />
+</p>

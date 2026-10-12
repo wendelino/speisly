@@ -1,0 +1,16 @@
+---
+// Pill-Link (z. B. Mensa-Sprungmarken); aktiv-Stile per Klasse von außen
+import type { HTMLAttributes } from "astro/types";
+import { cn } from "@/lib/utils";
+
+type Props = HTMLAttributes<"a">;
+const { class: className, ...rest } = Astro.props;
+---
+
+<a
+  class={cn(
+    "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-card px-3.5 py-1.5 font-semibold text-foreground text-sm shadow-soft ring-1 ring-border/70 transition-[background-color,color,box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:ring-primary/30 active:scale-95",
+    className
+  )}
+  {...rest}
+><slot /></a>

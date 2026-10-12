@@ -1,0 +1,16 @@
+---
+// Kopf statischer Seiten: Icon-Blob (slot "icon"), Titel und Einleitung
+import IconBlob from "@/components/ui/icon-blob.astro";
+import type { Tone } from "@/components/ui/tones";
+
+type Props = { title: string; intro?: string; tone?: Tone };
+const { title, intro, tone = "primary" } = Astro.props;
+---
+
+<div class="mb-8 flex flex-col items-center text-center sm:mb-10">
+  <IconBlob class="mb-5 -rotate-6" size="md" tone={tone}>
+    <slot name="icon" />
+  </IconBlob>
+  <h1 class="hyphens-auto break-words font-bold text-3xl sm:text-4xl">{title}</h1>
+  {intro && <p class="mt-3 max-w-lg text-lg text-muted-foreground">{intro}</p>}
+</div>

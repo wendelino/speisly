@@ -1,7 +1,7 @@
-import { addDays, todayBerlin } from "./dates";
+import { addDays, todayBerlin } from "@/lib/dates";
 
 /** Seiten, die nach Sync, Mitternacht und Neustart vorgerendert werden */
-export function prewarmPaths(today: string = todayBerlin()): string[] {
+function prewarmPaths(today: string = todayBerlin()): string[] {
   return [
     "/",
     ...Array.from({ length: 8 }, (_, i) => `/day/${addDays(today, i)}`),

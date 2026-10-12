@@ -1,0 +1,470 @@
+---
+// Wischgeste zwischen Tagen (nur Handy): nach links wischen → nächster
+// Werktag, nach rechts → vorheriger. Beim Ziehen fährt vom Rand eine
+// Vorschau-Karte herein („Morgen · Mittwoch, 15. Oktober“), ab der Schwelle
+// färbt sie sich und Loslassen wechselt den Tag; bis der neue Tag da ist,
+// dreht sich ein Spinner in der Karte und Platzhalter-Karten erscheinen. Die Liste folgt dem Finger
+// gedämpft (`[data-swipe-surface]` in plan-layout.astro). Ziehen läuft direkt
+// über Styles, motion wird erst für die Ausroll-Animation nachgeladen.
+import { ArrowLeft, ArrowRight, LoaderCircle } from "@lucide/astro";
+import Skeleton from "@/components/ui/skeleton.astro";
+import { addDays, DAY_WINDOW, diffDays } from "@/lib/dates";
+import { formatDay, formatRelativeDay, isoDayToLocalDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  /** angezeigter Tag (`YYYY-MM-DD`) */
+  date: string;
+  /** heute in Berlin (`YYYY-MM-DD`) */
+  today: string;
+};
+
+const { date, today } = Astro.props;
+
+const isWeekend = (isoDay: string) =>
+  [0, 6].includes(isoDayToLocalDate(isoDay).getDay());
+
+/** nächster Werktag in Richtung `step`, null außerhalb von DAY_WINDOW */
+function neighbour(step: 1 | -1): string | null {
+  let day = addDays(date, step);
+  while (isWeekend(day)) {
+    day = addDays(day, step);
+  }
+  const offset = diffDays(today, day);
+  return offset < -DAY_WINDOW.past || offset > DAY_WINDOW.future ? null : day;
+}
+
+function preview(day: string | null) {
+  if (!day) {
+    return null;
+  }
+  const near = Math.abs(diffDays(today, day)) <= 2;
+  return {
+    href: day === today ? "/" : `/day/${day}`,
+    title: near ? formatRelativeDay(day, today) : formatDay(day, "EEEE"),
+    subtitle: formatDay(day, near ? "EEEE, d. MMMM" : "d. MMMM"),
+  };
+}
+
+const sides = [
+  { side: "prev", target: preview(neighbour(-1)) },
+  { side: "next", target: preview(neighbour(1)) },
+] as const;
+---
+
+{
+  sides.map(
+    ({ side, target }) =>
+      target && (
+        <div
+          aria-hidden="true"
+          class={cn(
+            "swipe-peek pointer-events-none fixed top-[42%] z-40 -translate-y-1/2 flex items-center gap-3 rounded-3xl bg-card py-3 text-foreground opacity-0 shadow-lift ring-1 ring-border/70 transition-[background-color,color,box-shadow] duration-200 md:hidden",
+            side === "prev" ? "left-0 origin-left flex-row rounded-l-none pr-5 pl-3" : "right-0 origin-right flex-row-reverse rounded-r-none pr-3 pl-5 text-right"
+          )}
+          data-href={target.href}
+          data-swipe-peek={side}
+        >
+          <span class="swipe-peek-icon grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-[background-color,color,scale] duration-200">
+            {side === "prev" ? <ArrowLeft class="swipe-peek-arrow size-5" /> : <ArrowRight class="swipe-peek-arrow size-5" />}
+            <LoaderCircle class="swipe-peek-spin size-5 animate-spin" />
+          </span>
+          <span class="flex flex-col leading-tight">
+            <span class="font-bold font-display text-lg">{target.title}</span>
+            <span class="swipe-peek-sub text-muted-foreground text-xs">{target.subtitle}</span>
+          </span>
+        </div>
+      )
+  )
+}
+
+<div
+  aria-hidden="true"
+  class="pointer-events-none absolute inset-x-0 top-0 bottom-0 hidden overflow-hidden [mask-image:linear-gradient(to_bottom,black_75%,transparent)] md:hidden"
+  data-swipe-skeleton
+>
+  <div class="container-page space-y-4 pt-2">
+    <div class="swipe-skel flex items-center gap-2.5 py-3" style="--i: 0">
+      <Skeleton class="size-3 rounded-full" />
+      <Skeleton class="h-6 w-40 rounded-lg" />
+    </div>
+    {
+      [1, 2, 3].map((i) => (
+        <div
+          class="swipe-skel grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 rounded-3xl bg-card p-2 shadow-soft ring-1 ring-border/60"
+          style={`--i: ${i}`}
+        >
+          <Skeleton class="aspect-4/3 rounded-2xl" />
+          <div class="flex flex-col gap-2 py-1 pr-1.5">
+            <Skeleton class="h-4 w-full rounded-md" />
+            <Skeleton class="h-4 w-2/3 rounded-md" />
+            <div class="flex justify-between pt-4">
+              <Skeleton class="h-6 w-14 rounded-full" />
+              <Skeleton class="h-6 w-16 rounded-full" />
+            </div>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+</div>
+
+<style is:global>
+  /* Ladezustand nach dem Wischen: Karten fahren gestaffelt aus der Wischrichtung herein */
+  [data-swipe-skeleton][data-from] {
+    display: block;
+  }
+  [data-swipe-skeleton][data-from="next"] {
+    --swipe-from: 40px;
+  }
+  [data-swipe-skeleton][data-from="prev"] {
+    --swipe-from: -40px;
+  }
+  [data-swipe-skeleton][data-from] .swipe-skel {
+    animation: swipe-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(var(--i) * 60ms);
+  }
+  .swipe-peek-spin,
+  .swipe-peek[data-loading] .swipe-peek-arrow {
+    display: none;
+  }
+  .swipe-peek[data-loading] .swipe-peek-spin {
+    display: block;
+  }
+
+  /* neuer Tag fährt aus der Wischrichtung herein (data-swipe-enter: plan-layout.astro) */
+  @keyframes swipe-enter {
+    from {
+      opacity: 0;
+      transform: translateX(var(--swipe-from)) scale(0.98);
+    }
+  }
+  html[data-swipe-enter] [data-swipe-surface] {
+    animation: swipe-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  html[data-swipe-enter="next"] [data-swipe-surface] {
+    --swipe-from: 56px;
+  }
+  html[data-swipe-enter="prev"] [data-swipe-surface] {
+    --swipe-from: -56px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html[data-swipe-enter] [data-swipe-surface],
+    [data-swipe-skeleton][data-from] {
+      --swipe-from: 0px;
+    }
+  }
+</style>
+
+<style>
+  .swipe-peek[data-armed] {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow-pop);
+  }
+  .swipe-peek[data-armed] .swipe-peek-icon {
+    background-color: var(--gold);
+    color: var(--foreground);
+    scale: 1.1;
+  }
+  .swipe-peek[data-armed] .swipe-peek-sub {
+    color: inherit;
+    opacity: 0.8;
+  }
+</style>
+
+<script>
+  import { prefetch } from "astro:prefetch";
+
+  const MOBILE = window.matchMedia("(max-width: 767px)");
+  const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)");
+  /** Abstand zum Bildschirmrand, in dem die System-Zurück-Geste Vorrang hat */
+  const EDGE = 24;
+  /** Bewegung, ab der die Richtung (horizontal/vertikal) feststeht */
+  const LOCK = 10;
+
+  const surface = document.querySelector<HTMLElement>("[data-swipe-surface]");
+  const skeleton = document.querySelector<HTMLElement>("[data-swipe-skeleton]");
+  const peeks = {
+    prev: document.querySelector<HTMLElement>('[data-swipe-peek="prev"]'),
+    next: document.querySelector<HTMLElement>('[data-swipe-peek="next"]'),
+  };
+
+  type Side = keyof typeof peeks;
+  type Gesture = {
+    x0: number;
+    y0: number;
+    lastX: number;
+    lastT: number;
+    velocity: number;
+    locked: boolean;
+  };
+
+  let gesture: Gesture | null = null;
+  /** aktueller Fingerweg in px; Quelle für alle Styles (paint) */
+  let dx = 0;
+  let armed = false;
+  let frame = 0;
+  let leaving = false;
+  let settling: { stop: () => void } | null = null;
+
+  const threshold = () => Math.min(110, window.innerWidth * 0.28);
+  const sideOf = (value: number): Side => (value < 0 ? "next" : "prev");
+  const loadMotion = () => import("motion");
+
+  /** Start in Eingaben, Dialogen oder horizontal scrollbaren Leisten ignorieren */
+  function blocked(target: EventTarget | null): boolean {
+    if (document.querySelector('[role="dialog"]')) {
+      return true;
+    }
+    for (let el = target as HTMLElement | null; el && el !== document.body; el = el.parentElement) {
+      if (el.matches("input, textarea, select, [data-no-swipe]")) {
+        return true;
+      }
+      const overflowX = getComputedStyle(el).overflowX;
+      if ((overflowX === "auto" || overflowX === "scroll") && el.scrollWidth > el.clientWidth) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Schreibt alle Styles aus `dx` (und beim Verlassen `exit` 0…1). Ziehen,
+   * Zurückfedern und Ausrollen laufen alle hierüber; motion animiert nur
+   * Zahlen. So bleibt nie ein halber Zustand stehen (WAAPI auf
+   * transform-Strings war in iOS Safari unzuverlässig).
+   */
+  function paint(exit = 0) {
+    const side = sideOf(dx);
+    const peek = peeks[side];
+    const other = peeks[side === "next" ? "prev" : "next"];
+    const progress = Math.min(Math.abs(dx) / threshold(), 1);
+
+    if (surface) {
+      if (dx === 0 && exit === 0) {
+        surface.removeAttribute("style");
+      } else if (REDUCED.matches) {
+        surface.style.opacity = String(1 - exit);
+      } else {
+        const damp = peek ? 0.35 : 0.12;
+        const out = Math.sign(dx) * exit * window.innerWidth * 0.4;
+        surface.style.transform = `translateX(${dx * damp + out}px) rotate(${dx * 0.004 + Math.sign(dx) * exit * 1.5}deg)`;
+        surface.style.opacity = String((1 - progress * 0.25) * (1 - exit));
+      }
+    }
+    if (other) {
+      other.removeAttribute("style");
+      other.removeAttribute("data-armed");
+    }
+    if (!peek) {
+      return;
+    }
+    if (dx === 0) {
+      peek.removeAttribute("style");
+    } else {
+      // fährt vom Rand herein und bleibt an ihm kleben
+      const offset = (1 - progress) * 100;
+      peek.style.opacity = String(Math.min(progress * 1.6, 1));
+      peek.style.transform = `translateX(${side === "next" ? offset : -offset}%) scale(${0.85 + progress * 0.15 + exit * 0.08})`;
+    }
+
+    const isArmed = progress >= 1;
+    if (isArmed !== armed) {
+      armed = isArmed;
+      peek.toggleAttribute("data-armed", armed);
+      if (armed && gesture) {
+        navigator.vibrate?.(8);
+      }
+    }
+  }
+
+  const schedule = () => {
+    frame ||= requestAnimationFrame(() => {
+      frame = 0;
+      paint();
+    });
+  };
+
+  async function settle(commit: Side | null) {
+    gesture = null;
+    cancelAnimationFrame(frame);
+    frame = 0;
+
+    if (commit) {
+      const peek = peeks[commit];
+      if (!peek) {
+        return;
+      }
+      // Ladezustand und Navigation sofort, nicht erst nach dem motion-Chunk
+      leaving = true;
+      peek.setAttribute("data-loading", "");
+      try {
+        // neue Seite fährt aus derselben Richtung herein (Inline-Script in plan-layout.astro)
+        sessionStorage.setItem("speisly-swipe", commit);
+      } catch {
+        // ohne Storage eben ohne Enter-Animation
+      }
+      location.assign(peek.dataset.href as string);
+      const { animate } = await loadMotion();
+      await animate(0, 1, {
+        duration: 0.22,
+        ease: "easeIn",
+        onUpdate: (exit) => paint(exit),
+      });
+      showSkeleton(commit);
+      return;
+    }
+
+    const { animate } = await loadMotion();
+    settling = animate(dx, 0, {
+      type: "spring",
+      stiffness: 420,
+      damping: 34,
+      restDelta: 0.5,
+      onUpdate: (value) => {
+        dx = value;
+        paint();
+      },
+      onComplete: () => {
+        dx = 0;
+        paint();
+        settling = null;
+      },
+    });
+  }
+
+  /** Platzhalter-Karten im sichtbaren Bereich, bis der neue Tag da ist */
+  function showSkeleton(from: Side) {
+    const container = skeleton?.parentElement;
+    if (!(skeleton && container)) {
+      return;
+    }
+    skeleton.style.top = `${Math.max(0, -container.getBoundingClientRect().top)}px`;
+    skeleton.dataset.from = from;
+  }
+
+  function reset() {
+    skeleton?.removeAttribute("data-from");
+    for (const peek of Object.values(peeks)) {
+      peek?.removeAttribute("data-loading");
+    }
+    leaving = false;
+    gesture = null;
+    settling?.stop();
+    settling = null;
+    dx = 0;
+    paint();
+  }
+
+  if (surface && (peeks.prev || peeks.next)) {
+    document.addEventListener(
+      "touchstart",
+      (event) => {
+        const touch = event.touches[0];
+        if (
+          leaving ||
+          !MOBILE.matches ||
+          event.touches.length > 1 ||
+          touch.clientX < EDGE ||
+          touch.clientX > window.innerWidth - EDGE ||
+          blocked(event.target)
+        ) {
+          gesture = null;
+          return;
+        }
+        // Finger greift eine noch zurückfedernde Liste: dort weitermachen
+        const resumed = settling !== null && dx !== 0;
+        settling?.stop();
+        settling = null;
+        gesture = {
+          x0: touch.clientX - (resumed ? dx : 0),
+          y0: touch.clientY,
+          lastX: touch.clientX,
+          lastT: event.timeStamp,
+          velocity: 0,
+          locked: resumed,
+        };
+        if (!resumed) {
+          dx = 0;
+        }
+      },
+      { passive: true }
+    );
+
+    document.addEventListener(
+      "touchmove",
+      (event) => {
+        if (!gesture) {
+          return;
+        }
+        const touch = event.touches[0];
+        const moveX = touch.clientX - gesture.x0;
+        const moveY = touch.clientY - gesture.y0;
+
+        if (!gesture.locked) {
+          if (Math.hypot(moveX, moveY) < LOCK) {
+            return;
+          }
+          // eher vertikal → normales Scrollen, Geste verwerfen
+          if (Math.abs(moveX) < Math.abs(moveY) * 1.2) {
+            gesture = null;
+            return;
+          }
+          gesture.locked = true;
+          loadMotion();
+          for (const peek of Object.values(peeks)) {
+            if (peek) {
+              prefetch(peek.dataset.href as string, { ignoreSlowConnection: true });
+            }
+          }
+        }
+
+        event.preventDefault();
+        const dt = Math.max(event.timeStamp - gesture.lastT, 1);
+        gesture.velocity = (touch.clientX - gesture.lastX) / dt;
+        gesture.lastX = touch.clientX;
+        gesture.lastT = event.timeStamp;
+        dx = touch.clientX - gesture.x0;
+        schedule();
+      },
+      { passive: false }
+    );
+
+    const end = () => {
+      if (!gesture?.locked) {
+        gesture = null;
+        return;
+      }
+      const { velocity } = gesture;
+      const side = sideOf(dx);
+      // Schwelle erreicht oder schneller Wisch in dieselbe Richtung
+      const flick = Math.abs(velocity) > 0.6 && Math.sign(velocity) === Math.sign(dx) && Math.abs(dx) > 40;
+      settle(peeks[side] && (armed || flick) ? side : null);
+    };
+    document.addEventListener("touchend", end);
+    document.addEventListener("touchcancel", () => {
+      if (gesture?.locked) {
+        settle(null);
+      }
+      gesture = null;
+    });
+    // Sicherheitsnetz: Seite verliert den Fokus mitten in der Geste
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && !leaving && dx !== 0) {
+        reset();
+      }
+    });
+
+    // motion schon im Leerlauf holen, damit Zurückfedern nie auf das Netz wartet
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1500));
+    idle(() => loadMotion(), { timeout: 4000 });
+
+    // Zurück aus dem bfcache: Liste und Karten wieder zurücksetzen
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        reset();
+      }
+    });
+  }
+</script>

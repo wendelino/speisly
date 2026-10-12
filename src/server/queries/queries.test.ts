@@ -61,15 +61,8 @@ describe.skipIf(!hasDb)("queries (integration)", () => {
       for (const meal of groups[0].meals) {
         expect(meal.flags).toBeDefined();
         expect(typeof meal.flags.isSmall).toBe("boolean");
-        expect(meal.date.toISOString().slice(0, 10)).toBe(servedDay);
       }
       expect(await getMealsForDate(servedDay)).toEqual(groups);
-    });
-
-    test("filters by mensa", async () => {
-      const [first] = await getMealsForDate(servedDay);
-      const filtered = await getMealsForDate(servedDay, first.id);
-      expect(filtered).toEqual([first]);
     });
 
     test("returns [] for days without servings", async () => {

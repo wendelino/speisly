@@ -8,16 +8,16 @@
 
 | Phase | Stand |
 |---|---|
-| 0. Baseline | ✅ erledigt – [`docs/perf-baseline.md`](perf-baseline.md) |
-| 1. Scaffold | ✅ erledigt – siehe „Umsetzungsnotizen Phase 1“ unten |
-| 2. Datenschicht | ✅ erledigt – siehe „Umsetzungsnotizen Phase 2“ unten |
-| 3. Statische Seiten | ✅ erledigt – siehe „Umsetzungsnotizen Phase 3“ unten |
-| 4. Speiseplan | ✅ erledigt – siehe „Umsetzungsnotizen Phase 4“ unten |
-| 5. Gericht-Detail | ✅ erledigt – siehe „Umsetzungsnotizen Phase 5“ unten |
-| 6. Caching | ✅ erledigt – siehe „Umsetzungsnotizen Phase 6“ unten |
-| 7. Bilder | ✅ erledigt – siehe „Umsetzungsnotizen Phase 7“ unten |
-| 8. Sync-Optimierung | ✅ erledigt – siehe „Umsetzungsnotizen Phase 8“ unten |
-| 9. Betrieb & Cutover | ✅ erledigt – siehe „Umsetzungsnotizen Phase 9“ und „Abschluss“ unten |
+| 0. Baseline | erledigt – [`docs/perf-baseline.md`](perf-baseline.md) |
+| 1. Scaffold | erledigt – siehe „Umsetzungsnotizen Phase 1“ unten |
+| 2. Datenschicht | erledigt – siehe „Umsetzungsnotizen Phase 2“ unten |
+| 3. Statische Seiten | erledigt – siehe „Umsetzungsnotizen Phase 3“ unten |
+| 4. Speiseplan | erledigt – siehe „Umsetzungsnotizen Phase 4“ unten |
+| 5. Gericht-Detail | erledigt – siehe „Umsetzungsnotizen Phase 5“ unten |
+| 6. Caching | erledigt – siehe „Umsetzungsnotizen Phase 6“ unten |
+| 7. Bilder | erledigt – siehe „Umsetzungsnotizen Phase 7“ unten |
+| 8. Sync-Optimierung | erledigt – siehe „Umsetzungsnotizen Phase 8“ unten |
+| 9. Betrieb & Cutover | erledigt – siehe „Umsetzungsnotizen Phase 9“ und „Abschluss“ unten |
 
 Verifizierte Zielversionen (npm, Stand 06.10.2026):
 
@@ -395,12 +395,12 @@ Abweichungen und Entscheidungen gegenüber dem ursprünglichen Plan:
 
 | Kriterium | Ergebnis |
 |---|---|
-| `astro build` | ✅ 1,8 s (Next: 17 s) |
-| `astro check` | ✅ 0 Fehler |
-| Biome (neue Dateien) | ✅ sauber |
-| Layout/Footer/Hero pixelgleich | ✅ gleiche Abmessungen (Mobil + Desktop), Abweichungen nur durch 1-px-Rundung und Glyph-Antialiasing. Der Filter-Button (fixed) fehlt bewusst, er kommt in Phase 4. |
+| `astro build` | 1,8 s (Next: 17 s) |
+| `astro check` | 0 Fehler |
+| Biome (neue Dateien) | sauber |
+| Layout/Footer/Hero pixelgleich | gleiche Abmessungen (Mobil + Desktop), Abweichungen nur durch 1-px-Rundung und Glyph-Antialiasing. Der Filter-Button (fixed) fehlt bewusst, er kommt in Phase 4. |
 | Client-JS auf `/` | 0 Bytes (nur das Umami-Script in Produktion) |
-| Bun-Runtime | ✅ identische Antworten wie Node; Lasttest (autocannon, 10 Verbindungen): `/api/health` 4 737 vs. 2 787 req/s, statische Seite 11 676 vs. 5 975 req/s, 0 Fehler |
+| Bun-Runtime | identische Antworten wie Node; Lasttest (autocannon, 10 Verbindungen): `/api/health` 4 737 vs. 2 787 req/s, statische Seite 11 676 vs. 5 975 req/s, 0 Fehler |
 
 ---
 

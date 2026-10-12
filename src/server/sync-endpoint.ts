@@ -1,13 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
 import type { APIContext } from "astro";
+import { addDays, todayBerlin } from "@/lib/dates";
 import { invalidateTags } from "./cache";
 import { tagsForSync } from "./cache-policy";
 import { TAG } from "./cache-tags";
-import { addDays, todayBerlin } from "./dates";
 import { logError } from "./log";
 import type { SyncResult } from "./sync";
 
-export const SYNC_SCOPES = ["today", "week", "midnight", "warm"] as const;
+const SYNC_SCOPES = ["today", "week", "midnight", "warm"] as const;
 type Scope = (typeof SYNC_SCOPES)[number];
 
 type Deps = {

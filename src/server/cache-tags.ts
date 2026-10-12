@@ -1,5 +1,5 @@
 /**
- * Cache-Tags für den Route Cache (Phase 6, siehe docs/astro-migration-plan.md §2.3).
+ * Cache-Tags für den Route Cache (siehe docs/astro-migration-plan.md §2.3).
  * Zentral definiert, damit Seiten, Islands und Invalidierung dieselben Namen nutzen.
  */
 export const TAG = {

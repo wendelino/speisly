@@ -1,5 +1,5 @@
+import { diffDays, secondsUntilBerlinMidnight } from "@/lib/dates";
 import { TAG } from "./cache-tags";
-import { diffDays, secondsUntilBerlinMidnight } from "./dates";
 
 /** Optionen für `Astro.cache.set()` */
 export type CachePolicy = { maxAge: number; swr?: number; tags: string[] };

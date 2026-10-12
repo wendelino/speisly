@@ -1,0 +1,15 @@
+---
+// Kennzahl-Kachel: großer Wert, kleines Label darunter
+import { cn } from "@/lib/utils";
+import { TONES, type Tone } from "./tones";
+
+type Props = { label: string; value: string; tone?: Tone; class?: string };
+const { label, value, tone = "primary", class: className } = Astro.props;
+---
+
+<div class={cn("rounded-2xl px-3 py-3 text-center", TONES[tone].soft, className)}>
+  <p class={cn("font-bold font-display text-lg tabular-nums leading-tight sm:text-2xl", TONES[tone].text)}>
+    {value}
+  </p>
+  <p class="mt-0.5 text-muted-foreground text-xs">{label}</p>
+</div>

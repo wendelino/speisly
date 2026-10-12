@@ -1,0 +1,87 @@
+---
+// Sprungmarken zu den Mensen des Tages. Vom Mensa-Filter ausgeblendete
+// Mensen verschwinden auch hier (data-mensa-jump, lib/filters/boot.ts). Die
+// gerade sichtbare Mensa wird markiert (in der Desktop-Toolbar sticky).
+import Chip from "@/components/ui/chip.astro";
+import { TONES, toneAt } from "@/components/ui/tones";
+import { cn } from "@/lib/utils";
+
+type Props = { mensen: Mensa[] };
+const { mensen } = Astro.props;
+---
+
+{
+  mensen.length > 1 && (
+    <nav aria-label="Zu Mensa springen" data-mensa-nav>
+      <ul class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-1 sm:-mx-6 sm:px-6">
+        {mensen.map((mensa, index) => (
+          <li data-mensa-id={mensa.id} data-mensa-jump>
+            <Chip
+              class="data-active:bg-primary data-active:text-primary-foreground data-active:ring-primary"
+              data-mensa-chip={mensa.id}
+              href={`#mensa-${mensa.slug}`}
+            >
+              <span class={cn("size-2 rounded-full in-data-active:bg-primary-foreground", TONES[toneAt(index)].solid)} />
+              {mensa.name}
+            </Chip>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<script>
+  // Scrollspy: markiert die oberste sichtbare Mensa und scrollt ihre Marke in
+  // der Leiste in Sicht (nur horizontal, die Seite bleibt, wo sie ist)
+  const list = document.querySelector<HTMLElement>("[data-mensa-nav] ul");
+  const sections = [
+    ...document.querySelectorAll<HTMLElement>("[data-mensa-group]"),
+  ];
+
+  if (list && sections.length > 1 && "IntersectionObserver" in window) {
+    const visible = new Set<HTMLElement>();
+    let current: HTMLElement | null = null;
+
+    const activate = () => {
+      const top = sections.find((section) => visible.has(section)) ?? null;
+      // zwischen zwei Mensen (oder ganz oben) bleibt die letzte markiert
+      if (!top || top === current) {
+        return;
+      }
+      current = top;
+      for (const chip of list.querySelectorAll<HTMLElement>("[data-mensa-chip]")) {
+        const active = chip.dataset.mensaChip === top?.dataset.mensaId;
+        chip.toggleAttribute("data-active", active);
+        if (active) {
+          chip.setAttribute("aria-current", "location");
+          const left = chip.offsetLeft - list.offsetLeft;
+          if (left < list.scrollLeft || left + chip.offsetWidth > list.scrollLeft + list.clientWidth) {
+            list.scrollTo({ left: left - 16, behavior: "smooth" });
+          }
+        } else {
+          chip.removeAttribute("aria-current");
+        }
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const section = entry.target as HTMLElement;
+          if (entry.isIntersecting) {
+            visible.add(section);
+          } else {
+            visible.delete(section);
+          }
+        }
+        activate();
+      },
+      // schmales Band unterhalb der Toolbar: die Mensa, die es gerade kreuzt
+      { rootMargin: "-150px 0px -75% 0px" }
+    );
+    for (const section of sections) {
+      observer.observe(section);
+    }
+  }
+</script>

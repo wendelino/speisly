@@ -1,0 +1,86 @@
+/* Typografie für lange Texte (ui/prose.astro, z. B. Datenschutz) */
+@layer components {
+  .prose-speisly {
+    @apply text-[0.95rem] text-foreground/90 leading-relaxed sm:text-base;
+  }
+  .prose-speisly :where(section + section) {
+    @apply mt-6 border-border/70 border-t pt-6;
+  }
+  .prose-speisly :where(h2) {
+    @apply mb-3 font-bold font-display text-xl sm:text-2xl;
+  }
+  .prose-speisly :where(h3) {
+    @apply mt-6 mb-2 font-display font-semibold text-lg;
+  }
+  .prose-speisly :where(h4) {
+    @apply mt-4 mb-1.5 font-semibold text-base;
+  }
+  .prose-speisly :where(p) {
+    @apply my-3;
+  }
+  .prose-speisly :where(ul) {
+    @apply my-3 space-y-1.5 text-sm;
+  }
+  .prose-speisly :where(li) {
+    @apply relative pl-5;
+  }
+  .prose-speisly :where(li)::before {
+    @apply absolute top-[0.6em] left-1 size-1.5 rounded-full bg-primary/60 content-[""];
+  }
+  .prose-speisly :where(a) {
+    @apply font-semibold text-primary underline-offset-4 hover:underline;
+  }
+  .prose-speisly :where(strong) {
+    @apply font-semibold text-foreground;
+  }
+  .prose-speisly :where(.muted) {
+    @apply text-muted-foreground text-sm;
+  }
+}
+
+/*
+ * Zustände, die Attribute umschalten – ohne JS-Rendering und ohne Flackern.
+ * Bewusst ohne Layer: Sie stechen die display-Utilities der Elemente aus.
+ */
+
+/* Ernährungsfilter (meal-list.astro, lib/filters/boot.ts setzt html[data-diet]) */
+html[data-diet="veggie"] [data-meal]:not([data-veggie]),
+html[data-diet="vegan"] [data-meal]:not([data-vegan]),
+html[data-diet="veggie"] [data-hide-diet~="veggie"],
+html[data-diet="vegan"] [data-hide-diet~="vegan"] {
+  display: none !important;
+}
+[data-only-diet],
+[data-filter-empty] {
+  display: none;
+}
+/* revert-layer: zurück auf die Utility-Klassen des Elements (z. B. flex) */
+html[data-diet="veggie"] [data-only-diet="veggie"],
+html[data-diet="vegan"] [data-only-diet="vegan"] {
+  display: revert-layer;
+}
+
+/* Filter-Chips und Punkt am Filter-Button (filter-fab.astro) */
+[data-chip] {
+  display: none;
+}
+html[data-filter-vegan] [data-chip="vegan"],
+html[data-filter-veggie] [data-chip="veggie"] {
+  display: inline-flex;
+}
+html[data-filter-active] [data-filter-dot] {
+  display: block;
+}
+
+/* Bewerten-Button (rating-button.astro): eine Beschriftung je Zustand. Die
+   Spans sind layout-neutral, Icon und Text stehen direkt im Button. */
+[data-rate-label] {
+  display: contents;
+}
+[data-rate-button="new"] [data-rate-label]:not([data-rate-label="new"]),
+[data-rate-button="existing"]
+  [data-rate-label]:not([data-rate-label="existing"]),
+[data-rate-button="loading"]
+  [data-rate-label]:not([data-rate-label="loading"]) {
+  display: none;
+}

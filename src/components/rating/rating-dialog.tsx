@@ -3,21 +3,22 @@ import { format } from "date-fns";
 import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ConsentProvider } from "@/components/consent/consent-provider";
+import { StarRating } from "@/components/rating/star-rating";
 import { Button } from "@/components/ui/button";
+import { confirm } from "@/components/ui/confirm";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ConsentProvider } from "@/lib/cookie/consent-provider";
-import { confirm } from "@/lnio/components/alert";
-import LoadingButton from "@/lnio/components/loading-button";
-import { StarRating } from "@/lnio/components/star-rating";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { labelClass } from "@/components/ui/variants";
 import { $ratingDialogOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
 
@@ -39,9 +40,9 @@ export type RatingDialogProps = {
 };
 
 /**
- * Bewertungs-Dialog (Inhalt unverändert aus meal-rating.tsx). Der Trigger ist
- * der statische Button aus rating-button.astro; die eigene Bewertung kommt von
- * dort (wurde bereits geladen, falls Consent erteilt ist).
+ * Bewertungs-Dialog. Der Trigger ist der statische Button aus
+ * rating-button.astro; die eigene Bewertung kommt von dort (wurde bereits
+ * geladen, falls Consent erteilt ist).
  */
 export function RatingDialog({
   mealId,
@@ -49,7 +50,7 @@ export function RatingDialog({
   existing,
   onChange,
 }: RatingDialogProps) {
-  const open = useAtom($ratingDialogOpen, false);
+  const open = useAtom($ratingDialogOpen);
   const [submitting, setSubmitting] = useState(false);
   const [value, setValue] = useState<number>(existing?.value ?? 0);
   const [valuePrice, setValuePrice] = useState<number | undefined>(
@@ -153,49 +154,44 @@ export function RatingDialog({
   };
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogContent
-        onCloseAutoFocus={(event) => {
-          // kein Radix-Trigger vorhanden: Fokus zurück auf den Bewerten-Button
-          event.preventDefault();
-          document.querySelector<HTMLElement>("[data-rate-button]")?.focus();
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle>Gericht bewerten</DialogTitle>
-          <DialogDescription>
-            Teile deine Meinung zu diesem Gericht mit uns.
-          </DialogDescription>
-        </DialogHeader>
+    <Drawer onOpenChange={setOpen} open={open}>
+      <DrawerContent returnFocus="[data-rate-button]">
+        <DrawerHeader>
+          <DrawerTitle>Gericht bewerten</DrawerTitle>
+          <DrawerDescription>
+            Wie hat’s dir geschmeckt? Deine Sterne helfen allen beim Aussuchen.
+          </DrawerDescription>
+        </DrawerHeader>
 
-        <ConsentProvider disableStyling>
-          <div className="flex w-full flex-col items-center gap-2 space-y-6 py-4 sm:items-start">
+        <ConsentProvider>
+          <DrawerBody className="space-y-4">
             <StarRating
+              featured
               label="Gesamtbewertung *"
               onChange={setValue}
               value={value}
             />
-
-            <StarRating
-              label="Preis-Leistung"
-              onChange={setValuePrice}
-              value={valuePrice}
-            />
-
-            <StarRating
-              label="Menge"
-              onChange={setValueQuantity}
-              value={valueQuantity}
-            />
-
-            <StarRating
-              label="Geschmack"
-              onChange={setValueTaste}
-              value={valueTaste}
-            />
-
-            <div className="w-full space-y-2">
-              <Label htmlFor="comment">Kommentar (optional)</Label>
+            <div className="space-y-3">
+              <StarRating
+                label="Preis-Leistung"
+                onChange={setValuePrice}
+                value={valuePrice}
+              />
+              <StarRating
+                label="Menge"
+                onChange={setValueQuantity}
+                value={valueQuantity}
+              />
+              <StarRating
+                label="Geschmack"
+                onChange={setValueTaste}
+                value={valueTaste}
+              />
+            </div>
+            <div className="space-y-2 pt-1">
+              <label className={labelClass} htmlFor="comment">
+                Kommentar (optional)
+              </label>
               <Input
                 id="comment"
                 maxLength={500}
@@ -204,27 +200,27 @@ export function RatingDialog({
                 value={comment}
               />
             </div>
-          </div>
+          </DrawerBody>
 
-          <DialogFooter className="flex-col">
+          <DrawerFooter className="gap-3">
             {hasExistingRating ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 rounded-2xl bg-muted/60 py-1.5 pr-1.5 pl-4">
+                <p className="text-muted-foreground text-sm">
+                  Deine Bewertung vom {format(hasExistingRating, "dd.MM.yyyy")}
+                </p>
                 <Button
-                  className="gap-2"
+                  aria-label="Bewertung löschen"
                   disabled={deleting || submitting}
                   onClick={handleDelete}
                   size="icon-sm"
                   variant="destructive"
                 >
                   {deleting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="size-4" />
                   )}
                 </Button>
-                <p className="text-muted-foreground text-sm">
-                  Bewertung vom {format(hasExistingRating, "dd.MM.yyyy")}
-                </p>
               </div>
             ) : null}
             <div className="flex w-full gap-2">
@@ -237,7 +233,7 @@ export function RatingDialog({
               </Button>
               <LoadingButton
                 className="flex-1"
-                disabled={submitting || value === 0 || deleting}
+                disabled={value === 0 || deleting}
                 loading={submitting}
                 loadingText="Wird gespeichert..."
                 onClick={handleSubmit}
@@ -245,9 +241,9 @@ export function RatingDialog({
                 Bewertung speichern
               </LoadingButton>
             </div>
-          </DialogFooter>
+          </DrawerFooter>
         </ConsentProvider>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

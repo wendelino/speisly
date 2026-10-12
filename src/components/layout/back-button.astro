@@ -1,32 +1,19 @@
 ---
-// Astro-Port von back-button.tsx: Link mit History-Back per Mini-Script
+// Zurück-Link: geht in der History zurück, wenn es eine gibt, sonst zur
+// Startseite
 import { ArrowLeft } from "@lucide/astro";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import Button from "@/components/ui/button.astro";
 
-type Props = {
-  href?: string;
-  label?: string;
-  class?: string;
-};
-
-const { href = "/", label = "Zurück", class: className } = Astro.props;
+type Props = { class?: string };
+const { class: className } = Astro.props;
 ---
 
-<a
-  class={cn(
-    buttonVariants({ variant: "ghost", className: cn("text-primary", className) })
-  )}
-  data-back-button
-  data-slot="button"
-  href={href}
->
-  <ArrowLeft class="h-4 w-4" />
-  {label}
-</a>
+<Button class={className} data-back-button href="/" size="sm" variant="outline">
+  <ArrowLeft class="size-4" />
+  Zurück
+</Button>
 
 <script>
-  // Wie vorher router.back(): zurück, wenn es eine History gibt, sonst href
   for (const link of document.querySelectorAll<HTMLAnchorElement>(
     "[data-back-button]"
   )) {

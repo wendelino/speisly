@@ -1,0 +1,16 @@
+---
+// Fläche für Inhaltsblöcke
+import type { HTMLAttributes } from "astro/types";
+import { cn } from "@/lib/utils";
+
+type Props = HTMLAttributes<"div"> & { padding?: "md" | "lg" };
+const { padding = "md", class: className, ...rest } = Astro.props;
+const PADDING = { md: "p-5 sm:p-6", lg: "p-6 sm:p-8" };
+---
+
+<div
+  class={cn("rounded-3xl bg-card shadow-soft ring-1 ring-border/70", PADDING[padding], className)}
+  {...rest}
+>
+  <slot />
+</div>
