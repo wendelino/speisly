@@ -75,6 +75,30 @@ const sides = [
   )
 }
 
+<style is:global>
+  /* neuer Tag fährt aus der Wischrichtung herein (data-swipe-enter: plan-layout.astro) */
+  @keyframes swipe-enter {
+    from {
+      opacity: 0;
+      transform: translateX(var(--swipe-from)) scale(0.98);
+    }
+  }
+  html[data-swipe-enter] [data-swipe-surface] {
+    animation: swipe-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  html[data-swipe-enter="next"] [data-swipe-surface] {
+    --swipe-from: 56px;
+  }
+  html[data-swipe-enter="prev"] [data-swipe-surface] {
+    --swipe-from: -56px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html[data-swipe-enter] [data-swipe-surface] {
+      --swipe-from: 0px;
+    }
+  }
+</style>
+
 <style>
   .swipe-peek[data-armed] {
     background-color: var(--primary);
@@ -112,21 +136,22 @@ const sides = [
   type Gesture = {
     x0: number;
     y0: number;
-    t0: number;
-    dx: number;
     lastX: number;
     lastT: number;
     velocity: number;
     locked: boolean;
-    armed: boolean;
   };
 
   let gesture: Gesture | null = null;
+  /** aktueller Fingerweg in px; Quelle für alle Styles (paint) */
+  let dx = 0;
+  let armed = false;
   let frame = 0;
   let leaving = false;
+  let settling: { stop: () => void } | null = null;
 
   const threshold = () => Math.min(110, window.innerWidth * 0.28);
-  const sideOf = (dx: number): Side => (dx < 0 ? "next" : "prev");
+  const sideOf = (value: number): Side => (value < 0 ? "next" : "prev");
   const loadMotion = () => import("motion");
 
   /** Start in Eingaben, Dialogen oder horizontal scrollbaren Leisten ignorieren */
@@ -146,108 +171,114 @@ const sides = [
     return false;
   }
 
-  /** Gedämpfter Weg der Liste; ohne Ziel in der Richtung zieht sie zäh wie Gummi */
-  function render() {
-    frame = 0;
-    if (!gesture) {
-      return;
-    }
-    const { dx } = gesture;
+  /**
+   * Schreibt alle Styles aus `dx` (und beim Verlassen `exit` 0…1). Ziehen,
+   * Zurückfedern und Ausrollen laufen alle hierüber; motion animiert nur
+   * Zahlen. So bleibt nie ein halber Zustand stehen (WAAPI auf
+   * transform-Strings war in iOS Safari unzuverlässig).
+   */
+  function paint(exit = 0) {
     const side = sideOf(dx);
     const peek = peeks[side];
     const other = peeks[side === "next" ? "prev" : "next"];
     const progress = Math.min(Math.abs(dx) / threshold(), 1);
 
-    if (surface && !REDUCED.matches) {
-      const damp = peek ? 0.35 : 0.12;
-      surface.style.transform = `translateX(${dx * damp}px) rotate(${dx * 0.004}deg)`;
-      surface.style.opacity = String(1 - progress * 0.25);
+    if (surface) {
+      if (dx === 0 && exit === 0) {
+        surface.removeAttribute("style");
+      } else if (REDUCED.matches) {
+        surface.style.opacity = String(1 - exit);
+      } else {
+        const damp = peek ? 0.35 : 0.12;
+        const out = Math.sign(dx) * exit * window.innerWidth * 0.4;
+        surface.style.transform = `translateX(${dx * damp + out}px) rotate(${dx * 0.004 + Math.sign(dx) * exit * 1.5}deg)`;
+        surface.style.opacity = String((1 - progress * 0.25) * (1 - exit));
+      }
     }
     if (other) {
-      other.style.opacity = "0";
+      other.removeAttribute("style");
+      other.removeAttribute("data-armed");
     }
     if (!peek) {
       return;
     }
-    // fährt vom Rand herein und bleibt an ihm kleben
-    const offset = (1 - progress) * 100;
-    peek.style.opacity = String(Math.min(progress * 1.6, 1));
-    peek.style.transform = `translateX(${side === "next" ? offset : -offset}%) scale(${0.85 + progress * 0.15})`;
+    if (dx === 0) {
+      peek.removeAttribute("style");
+    } else {
+      // fährt vom Rand herein und bleibt an ihm kleben
+      const offset = (1 - progress) * 100;
+      peek.style.opacity = String(Math.min(progress * 1.6, 1));
+      peek.style.transform = `translateX(${side === "next" ? offset : -offset}%) scale(${0.85 + progress * 0.15 + exit * 0.08})`;
+    }
 
-    const armed = progress >= 1;
-    if (armed !== gesture.armed) {
-      gesture.armed = armed;
+    const isArmed = progress >= 1;
+    if (isArmed !== armed) {
+      armed = isArmed;
       peek.toggleAttribute("data-armed", armed);
-      if (armed) {
+      if (armed && gesture) {
         navigator.vibrate?.(8);
       }
     }
   }
 
   const schedule = () => {
-    frame ||= requestAnimationFrame(render);
+    frame ||= requestAnimationFrame(() => {
+      frame = 0;
+      paint();
+    });
   };
 
   async function settle(commit: Side | null) {
-    const active = gesture;
     gesture = null;
     cancelAnimationFrame(frame);
     frame = 0;
     const { animate } = await loadMotion();
-    const spring = { type: "spring", stiffness: 420, damping: 36 } as const;
 
-    if (commit && active) {
+    if (commit) {
       const peek = peeks[commit];
       if (!peek) {
         return;
       }
       leaving = true;
-      const dir = commit === "next" ? -1 : 1;
-      if (surface && !REDUCED.matches) {
-        animate(
-          surface,
-          { transform: `translateX(${dir * window.innerWidth * 0.45}px) rotate(${dir * 1.5}deg)`, opacity: 0 },
-          { duration: 0.22, ease: "easeIn" }
-        );
+      try {
+        // neue Seite fährt aus derselben Richtung herein (Inline-Script in plan-layout.astro)
+        sessionStorage.setItem("speisly-swipe", commit);
+      } catch {
+        // ohne Storage eben ohne Enter-Animation
       }
-      // Karte wächst kurz, dann Navigation
-      await animate(
-        peek,
-        { transform: "translateX(0%) scale(1.08)", opacity: 1 },
-        { duration: 0.16, ease: "easeOut" }
-      );
+      await animate(0, 1, {
+        duration: 0.22,
+        ease: "easeIn",
+        onUpdate: (exit) => paint(exit),
+      });
       location.assign(peek.dataset.href as string);
       return;
     }
 
-    for (const [side, peek] of Object.entries(peeks) as [Side, HTMLElement | null][]) {
-      if (!peek) {
-        continue;
-      }
-      peek.removeAttribute("data-armed");
-      animate(
-        peek,
-        { transform: `translateX(${side === "next" ? 100 : -100}%) scale(0.85)`, opacity: 0 },
-        { duration: 0.2, ease: "easeOut" }
-      );
-    }
-    if (surface) {
-      animate(surface, { transform: "translateX(0px) rotate(0deg)", opacity: 1 }, spring).finished.then(() => {
-        if (!gesture) {
-          surface.removeAttribute("style");
-        }
-      });
-    }
+    settling = animate(dx, 0, {
+      type: "spring",
+      stiffness: 420,
+      damping: 34,
+      restDelta: 0.5,
+      onUpdate: (value) => {
+        dx = value;
+        paint();
+      },
+      onComplete: () => {
+        dx = 0;
+        paint();
+        settling = null;
+      },
+    });
   }
 
   function reset() {
     leaving = false;
     gesture = null;
-    surface?.removeAttribute("style");
-    for (const peek of Object.values(peeks)) {
-      peek?.removeAttribute("style");
-      peek?.removeAttribute("data-armed");
-    }
+    settling?.stop();
+    settling = null;
+    dx = 0;
+    paint();
   }
 
   if (surface && (peeks.prev || peeks.next)) {
@@ -266,18 +297,21 @@ const sides = [
           gesture = null;
           return;
         }
-        const now = event.timeStamp;
+        // Finger greift eine noch zurückfedernde Liste: dort weitermachen
+        const resumed = settling !== null && dx !== 0;
+        settling?.stop();
+        settling = null;
         gesture = {
-          x0: touch.clientX,
+          x0: touch.clientX - (resumed ? dx : 0),
           y0: touch.clientY,
-          t0: now,
-          dx: 0,
           lastX: touch.clientX,
-          lastT: now,
+          lastT: event.timeStamp,
           velocity: 0,
-          locked: false,
-          armed: false,
+          locked: resumed,
         };
+        if (!resumed) {
+          dx = 0;
+        }
       },
       { passive: true }
     );
@@ -289,15 +323,15 @@ const sides = [
           return;
         }
         const touch = event.touches[0];
-        const dx = touch.clientX - gesture.x0;
-        const dy = touch.clientY - gesture.y0;
+        const moveX = touch.clientX - gesture.x0;
+        const moveY = touch.clientY - gesture.y0;
 
         if (!gesture.locked) {
-          if (Math.hypot(dx, dy) < LOCK) {
+          if (Math.hypot(moveX, moveY) < LOCK) {
             return;
           }
           // eher vertikal → normales Scrollen, Geste verwerfen
-          if (Math.abs(dx) < Math.abs(dy) * 1.2) {
+          if (Math.abs(moveX) < Math.abs(moveY) * 1.2) {
             gesture = null;
             return;
           }
@@ -315,7 +349,7 @@ const sides = [
         gesture.velocity = (touch.clientX - gesture.lastX) / dt;
         gesture.lastX = touch.clientX;
         gesture.lastT = event.timeStamp;
-        gesture.dx = touch.clientX - gesture.x0;
+        dx = touch.clientX - gesture.x0;
         schedule();
       },
       { passive: false }
@@ -326,7 +360,7 @@ const sides = [
         gesture = null;
         return;
       }
-      const { dx, velocity, armed } = gesture;
+      const { velocity } = gesture;
       const side = sideOf(dx);
       // Schwelle erreicht oder schneller Wisch in dieselbe Richtung
       const flick = Math.abs(velocity) > 0.6 && Math.sign(velocity) === Math.sign(dx) && Math.abs(dx) > 40;
@@ -338,6 +372,12 @@ const sides = [
         settle(null);
       }
       gesture = null;
+    });
+    // Sicherheitsnetz: Seite verliert den Fokus mitten in der Geste
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && !leaving && dx !== 0) {
+        reset();
+      }
     });
 
     // Zurück aus dem bfcache: Liste und Karten wieder zurücksetzen

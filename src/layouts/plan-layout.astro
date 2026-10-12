@@ -22,10 +22,14 @@ type Props = {
 const { date, today, groups, mensen } = Astro.props;
 const dayLabel = formatLongDay(date);
 const filterScript = `(${filterBoot.toString()})();`;
+// nach einem Wisch (day-swipe.astro) vor dem ersten Paint die Richtung der
+// Enter-Animation setzen
+const swipeEnterScript = `try{var d=sessionStorage.getItem("speisly-swipe");if(d){sessionStorage.removeItem("speisly-swipe");document.documentElement.dataset.swipeEnter=d}}catch(e){}`;
 ---
 
 <BaseLayout mealAssets title={date === today ? undefined : `Speiseplan ${dayLabel}`}>
   <script is:inline set:html={filterScript} slot="head" />
+  <script is:inline set:html={swipeEnterScript} slot="head" />
   <main class="overflow-x-clip">
     <h1 class="sr-only">{`Speiseplan für ${dayLabel}`}</h1>
     <PlanToolbar date={date} mensen={groups} today={today} />
