@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 /**
  * Rendert eine React-Komponente erst bei Bedarf in einen eigenen Root am Ende
  * von <body>. So laden Seiten mit Filter/Kalender zunächst kein React; der
- * Chunk wird bei Hover/Touch/Fokus vorgeladen und beim Klick gerendert.
+ * Chunk wird im Leerlauf oder bei Hover/Touch/Fokus vorgeladen.
  */
 const roots = new Map<string, Root>();
 

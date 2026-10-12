@@ -74,7 +74,8 @@ const CHIP =
     loadOnIntent(
       fab,
       () => import("./filter-dialog.mount"),
-      ({ openFilterDialog }) => openFilterDialog(mensen)
+      ({ openFilterDialog }) => openFilterDialog(mensen),
+      { idle: true, warm: ({ mountFilterDialog }) => mountFilterDialog(mensen) }
     );
   }
 

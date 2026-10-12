@@ -98,7 +98,11 @@ const pillState = (active: boolean) =>
     loadOnIntent(
       trigger,
       () => import("./calendar-dialog.mount"),
-      ({ openCalendar }) => openCalendar(nav.dataset.selected as string)
+      ({ openCalendar }) => openCalendar(nav.dataset.selected as string),
+      {
+        idle: true,
+        warm: ({ mountCalendar }) => mountCalendar(nav.dataset.selected as string),
+      }
     );
   }
 </script>
