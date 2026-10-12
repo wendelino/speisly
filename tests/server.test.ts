@@ -57,11 +57,19 @@ describe("compression middleware", () => {
   });
   afterAll(() => server.close());
 
-  async function get(path: string, encoding?: string) {
+  async function get(
+    path: string,
+    encoding?: string,
+    headers: Record<string, string> = {}
+  ) {
     const res = await new Promise<http.IncomingMessage>((resolve) =>
       http.get(
         `${base}${path}`,
-        { headers: encoding ? { "accept-encoding": encoding } : {} },
+        {
+          headers: encoding
+            ? { "accept-encoding": encoding, ...headers }
+            : headers,
+        },
         resolve
       )
     );
@@ -90,6 +98,25 @@ describe("compression middleware", () => {
     await get("/html", "br");
     await get("/html", "br");
     expect(compression.stats.lruHits).toBe(before + 2);
+  });
+
+  test("ETag from the content, 304 on If-None-Match", async () => {
+    const first = await get("/html", "br");
+    const etag = first.res.headers.etag as string;
+    expect(etag.startsWith('W/"')).toBe(true);
+    expect((await get("/html", "gzip")).res.headers.etag).toBe(etag);
+
+    const again = await get("/html", "br", { "if-none-match": etag });
+    expect(again.res.statusCode).toBe(304);
+    expect(again.raw.length).toBe(0);
+    expect(again.res.headers.etag).toBe(etag);
+
+    const changed = await get("/html", "br", { "if-none-match": 'W/"x"' });
+    expect(changed.res.statusCode).toBe(200);
+
+    const error = await get("/error", "br", { "if-none-match": "*" });
+    expect(error.res.statusCode).toBe(500);
+    expect(error.res.headers.etag).toBeUndefined();
   });
 
   test("no compression without Accept-Encoding, for small bodies, images, redirects, errors", async () => {

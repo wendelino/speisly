@@ -10,11 +10,16 @@ import zlib from "node:zlib";
  * komprimierte Fassung wird deshalb über einen Hash des Inhalts in einem
  * kleinen LRU gehalten: Ein Cache-HIT kostet so nur den Hash (~0,3 ms)
  * statt einer neuen Komprimierung (~1,5–2,5 ms für 300 KB HTML).
+ *
+ * Derselbe Hash dient als ETag für Antworten ohne eigenen (SSR-Seiten,
+ * Server Islands): Der Browser fragt HTML immer neu an (`max-age=0`, siehe
+ * src/middleware.ts), bekommt bei unverändertem Inhalt aber nur ein 304.
  */
 
 const COMPRESSIBLE =
   /^(text\/|application\/(json|javascript|manifest\+json|xml)|image\/svg\+xml)/i;
 const VARY_ACCEPT_ENCODING = /accept-encoding/i;
+const WEAK_ETAG_PREFIX = /^W\//;
 const MIN_BYTES = 1024;
 /** Größere Antworten werden komprimiert, aber nicht im LRU gehalten */
 const MAX_CACHEABLE_BYTES = 2 * 1024 * 1024;
@@ -60,6 +65,22 @@ export function negotiateEncoding(header) {
 }
 
 /**
+ * `If-None-Match` gegen einen ETag (schwacher Vergleich, `*` passt immer).
+ * @param {string | undefined} header
+ * @param {string} etag
+ */
+function matchesEtag(header, etag) {
+  if (!header) {
+    return false;
+  }
+  const opaque = (/** @type {string} */ tag) =>
+    tag.trim().replace(WEAK_ETAG_PREFIX, "");
+  return header
+    .split(",")
+    .some((tag) => tag.trim() === "*" || opaque(tag) === opaque(etag));
+}
+
+/**
  * @param {"br" | "gzip"} encoding
  * @param {Buffer} body
  */
@@ -84,17 +105,18 @@ export function createCompression({
   /** @type {Map<string, Buffer>} */
   const lru = new Map();
   let lruBytes = 0;
-  const stats = { compressed: 0, lruHits: 0, passthrough: 0 };
+  const stats = { compressed: 0, lruHits: 0, notModified: 0, passthrough: 0 };
 
   /**
    * @param {"br" | "gzip"} encoding
    * @param {Buffer} body
+   * @param {string} hash contentHash(body)
    */
-  async function compressCached(encoding, body) {
+  async function compressCached(encoding, body, hash) {
     if (body.length > MAX_CACHEABLE_BYTES) {
       return compressBody(encoding, body);
     }
-    const key = `${encoding}:${contentHash(body)}`;
+    const key = `${encoding}:${hash}`;
     const hit = lru.get(key);
     if (hit) {
       lru.delete(key);
@@ -259,12 +281,30 @@ export function createCompression({
           vary ? `${vary}, Accept-Encoding` : "Accept-Encoding"
         );
       }
+      const hash = contentHash(body);
+      const cacheControl = String(res.getHeader("cache-control") ?? "");
+      if (
+        res.statusCode === 200 &&
+        !res.getHeader("etag") &&
+        !cacheControl.includes("no-store")
+      ) {
+        const etag = `W/"${hash}"`;
+        res.setHeader("ETag", etag);
+        if (matchesEtag(req.headers["if-none-match"], etag)) {
+          stats.notModified += 1;
+          res.statusCode = 304;
+          res.removeHeader("Content-Length");
+          res.removeHeader("Content-Type");
+          res.end();
+          return res;
+        }
+      }
       if (body.length < MIN_BYTES) {
         res.setHeader("Content-Length", body.length);
         res.end(body);
         return res;
       }
-      compressCached(encoding, body).then(
+      compressCached(encoding, body, hash).then(
         (out) => {
           stats.compressed += 1;
           res.setHeader("Content-Encoding", encoding);

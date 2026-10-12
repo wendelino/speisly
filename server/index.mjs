@@ -36,9 +36,21 @@ process.env.PORT = String(port);
 // den Host sonst nirgends (absolute URLs kommen aus `site` in astro.config).
 const canonicalHost = process.env.SITE_HOST || "speisly.de";
 
+// Dateien aus public/ haben keinen Hash im Namen; der Adapter liefert sie mit
+// `max-age=0` aus, was der Browser bei jedem Seitenaufruf neu prüft. Icons
+// und Manifest ändern sich praktisch nie: ein Tag frisch, danach im
+// Hintergrund neu (`send` übernimmt einen schon gesetzten Header).
+const PUBLIC_FILES =
+  /^\/(favicon\.ico|apple-touch-icon\.png|logo_full\.png|manifest\.webmanifest|icons\/[\w-]+\.png)(\?|$)/;
+const PUBLIC_CACHE_CONTROL =
+  "public, max-age=86400, stale-while-revalidate=604800";
+
 const compression = createCompression();
 const server = http.createServer((req, res) => {
   req.headers.host = canonicalHost;
+  if (PUBLIC_FILES.test(req.url ?? "")) {
+    res.setHeader("Cache-Control", PUBLIC_CACHE_CONTROL);
+  }
   compression(req, res, () => handler(req, res));
 });
 server.keepAliveTimeout = 65_000;
