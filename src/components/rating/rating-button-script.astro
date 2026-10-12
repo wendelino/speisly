@@ -1,12 +1,15 @@
 ---
 // Verhalten des Bewerten-Buttons (rating-button.astro). Der Dialog (React)
-// wird erst beim Klick geladen; die eigene Bewertung wird nur abgefragt, wenn
-// Cookie-Consent erteilt ist.
+// wird im Leerlauf vorgeladen und geschlossen vorab gerendert; die eigene
+// Bewertung wird nur abgefragt, wenn Cookie-Consent erteilt ist.
 ---
 
 <script>
   import { actions } from "astro:actions";
-  import type { ExistingRating } from "@/components/rating/rating-dialog";
+  import type {
+    ExistingRating,
+    RatingDialogProps,
+  } from "@/components/rating/rating-dialog";
   import { readConsent } from "@/lib/cookies";
   import { loadOnIntent } from "@/lib/load-on-intent";
 
@@ -42,9 +45,12 @@
     const mealId = button.dataset.mealId as string;
     const mensaMealId = button.dataset.mensaMealId as string;
 
+    // Eigene Bewertung (nur mit Consent); der Dialog wird erst danach vorab
+    // gerendert, weil das Formular `existing` beim ersten Rendern übernimmt
+    let existingLoaded: Promise<void> = Promise.resolve();
     if (readConsent() === "accepted") {
       setUi("loading");
-      actions.rating
+      existingLoaded = actions.rating
         .mine({ mealId })
         .then(({ data }) => {
           existing = data ?? null;
@@ -53,20 +59,26 @@
         .catch(() => setUi("new"));
     }
 
+    const props = (): RatingDialogProps => ({
+      mealId,
+      mensaMealId,
+      existing,
+      onChange: (next) => {
+        existing = next;
+        setUi(next ? "existing" : "new");
+        refreshSummary();
+      },
+    });
+
     loadOnIntent(
       button,
       () => import("@/components/rating/rating-dialog.mount"),
-      ({ openRatingDialog }) =>
-        openRatingDialog({
-          mealId,
-          mensaMealId,
-          existing,
-          onChange: (next) => {
-            existing = next;
-            setUi(next ? "existing" : "new");
-            refreshSummary();
-          },
-        })
+      ({ openRatingDialog }) => openRatingDialog(props()),
+      {
+        idle: true,
+        warm: ({ mountRatingDialog }) =>
+          existingLoaded.then(() => mountRatingDialog(props())),
+      }
     );
   }
 </script>

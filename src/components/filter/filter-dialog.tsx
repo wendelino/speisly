@@ -122,22 +122,22 @@ export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
             <ul className="space-y-1.5 rounded-2xl bg-muted/60 p-1.5">
               {mensen.map((mensa) => {
                 const checked = selectedMensen.includes(mensa.id);
+                const rowClass = checked ? "bg-card shadow-soft" : "";
                 return (
                   <li key={mensa.id}>
-                    <label
+                    <div
                       className={cn(
-                        "flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 font-medium text-sm transition-colors",
-                        checked ? "bg-card shadow-soft" : "hover:bg-card/60"
+                        "flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 font-medium text-sm transition-colors",
+                        rowClass
                       )}
-                      htmlFor={`mensa-${mensa.id}`}
                     >
-                      {mensa.name}
+                      <span id={`mensa-${mensa.id}`}>{mensa.name}</span>
                       <Switch
+                        aria-labelledby={`mensa-${mensa.id}`}
                         checked={checked}
-                        id={`mensa-${mensa.id}`}
                         onCheckedChange={() => toggleMensa(mensa.id)}
                       />
-                    </label>
+                    </div>
                   </li>
                 );
               })}

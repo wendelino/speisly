@@ -20,8 +20,12 @@ function CookiePreferences() {
   );
 }
 
-/** Lädt Consent-Dialog und Toaster beim ersten Öffnen */
-export function openCookiePreferences(): void {
+/** Rendert Consent-Dialog und Toaster geschlossen vorab */
+export function mountCookiePreferences(): void {
   mountOnce("cookie-preferences", () => <CookiePreferences />);
+}
+
+export function openCookiePreferences(): void {
+  mountCookiePreferences();
   $cookiePreferencesOpen.set(true);
 }

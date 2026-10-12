@@ -1,6 +1,6 @@
 ---
-// Öffnet die Cookie-Einstellungen (Datenschutzseite). Der Dialog wird erst
-// bei Bedarf geladen (cookie-preferences.mount.tsx).
+// Öffnet die Cookie-Einstellungen (Datenschutzseite). Der Dialog wird im
+// Leerlauf vorgeladen (cookie-preferences.mount.tsx).
 import { Cookie } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
 ---
@@ -18,7 +18,8 @@ import Button from "@/components/ui/button.astro";
     loadOnIntent(
       button,
       () => import("./cookie-preferences.mount"),
-      ({ openCookiePreferences }) => openCookiePreferences()
+      ({ openCookiePreferences }) => openCookiePreferences(),
+      { idle: true, warm: ({ mountCookiePreferences }) => mountCookiePreferences() }
     );
   }
 </script>

@@ -1,8 +1,9 @@
 ---
 // Speiseplan eines Tages (Startseite und /day/[date]): Tagesauswahl,
-// Mensa-Sprungmarken, Gerichte und Filter. Das Inline-Script wendet die
+// Mensa-Sprungmarken, Gerichte, Filter und Wischgeste zwischen Tagen. Das Inline-Script wendet die
 // Filter-Cookies vor dem ersten Paint an (lib/filters/boot.ts).
 import FilterFab from "@/components/filter/filter-fab.astro";
+import DaySwipe from "@/components/day/day-swipe.astro";
 import MealList from "@/components/meal/meal-list.astro";
 import PlanToolbar from "@/components/meal/plan-toolbar.astro";
 import { filterBoot } from "@/lib/filters/boot";
@@ -25,10 +26,13 @@ const filterScript = `(${filterBoot.toString()})();`;
 
 <BaseLayout mealAssets title={date === today ? undefined : `Speiseplan ${dayLabel}`}>
   <script is:inline set:html={filterScript} slot="head" />
-  <main>
+  <main class="overflow-x-clip">
     <h1 class="sr-only">{`Speiseplan für ${dayLabel}`}</h1>
     <PlanToolbar date={date} mensen={groups} today={today} />
-    <MealList date={date} groups={groups} today={today} />
+    <div data-swipe-surface>
+      <MealList date={date} groups={groups} today={today} />
+    </div>
+    <DaySwipe date={date} today={today} />
     <FilterFab mensen={mensen} />
   </main>
 </BaseLayout>

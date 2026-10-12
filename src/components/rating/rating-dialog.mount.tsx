@@ -4,13 +4,21 @@ import { Toaster } from "@/components/ui/toaster";
 import { $ratingDialogOpen } from "@/stores/ui";
 import { RatingDialog, type RatingDialogProps } from "./rating-dialog";
 
-/** Lädt Dialog, Bestätigungsdialog und Toaster beim ersten Öffnen */
-export function openRatingDialog(props: RatingDialogProps): void {
+/**
+ * Rendert Dialog, Bestätigungsdialog und Toaster geschlossen vorab. Erst
+ * aufrufen, wenn die eigene Bewertung feststeht: das Formular übernimmt
+ * `existing` nur beim ersten Rendern.
+ */
+export function mountRatingDialog(props: RatingDialogProps): void {
   mountOnce("rating-dialog", () => (
     <ConfirmProvider>
       <RatingDialog {...props} />
       <Toaster position="top-right" />
     </ConfirmProvider>
   ));
+}
+
+export function openRatingDialog(props: RatingDialogProps): void {
+  mountRatingDialog(props);
   $ratingDialogOpen.set(true);
 }

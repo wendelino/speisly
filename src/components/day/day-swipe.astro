@@ -1,0 +1,350 @@
+---
+// Wischgeste zwischen Tagen (nur Handy): nach links wischen → nächster
+// Werktag, nach rechts → vorheriger. Beim Ziehen fährt vom Rand eine
+// Vorschau-Karte herein („Morgen · Mittwoch, 15. Oktober“), ab der Schwelle
+// färbt sie sich und Loslassen wechselt den Tag. Die Liste folgt dem Finger
+// gedämpft (`[data-swipe-surface]` in plan-layout.astro). Ziehen läuft direkt
+// über Styles, motion wird erst für die Ausroll-Animation nachgeladen.
+import { ArrowLeft, ArrowRight } from "@lucide/astro";
+import { addDays, DAY_WINDOW, diffDays } from "@/lib/dates";
+import { formatDay, formatRelativeDay, isoDayToLocalDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  /** angezeigter Tag (`YYYY-MM-DD`) */
+  date: string;
+  /** heute in Berlin (`YYYY-MM-DD`) */
+  today: string;
+};
+
+const { date, today } = Astro.props;
+
+const isWeekend = (isoDay: string) =>
+  [0, 6].includes(isoDayToLocalDate(isoDay).getDay());
+
+/** nächster Werktag in Richtung `step`, null außerhalb von DAY_WINDOW */
+function neighbour(step: 1 | -1): string | null {
+  let day = addDays(date, step);
+  while (isWeekend(day)) {
+    day = addDays(day, step);
+  }
+  const offset = diffDays(today, day);
+  return offset < -DAY_WINDOW.past || offset > DAY_WINDOW.future ? null : day;
+}
+
+function preview(day: string | null) {
+  if (!day) {
+    return null;
+  }
+  const near = Math.abs(diffDays(today, day)) <= 2;
+  return {
+    href: day === today ? "/" : `/day/${day}`,
+    title: near ? formatRelativeDay(day, today) : formatDay(day, "EEEE"),
+    subtitle: formatDay(day, near ? "EEEE, d. MMMM" : "d. MMMM"),
+  };
+}
+
+const sides = [
+  { side: "prev", target: preview(neighbour(-1)) },
+  { side: "next", target: preview(neighbour(1)) },
+] as const;
+---
+
+{
+  sides.map(
+    ({ side, target }) =>
+      target && (
+        <div
+          aria-hidden="true"
+          class={cn(
+            "swipe-peek pointer-events-none fixed top-[42%] z-40 -translate-y-1/2 flex items-center gap-3 rounded-3xl bg-card py-3 text-foreground opacity-0 shadow-lift ring-1 ring-border/70 transition-[background-color,color,box-shadow] duration-200 md:hidden",
+            side === "prev" ? "left-0 origin-left flex-row rounded-l-none pr-5 pl-3" : "right-0 origin-right flex-row-reverse rounded-r-none pr-3 pl-5 text-right"
+          )}
+          data-href={target.href}
+          data-swipe-peek={side}
+        >
+          <span class="swipe-peek-icon grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-[background-color,color,scale] duration-200">
+            {side === "prev" ? <ArrowLeft class="size-5" /> : <ArrowRight class="size-5" />}
+          </span>
+          <span class="flex flex-col leading-tight">
+            <span class="font-bold font-display text-lg">{target.title}</span>
+            <span class="swipe-peek-sub text-muted-foreground text-xs">{target.subtitle}</span>
+          </span>
+        </div>
+      )
+  )
+}
+
+<style>
+  .swipe-peek[data-armed] {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow-pop);
+  }
+  .swipe-peek[data-armed] .swipe-peek-icon {
+    background-color: var(--gold);
+    color: var(--foreground);
+    scale: 1.1;
+  }
+  .swipe-peek[data-armed] .swipe-peek-sub {
+    color: inherit;
+    opacity: 0.8;
+  }
+</style>
+
+<script>
+  import { prefetch } from "astro:prefetch";
+
+  const MOBILE = window.matchMedia("(max-width: 767px)");
+  const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)");
+  /** Abstand zum Bildschirmrand, in dem die System-Zurück-Geste Vorrang hat */
+  const EDGE = 24;
+  /** Bewegung, ab der die Richtung (horizontal/vertikal) feststeht */
+  const LOCK = 10;
+
+  const surface = document.querySelector<HTMLElement>("[data-swipe-surface]");
+  const peeks = {
+    prev: document.querySelector<HTMLElement>('[data-swipe-peek="prev"]'),
+    next: document.querySelector<HTMLElement>('[data-swipe-peek="next"]'),
+  };
+
+  type Side = keyof typeof peeks;
+  type Gesture = {
+    x0: number;
+    y0: number;
+    t0: number;
+    dx: number;
+    lastX: number;
+    lastT: number;
+    velocity: number;
+    locked: boolean;
+    armed: boolean;
+  };
+
+  let gesture: Gesture | null = null;
+  let frame = 0;
+  let leaving = false;
+
+  const threshold = () => Math.min(110, window.innerWidth * 0.28);
+  const sideOf = (dx: number): Side => (dx < 0 ? "next" : "prev");
+  const loadMotion = () => import("motion");
+
+  /** Start in Eingaben, Dialogen oder horizontal scrollbaren Leisten ignorieren */
+  function blocked(target: EventTarget | null): boolean {
+    if (document.querySelector('[role="dialog"]')) {
+      return true;
+    }
+    for (let el = target as HTMLElement | null; el && el !== document.body; el = el.parentElement) {
+      if (el.matches("input, textarea, select, [data-no-swipe]")) {
+        return true;
+      }
+      const overflowX = getComputedStyle(el).overflowX;
+      if ((overflowX === "auto" || overflowX === "scroll") && el.scrollWidth > el.clientWidth) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Gedämpfter Weg der Liste; ohne Ziel in der Richtung zieht sie zäh wie Gummi */
+  function render() {
+    frame = 0;
+    if (!gesture) {
+      return;
+    }
+    const { dx } = gesture;
+    const side = sideOf(dx);
+    const peek = peeks[side];
+    const other = peeks[side === "next" ? "prev" : "next"];
+    const progress = Math.min(Math.abs(dx) / threshold(), 1);
+
+    if (surface && !REDUCED.matches) {
+      const damp = peek ? 0.35 : 0.12;
+      surface.style.transform = `translateX(${dx * damp}px) rotate(${dx * 0.004}deg)`;
+      surface.style.opacity = String(1 - progress * 0.25);
+    }
+    if (other) {
+      other.style.opacity = "0";
+    }
+    if (!peek) {
+      return;
+    }
+    // fährt vom Rand herein und bleibt an ihm kleben
+    const offset = (1 - progress) * 100;
+    peek.style.opacity = String(Math.min(progress * 1.6, 1));
+    peek.style.transform = `translateX(${side === "next" ? offset : -offset}%) scale(${0.85 + progress * 0.15})`;
+
+    const armed = progress >= 1;
+    if (armed !== gesture.armed) {
+      gesture.armed = armed;
+      peek.toggleAttribute("data-armed", armed);
+      if (armed) {
+        navigator.vibrate?.(8);
+      }
+    }
+  }
+
+  const schedule = () => {
+    frame ||= requestAnimationFrame(render);
+  };
+
+  async function settle(commit: Side | null) {
+    const active = gesture;
+    gesture = null;
+    cancelAnimationFrame(frame);
+    frame = 0;
+    const { animate } = await loadMotion();
+    const spring = { type: "spring", stiffness: 420, damping: 36 } as const;
+
+    if (commit && active) {
+      const peek = peeks[commit];
+      if (!peek) {
+        return;
+      }
+      leaving = true;
+      const dir = commit === "next" ? -1 : 1;
+      if (surface && !REDUCED.matches) {
+        animate(
+          surface,
+          { transform: `translateX(${dir * window.innerWidth * 0.45}px) rotate(${dir * 1.5}deg)`, opacity: 0 },
+          { duration: 0.22, ease: "easeIn" }
+        );
+      }
+      // Karte wächst kurz, dann Navigation
+      await animate(
+        peek,
+        { transform: "translateX(0%) scale(1.08)", opacity: 1 },
+        { duration: 0.16, ease: "easeOut" }
+      );
+      location.assign(peek.dataset.href as string);
+      return;
+    }
+
+    for (const [side, peek] of Object.entries(peeks) as [Side, HTMLElement | null][]) {
+      if (!peek) {
+        continue;
+      }
+      peek.removeAttribute("data-armed");
+      animate(
+        peek,
+        { transform: `translateX(${side === "next" ? 100 : -100}%) scale(0.85)`, opacity: 0 },
+        { duration: 0.2, ease: "easeOut" }
+      );
+    }
+    if (surface) {
+      animate(surface, { transform: "translateX(0px) rotate(0deg)", opacity: 1 }, spring).finished.then(() => {
+        if (!gesture) {
+          surface.removeAttribute("style");
+        }
+      });
+    }
+  }
+
+  function reset() {
+    leaving = false;
+    gesture = null;
+    surface?.removeAttribute("style");
+    for (const peek of Object.values(peeks)) {
+      peek?.removeAttribute("style");
+      peek?.removeAttribute("data-armed");
+    }
+  }
+
+  if (surface && (peeks.prev || peeks.next)) {
+    document.addEventListener(
+      "touchstart",
+      (event) => {
+        const touch = event.touches[0];
+        if (
+          leaving ||
+          !MOBILE.matches ||
+          event.touches.length > 1 ||
+          touch.clientX < EDGE ||
+          touch.clientX > window.innerWidth - EDGE ||
+          blocked(event.target)
+        ) {
+          gesture = null;
+          return;
+        }
+        const now = event.timeStamp;
+        gesture = {
+          x0: touch.clientX,
+          y0: touch.clientY,
+          t0: now,
+          dx: 0,
+          lastX: touch.clientX,
+          lastT: now,
+          velocity: 0,
+          locked: false,
+          armed: false,
+        };
+      },
+      { passive: true }
+    );
+
+    document.addEventListener(
+      "touchmove",
+      (event) => {
+        if (!gesture) {
+          return;
+        }
+        const touch = event.touches[0];
+        const dx = touch.clientX - gesture.x0;
+        const dy = touch.clientY - gesture.y0;
+
+        if (!gesture.locked) {
+          if (Math.hypot(dx, dy) < LOCK) {
+            return;
+          }
+          // eher vertikal → normales Scrollen, Geste verwerfen
+          if (Math.abs(dx) < Math.abs(dy) * 1.2) {
+            gesture = null;
+            return;
+          }
+          gesture.locked = true;
+          loadMotion();
+          for (const peek of Object.values(peeks)) {
+            if (peek) {
+              prefetch(peek.dataset.href as string, { ignoreSlowConnection: true });
+            }
+          }
+        }
+
+        event.preventDefault();
+        const dt = Math.max(event.timeStamp - gesture.lastT, 1);
+        gesture.velocity = (touch.clientX - gesture.lastX) / dt;
+        gesture.lastX = touch.clientX;
+        gesture.lastT = event.timeStamp;
+        gesture.dx = touch.clientX - gesture.x0;
+        schedule();
+      },
+      { passive: false }
+    );
+
+    const end = () => {
+      if (!gesture?.locked) {
+        gesture = null;
+        return;
+      }
+      const { dx, velocity, armed } = gesture;
+      const side = sideOf(dx);
+      // Schwelle erreicht oder schneller Wisch in dieselbe Richtung
+      const flick = Math.abs(velocity) > 0.6 && Math.sign(velocity) === Math.sign(dx) && Math.abs(dx) > 40;
+      settle(peeks[side] && (armed || flick) ? side : null);
+    };
+    document.addEventListener("touchend", end);
+    document.addEventListener("touchcancel", () => {
+      if (gesture?.locked) {
+        settle(null);
+      }
+      gesture = null;
+    });
+
+    // Zurück aus dem bfcache: Liste und Karten wieder zurücksetzen
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        reset();
+      }
+    });
+  }
+</script>
