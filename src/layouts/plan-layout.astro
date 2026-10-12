@@ -33,10 +33,12 @@ const swipeEnterScript = `try{var d=sessionStorage.getItem("speisly-swipe");if(d
   <main class="overflow-x-clip">
     <h1 class="sr-only">{`Speiseplan für ${dayLabel}`}</h1>
     <PlanToolbar date={date} mensen={groups} today={today} />
-    <div data-swipe-surface>
-      <MealList date={date} groups={groups} today={today} />
+    <div class="relative">
+      <div data-swipe-surface>
+        <MealList date={date} groups={groups} today={today} />
+      </div>
+      <DaySwipe date={date} today={today} />
     </div>
-    <DaySwipe date={date} today={today} />
     <FilterFab mensen={mensen} />
   </main>
 </BaseLayout>

@@ -2,10 +2,12 @@
 // Wischgeste zwischen Tagen (nur Handy): nach links wischen → nächster
 // Werktag, nach rechts → vorheriger. Beim Ziehen fährt vom Rand eine
 // Vorschau-Karte herein („Morgen · Mittwoch, 15. Oktober“), ab der Schwelle
-// färbt sie sich und Loslassen wechselt den Tag. Die Liste folgt dem Finger
+// färbt sie sich und Loslassen wechselt den Tag; bis der neue Tag da ist,
+// dreht sich ein Spinner in der Karte und Platzhalter-Karten erscheinen. Die Liste folgt dem Finger
 // gedämpft (`[data-swipe-surface]` in plan-layout.astro). Ziehen läuft direkt
 // über Styles, motion wird erst für die Ausroll-Animation nachgeladen.
-import { ArrowLeft, ArrowRight } from "@lucide/astro";
+import { ArrowLeft, ArrowRight, LoaderCircle } from "@lucide/astro";
+import Skeleton from "@/components/ui/skeleton.astro";
 import { addDays, DAY_WINDOW, diffDays } from "@/lib/dates";
 import { formatDay, formatRelativeDay, isoDayToLocalDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -64,7 +66,8 @@ const sides = [
           data-swipe-peek={side}
         >
           <span class="swipe-peek-icon grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-[background-color,color,scale] duration-200">
-            {side === "prev" ? <ArrowLeft class="size-5" /> : <ArrowRight class="size-5" />}
+            {side === "prev" ? <ArrowLeft class="swipe-peek-arrow size-5" /> : <ArrowRight class="swipe-peek-arrow size-5" />}
+            <LoaderCircle class="swipe-peek-spin size-5 animate-spin" />
           </span>
           <span class="flex flex-col leading-tight">
             <span class="font-bold font-display text-lg">{target.title}</span>
@@ -75,7 +78,60 @@ const sides = [
   )
 }
 
+<div
+  aria-hidden="true"
+  class="pointer-events-none absolute inset-x-0 top-0 bottom-0 hidden overflow-hidden [mask-image:linear-gradient(to_bottom,black_75%,transparent)] md:hidden"
+  data-swipe-skeleton
+>
+  <div class="container-page space-y-4 pt-2">
+    <div class="swipe-skel flex items-center gap-2.5 py-3" style="--i: 0">
+      <Skeleton class="size-3 rounded-full" />
+      <Skeleton class="h-6 w-40 rounded-lg" />
+    </div>
+    {
+      [1, 2, 3].map((i) => (
+        <div
+          class="swipe-skel grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 rounded-3xl bg-card p-2 shadow-soft ring-1 ring-border/60"
+          style={`--i: ${i}`}
+        >
+          <Skeleton class="aspect-4/3 rounded-2xl" />
+          <div class="flex flex-col gap-2 py-1 pr-1.5">
+            <Skeleton class="h-4 w-full rounded-md" />
+            <Skeleton class="h-4 w-2/3 rounded-md" />
+            <div class="flex justify-between pt-4">
+              <Skeleton class="h-6 w-14 rounded-full" />
+              <Skeleton class="h-6 w-16 rounded-full" />
+            </div>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+</div>
+
 <style is:global>
+  /* Ladezustand nach dem Wischen: Karten fahren gestaffelt aus der Wischrichtung herein */
+  [data-swipe-skeleton][data-from] {
+    display: block;
+  }
+  [data-swipe-skeleton][data-from="next"] {
+    --swipe-from: 40px;
+  }
+  [data-swipe-skeleton][data-from="prev"] {
+    --swipe-from: -40px;
+  }
+  [data-swipe-skeleton][data-from] .swipe-skel {
+    animation: swipe-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(var(--i) * 60ms);
+  }
+  .swipe-peek-spin,
+  .swipe-peek[data-loading] .swipe-peek-arrow {
+    display: none;
+  }
+  .swipe-peek[data-loading] .swipe-peek-spin {
+    display: block;
+  }
+
   /* neuer Tag fährt aus der Wischrichtung herein (data-swipe-enter: plan-layout.astro) */
   @keyframes swipe-enter {
     from {
@@ -93,7 +149,8 @@ const sides = [
     --swipe-from: -56px;
   }
   @media (prefers-reduced-motion: reduce) {
-    html[data-swipe-enter] [data-swipe-surface] {
+    html[data-swipe-enter] [data-swipe-surface],
+    [data-swipe-skeleton][data-from] {
       --swipe-from: 0px;
     }
   }
@@ -127,6 +184,7 @@ const sides = [
   const LOCK = 10;
 
   const surface = document.querySelector<HTMLElement>("[data-swipe-surface]");
+  const skeleton = document.querySelector<HTMLElement>("[data-swipe-skeleton]");
   const peeks = {
     prev: document.querySelector<HTMLElement>('[data-swipe-peek="prev"]'),
     next: document.querySelector<HTMLElement>('[data-swipe-peek="next"]'),
@@ -232,29 +290,33 @@ const sides = [
     gesture = null;
     cancelAnimationFrame(frame);
     frame = 0;
-    const { animate } = await loadMotion();
 
     if (commit) {
       const peek = peeks[commit];
       if (!peek) {
         return;
       }
+      // Ladezustand und Navigation sofort, nicht erst nach dem motion-Chunk
       leaving = true;
+      peek.setAttribute("data-loading", "");
       try {
         // neue Seite fährt aus derselben Richtung herein (Inline-Script in plan-layout.astro)
         sessionStorage.setItem("speisly-swipe", commit);
       } catch {
         // ohne Storage eben ohne Enter-Animation
       }
+      location.assign(peek.dataset.href as string);
+      const { animate } = await loadMotion();
       await animate(0, 1, {
         duration: 0.22,
         ease: "easeIn",
         onUpdate: (exit) => paint(exit),
       });
-      location.assign(peek.dataset.href as string);
+      showSkeleton(commit);
       return;
     }
 
+    const { animate } = await loadMotion();
     settling = animate(dx, 0, {
       type: "spring",
       stiffness: 420,
@@ -272,7 +334,21 @@ const sides = [
     });
   }
 
+  /** Platzhalter-Karten im sichtbaren Bereich, bis der neue Tag da ist */
+  function showSkeleton(from: Side) {
+    const container = skeleton?.parentElement;
+    if (!(skeleton && container)) {
+      return;
+    }
+    skeleton.style.top = `${Math.max(0, -container.getBoundingClientRect().top)}px`;
+    skeleton.dataset.from = from;
+  }
+
   function reset() {
+    skeleton?.removeAttribute("data-from");
+    for (const peek of Object.values(peeks)) {
+      peek?.removeAttribute("data-loading");
+    }
     leaving = false;
     gesture = null;
     settling?.stop();
@@ -379,6 +455,10 @@ const sides = [
         reset();
       }
     });
+
+    // motion schon im Leerlauf holen, damit Zurückfedern nie auf das Netz wartet
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1500));
+    idle(() => loadMotion(), { timeout: 4000 });
 
     // Zurück aus dem bfcache: Liste und Karten wieder zurücksetzen
     window.addEventListener("pageshow", (event) => {
