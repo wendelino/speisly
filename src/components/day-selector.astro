@@ -1,7 +1,7 @@
 ---
 // Astro-Port von day-selector.tsx: statisches Markup (identische Klassen),
-// Navigation per Mini-Script. Der Kalender (react-day-picker) wird erst beim
-// Öffnen geladen (calendar-popover.mount.tsx).
+// Navigation per Mini-Script. Der Kalender (react-day-picker) wird nach dem
+// Seitenaufbau im Leerlauf geladen (calendar-popover.mount.tsx).
 import { Calendar as CalendarIcon } from "@lucide/astro";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -93,6 +93,7 @@ const quick = [
 
 <script>
   import { prefetch } from "astro:prefetch";
+  import { whenIdle } from "@/lib/when-idle";
 
   const section = document.getElementById("day-selector");
   const loadCalendar = () => import("./calendar-popover.mount");
@@ -107,9 +108,15 @@ const quick = [
 
   const trigger = section?.querySelector<HTMLElement>("[data-calendar-trigger]");
   if (section && trigger) {
-    // React + Kalender bei Nutzerabsicht vorladen, beim Klick öffnen
+    // Kalender nach dem Seitenaufbau laden und geschlossen vorrendern
+    const selected = section.dataset.selected as string;
+    const prepare = () =>
+      loadCalendar().then(({ prepareCalendar }) =>
+        prepareCalendar(trigger, selected)
+      );
+    whenIdle(prepare);
     for (const event of ["pointerenter", "touchstart", "focus"]) {
-      trigger.addEventListener(event, loadCalendar, { once: true, passive: true });
+      trigger.addEventListener(event, prepare, { once: true, passive: true });
     }
     trigger.addEventListener("click", async () => {
       const { openCalendar } = await loadCalendar();
