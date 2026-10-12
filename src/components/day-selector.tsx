@@ -13,6 +13,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { IdlePrerender } from "./idle-prerender";
 import { Button } from "./ui/button";
 
 export default function DaySelector({ initialDate }: { initialDate?: Date }) {
@@ -108,6 +109,14 @@ export default function DaySelector({ initialDate }: { initialDate?: Date }) {
             />
           </PopoverContent>
         </Popover>
+        <IdlePrerender>
+          <Calendar
+            captionLayout="dropdown"
+            defaultMonth={selectedDate}
+            mode="single"
+            selected={selectedDate}
+          />
+        </IdlePrerender>
       </div>
     </section>
   );
