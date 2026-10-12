@@ -10,7 +10,6 @@
  * JS und ohne Flackern.
  */
 import Icon from "@/components/icons/icon.astro";
-import { TONES, toneAt } from "@/components/ui/tones";
 import Note from "@/components/ui/note.astro";
 import { cn } from "@/lib/utils";
 import NoMeals from "./no-meals.astro";
@@ -36,7 +35,7 @@ const hiddenText = (n: number) =>
 const dietList = (pred: (d: Diet) => boolean) =>
   DIETS.filter(pred).join(" ") || undefined;
 
-const prepared = groups.map((group, index) => {
+const prepared = groups.map((group) => {
   const regular = group.meals
     .filter((m) => !m.flags.isSmall)
     .sort((a, b) => b.priceStud - a.priceStud);
@@ -58,7 +57,7 @@ const prepared = groups.map((group, index) => {
     Diet,
     { kept: number; hidden: number; regular: number; portion: number }
   >;
-  return { group, regular, portion, stats, tone: TONES[toneAt(index)] };
+  return { group, regular, portion, stats };
 });
 ---
 
@@ -68,16 +67,15 @@ const prepared = groups.map((group, index) => {
   ) : (
     <>
       <div class="container-page space-y-8 pt-2 pb-8 md:pt-6" id="mealslist">
-        {prepared.map(({ group, regular, portion, stats, tone }) => (
+        {prepared.map(({ group, regular, portion, stats }) => (
           <section
             aria-labelledby={`mensa-${group.slug}-title`}
-            class="scroll-mt-2 md:scroll-mt-40"
+            class="scroll-mt-16 md:scroll-mt-40"
             data-mensa-group
             data-mensa-id={group.id}
             id={`mensa-${group.slug}`}
           >
             <div class="m-head">
-              <span class={cn("size-3 shrink-0 rounded-full", tone.solid)} />
               <h2 class="truncate font-bold text-xl sm:text-2xl" id={`mensa-${group.slug}-title`}>
                 {group.name}
               </h2>
