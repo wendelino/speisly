@@ -55,7 +55,7 @@ const pillState = (active: boolean) =>
               data-day
               href={isToday ? "/" : `/day/${day}`}
             >
-              <span class="font-semibold text-[0.7rem] opacity-75">{isToday ? "Heute" : weekday(day)}</span>
+              <span class="font-semibold text-[0.7rem] opacity-75 -mb-1.5 mt-1.5">{isToday ? "Heute" : weekday(day)}</span>
               <span class="font-bold font-display text-lg tabular-nums">{dayOfMonth(day)}</span>
             </a>
           </li>

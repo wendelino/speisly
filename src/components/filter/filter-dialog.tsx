@@ -142,7 +142,7 @@ export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
                 );
               })}
             </ul>
-            <div className="flex gap-2">
+            <div className="flex gap-2 pb-3 sm:pb-1">
               <Button
                 className="flex-1"
                 onClick={() => setSelectedMensen(mensen.map((m) => m.id))}
