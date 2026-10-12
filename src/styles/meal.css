@@ -39,16 +39,22 @@
   .m-title {
     @apply line-clamp-2 font-display font-semibold text-[0.95rem] leading-snug tracking-tight transition-colors group-hover:text-primary;
   }
-  /* Ernährungs-Badges oben über dem Titel */
+  /* Bild mit Ernährungs-Badges oben rechts darüber */
+  .m-media {
+    @apply relative;
+  }
   .m-badges {
-    @apply flex flex-wrap gap-1 empty:hidden;
+    @apply absolute top-1.5 right-1.5 flex flex-col items-end gap-1 empty:hidden;
+  }
+  .m-badges > .ib {
+    @apply shadow-sm ring-1 ring-white/80;
   }
   /* Preis groß unten links, Pfeil rechts als Hinweis auf die Detailseite */
   .m-foot {
     @apply mt-auto flex items-end justify-between gap-2 pt-1;
   }
   .m-price {
-    @apply inline-flex items-baseline gap-0.5 font-bold font-display text-[1.35rem] text-primary tabular-nums leading-none tracking-tight;
+    @apply inline-flex items-baseline gap-0.5 font-bold font-display text-[1.25rem] text-primary tabular-nums leading-none tracking-tight;
   }
   .m-go {
     @apply grid size-7 shrink-0 place-items-center rounded-full bg-secondary font-bold text-primary text-sm leading-none transition-[translate,background-color,color] duration-300 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground;
