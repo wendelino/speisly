@@ -1,0 +1,89 @@
+---
+// Tabs ohne Framework: Leiste mit role="tab", Inhalte als <TabPanel> im Slot
+// (gleiche `id`). Der erste Tab ist aktiv; Pfeiltasten, Pos1/Ende wechseln.
+import { cn } from "@/lib/utils";
+
+type Tab = {
+  id: string;
+  label: string;
+  /** kürzere Beschriftung für schmale Bildschirme */
+  short?: string;
+  count?: number;
+};
+type Props = { tabs: Tab[]; label: string; class?: string };
+const { tabs, label, class: className } = Astro.props;
+---
+
+<div class={className} data-tabs>
+  <div
+    aria-label={label}
+    class="flex gap-1 rounded-full bg-muted p-1"
+    role="tablist"
+  >
+    {
+      tabs.map((tab, index) => (
+        <button
+          aria-controls={`panel-${tab.id}`}
+          aria-label={tab.label}
+          aria-selected={index === 0 ? "true" : "false"}
+          class={cn(
+            "inline-flex min-w-0 flex-auto items-center justify-center gap-1.5 rounded-full px-2.5 py-2 font-semibold text-[0.8125rem] text-muted-foreground outline-none sm:px-3 sm:text-sm transition-[background-color,color,box-shadow] duration-200 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring",
+            "aria-selected:bg-card aria-selected:text-foreground aria-selected:shadow-soft"
+          )}
+          id={`tab-${tab.id}`}
+          role="tab"
+          tabindex={index === 0 ? 0 : -1}
+          type="button"
+        >
+          {tab.short ? (
+            <>
+              <span class="truncate sm:hidden">{tab.short}</span>
+              <span class="truncate max-sm:hidden">{tab.label}</span>
+            </>
+          ) : (
+            <span class="truncate">{tab.label}</span>
+          )}
+          {tab.count !== undefined && tab.count > 0 && (
+            <span class="rounded-full bg-secondary px-1.5 text-secondary-foreground text-xs tabular-nums">{tab.count}</span>
+          )}
+        </button>
+      ))
+    }
+  </div>
+  <div class="mt-4"><slot /></div>
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>("[data-tabs]")) {
+    const tabs = [...root.querySelectorAll<HTMLElement>('[role="tab"]')];
+    const select = (tab: HTMLElement, focus = false) => {
+      for (const other of tabs) {
+        const selected = other === tab;
+        other.setAttribute("aria-selected", String(selected));
+        other.tabIndex = selected ? 0 : -1;
+        const panel = document.getElementById(other.getAttribute("aria-controls") ?? "");
+        if (panel) {
+          panel.hidden = !selected;
+        }
+      }
+      if (focus) {
+        tab.focus();
+      }
+    };
+    for (const [index, tab] of tabs.entries()) {
+      tab.addEventListener("click", () => select(tab));
+      tab.addEventListener("keydown", (event) => {
+        const next: Record<string, number> = {
+          ArrowRight: (index + 1) % tabs.length,
+          ArrowLeft: (index - 1 + tabs.length) % tabs.length,
+          Home: 0,
+          End: tabs.length - 1,
+        };
+        if (event.key in next) {
+          event.preventDefault();
+          select(tabs[next[event.key]], true);
+        }
+      });
+    }
+  }
+</script>

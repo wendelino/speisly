@@ -1,0 +1,54 @@
+---
+// Angebotshistorie eines Gerichts (Inhalt der Server Island). Icons inline
+// statt aus dem Sprite: Die Island wird separat geladen.
+import { CalendarDays } from "@lucide/astro";
+import Meter from "@/components/ui/meter.astro";
+import Stat from "@/components/ui/stat.astro";
+import { toneAt } from "@/components/ui/tones";
+import { formatDay } from "@/lib/format";
+import type { MealServingStats } from "@/server/queries/serving-stats";
+
+type Props = { stats: MealServingStats };
+const { totalServings, mensaCount, firstServed, lastServed, byMensa } =
+  Astro.props.stats;
+
+const formatDate = (isoDay: string, pattern = "dd.MM.yyyy") =>
+  formatDay(isoDay, pattern);
+const maxCount = Math.max(1, ...byMensa.map((entry) => entry.servingCount));
+---
+
+{
+  totalServings === 0 ? (
+    <p class="rounded-2xl bg-muted/60 p-5 text-center text-muted-foreground text-sm">
+      Noch keine Angebotsdaten vorhanden
+    </p>
+  ) : (
+    <div class="space-y-5">
+      <div class="grid grid-cols-3 gap-2">
+        <Stat label={totalServings === 1 ? "Angebot" : "Angebote"} value={String(totalServings)} />
+        <Stat label={mensaCount === 1 ? "Mensa" : "Mensen"} tone="mint" value={String(mensaCount)} />
+        {lastServed && <Stat label="zuletzt" tone="sun" value={formatDate(lastServed, "dd.MM.yy")} />}
+      </div>
+      {firstServed && (
+        <p class="flex items-center gap-1.5 text-muted-foreground text-sm">
+          <CalendarDays class="size-4" />
+          {`Erstmals am ${formatDate(firstServed)}`}
+        </p>
+      )}
+      <ul class="space-y-4">
+        {byMensa.map((entry, index) => (
+          <li>
+            <div class="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
+              <span class="truncate font-semibold">{entry.mensaName}</span>
+              <span class="shrink-0 font-bold font-display tabular-nums">{`${entry.servingCount}×`}</span>
+            </div>
+            <Meter tone={toneAt(index)} value={entry.servingCount / maxCount} />
+            <p class="mt-1 text-muted-foreground text-xs">
+              {`${formatDate(entry.firstServed)} – ${formatDate(entry.lastServed)}`}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}

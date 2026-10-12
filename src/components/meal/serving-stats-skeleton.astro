@@ -1,0 +1,17 @@
+---
+// Platzhalter, bis die Server Island „Angebotshistorie“ geladen ist
+import Skeleton from "@/components/ui/skeleton.astro";
+---
+
+<div aria-busy="true" class="space-y-5">
+  <div class="grid grid-cols-3 gap-2">
+    <Skeleton class="h-[4.25rem] rounded-2xl" />
+    <Skeleton class="h-[4.25rem] rounded-2xl" />
+    <Skeleton class="h-[4.25rem] rounded-2xl" />
+  </div>
+  <Skeleton class="h-4 w-40" />
+  <div class="space-y-4">
+    <Skeleton class="h-10" />
+    <Skeleton class="h-10" />
+  </div>
+</div>

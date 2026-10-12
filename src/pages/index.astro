@@ -1,0 +1,20 @@
+---
+// Startseite: Speiseplan von heute (Berlin). Im Route Cache bis Mitternacht
+// (src/server/cache-policy.ts).
+import PlanLayout from "@/layouts/plan-layout.astro";
+import { todayBerlin } from "@/lib/dates";
+import { homePolicy } from "@/server/cache-policy";
+import { getMealsForDate } from "@/server/queries/meals";
+import { getVisibleMensen } from "@/server/queries/mensen";
+
+export const prerender = false;
+
+const today = todayBerlin();
+const [groups, mensen] = await Promise.all([
+  getMealsForDate(today),
+  getVisibleMensen(),
+]);
+Astro.cache.set(homePolicy(today));
+---
+
+<PlanLayout date={today} groups={groups} mensen={mensen} today={today} />

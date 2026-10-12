@@ -1,0 +1,68 @@
+---
+// Bewertungsübersicht der Detailseite (Tab „Bewertungen“). Teil der
+// (gecachten) Seite; die Seite wird beim Bewerten über den Tag ratings:<id>
+// invalidiert, der Bewerten-Button lädt [data-rating-summary] danach neu
+// (rating-button-script.astro).
+// Die Seite braucht das Sprite-Icon "star".
+import Meter from "@/components/ui/meter.astro";
+import Stars from "@/components/ui/stars.astro";
+import { formatDecimal } from "@/lib/format";
+import RatingButton from "./rating-button.astro";
+
+type Props = {
+  mealId: string;
+  stats: MealRatingStats;
+  /** nur mit konkreter Ausgabe (`?mmid=`) kann bewertet werden */
+  mensaMealId?: string;
+};
+
+const { mealId, stats, mensaMealId } = Astro.props;
+const { ratingCount, avgRating } = stats;
+
+const categories = [
+  { label: "Preis-Leistung", value: avgRating.value_price },
+  { label: "Menge", value: avgRating.value_quantity },
+  { label: "Geschmack", value: avgRating.value_taste },
+].filter(
+  (item): item is { label: string; value: number } => item.value !== null
+);
+---
+
+<div>
+  {
+    ratingCount === 0 || avgRating.value === null ? (
+      <div class="rounded-2xl bg-muted/60 p-5 text-center" data-rating-summary>
+        <p class="font-display font-semibold">Noch keine Bewertungen</p>
+        <p class="mt-1 text-muted-foreground text-sm">
+          Schon probiert? Sag uns, wie’s geschmeckt hat!
+        </p>
+      </div>
+    ) : (
+      <div class="space-y-5" data-rating-summary>
+        <div class="flex items-center gap-4">
+          <p class="font-display font-extrabold text-5xl text-primary tabular-nums leading-none">
+            {formatDecimal(avgRating.value)}
+          </p>
+          <div class="space-y-1">
+            <Stars value={avgRating.value} />
+            <p class="text-muted-foreground text-sm">
+              {`aus ${ratingCount} ${ratingCount === 1 ? "Bewertung" : "Bewertungen"}`}
+            </p>
+          </div>
+        </div>
+        {categories.length > 0 && (
+          <ul class="space-y-2.5">
+            {categories.map((item) => (
+              <li class="grid grid-cols-[7.5rem_1fr_2.25rem] items-center gap-3 text-sm">
+                <span class="text-muted-foreground">{item.label}</span>
+                <Meter tone="sun" value={item.value / 5} />
+                <span class="text-right font-bold font-display tabular-nums">{formatDecimal(item.value)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
+  }
+  {mensaMealId && <RatingButton class="mt-5" mealId={mealId} mensaMealId={mensaMealId} />}
+</div>

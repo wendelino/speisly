@@ -1,0 +1,41 @@
+---
+// Icon in einer organischen Blob-Form (rounded-blob, globals.css), z. B. über
+// Seitentiteln und leeren Zuständen
+import type { HTMLAttributes } from "astro/types";
+import { cn } from "@/lib/utils";
+import { TONES, type Tone } from "./tones";
+
+type Props = HTMLAttributes<"div"> & {
+  tone?: Tone;
+  size?: "md" | "lg";
+  /** sanftes Schweben (respektiert prefers-reduced-motion) */
+  float?: boolean;
+};
+
+const {
+  tone = "primary",
+  size = "md",
+  float = false,
+  class: className,
+  ...rest
+} = Astro.props;
+const SIZES = {
+  md: "size-16 [&_svg]:size-8",
+  lg: "size-24 [&_svg]:size-11",
+};
+---
+
+<div
+  aria-hidden="true"
+  class={cn(
+    "relative inline-flex shrink-0 items-center justify-center rounded-blob",
+    TONES[tone].soft,
+    TONES[tone].text,
+    SIZES[size],
+    float && "animate-float",
+    className
+  )}
+  {...rest}
+>
+  <slot />
+</div>

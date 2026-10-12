@@ -1,0 +1,27 @@
+---
+// Unterseiten: Container mit Zurück-Button über dem Inhalt
+import type { ComponentProps } from "astro/types";
+import BackButton from "@/components/layout/back-button.astro";
+import { cn } from "@/lib/utils";
+import BaseLayout from "./base-layout.astro";
+
+type Props = ComponentProps<typeof BaseLayout> & {
+  /** Breite des Inhalts: `narrow` für Formulare und Texte */
+  width?: "narrow" | "wide";
+};
+
+const { width = "narrow", ...props } = Astro.props;
+---
+
+<BaseLayout {...props}>
+  <slot name="head" slot="head" />
+  <main
+    class={cn(
+      "container-page pt-2 pb-8",
+      width === "narrow" ? "max-w-3xl" : "max-w-5xl"
+    )}
+  >
+    <BackButton class="mb-6" />
+    <slot />
+  </main>
+</BaseLayout>

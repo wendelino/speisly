@@ -1,0 +1,13 @@
+---
+// Preis als „Sticker“ auf der Karte (Studierendenpreis); Klasse: meal.css
+import { formatEuro } from "@/lib/format";
+
+type Props = {
+  cents: number;
+  /** Teil der View Transition (lib/view-transitions.ts) */
+  vt?: boolean;
+};
+const { cents, vt = false } = Astro.props;
+---
+
+<span class="m-price" data-vt={vt ? "price" : undefined}>{formatEuro(cents)}<small class="text-[0.75em]">€</small></span>

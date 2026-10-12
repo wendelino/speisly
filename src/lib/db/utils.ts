@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import { timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const ID_LENGTH = 32;

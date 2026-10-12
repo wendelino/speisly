@@ -1,0 +1,19 @@
+---
+// Horizontaler Balken für Anteile (0–1), z. B. Bewertungen und Angebote je Mensa
+import { cn } from "@/lib/utils";
+import { TONES, type Tone } from "./tones";
+
+type Props = { value: number; tone?: Tone; class?: string };
+const { value, tone = "primary", class: className } = Astro.props;
+const percent = Math.round(Math.min(1, Math.max(0, value)) * 100);
+---
+
+<span
+  aria-hidden="true"
+  class={cn("block h-2 overflow-hidden rounded-full", TONES[tone].soft, className)}
+>
+  <span
+    class={cn("block h-full rounded-full", TONES[tone].solid)}
+    style={`width:${percent}%`}
+  ></span>
+</span>

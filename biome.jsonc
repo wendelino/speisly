@@ -1,12 +1,8 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": [
-    "ultracite/core",
-    "ultracite/react",
-    "ultracite/next",
-    "ultracite/astro",
-    "ultracite/remix"
-  ],
+  "extends": ["ultracite/core", "ultracite/react", "ultracite/astro"],
+  // drizzle: von drizzle-kit erzeugt; dist: Build (auch nicht scannen)
+  "files": { "includes": ["**", "!drizzle", "!!**/dist"] },
   "linter": {
     "rules": {
       "style": {
@@ -31,5 +27,18 @@
         "noUselessFragments": "info"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      // Der Formatter entfernt in .astro-Templates Leerzeichen um {Ausdrücke}
+      // und Inline-Elemente („<b>fett</b> danach“ → „<b>fett</b>danach“) und
+      // verändert so den gerenderten Text. Außerdem fügt jedes `check/lint
+      // --write` (auch fixAll beim Speichern im Editor) eine Leerzeile ins
+      // Frontmatter ein (Biome 2.3.8). Typprüfung übernimmt `astro check`.
+      "includes": ["**/*.astro"],
+      "formatter": { "enabled": false },
+      "assist": { "enabled": false },
+      "linter": { "enabled": false }
+    }
+  ]
 }

@@ -1,0 +1,27 @@
+---
+// Zurück-Link: geht in der History zurück, wenn es eine gibt, sonst zur
+// Startseite
+import { ArrowLeft } from "@lucide/astro";
+import Button from "@/components/ui/button.astro";
+
+type Props = { class?: string };
+const { class: className } = Astro.props;
+---
+
+<Button class={className} data-back-button href="/" size="sm" variant="outline">
+  <ArrowLeft class="size-4" />
+  Zurück
+</Button>
+
+<script>
+  for (const link of document.querySelectorAll<HTMLAnchorElement>(
+    "[data-back-button]"
+  )) {
+    link.addEventListener("click", (event) => {
+      if (window.history.length > 1) {
+        event.preventDefault();
+        window.history.back();
+      }
+    });
+  }
+</script>

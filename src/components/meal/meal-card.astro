@@ -1,0 +1,44 @@
+---
+// Gerichtskarte im Speiseplan – statisches HTML, kein JS.
+// data-meal/-veggie/-vegan steuern den CSS-Filter (lib/filters/boot.ts).
+// Klassen m-*: src/styles/meal.css. data-vt: Rolle für die View Transition,
+// der Name entsteht erst beim Klick (lib/view-transitions.ts).
+import { visibleIngredientTypes } from "@/lib/ingredients";
+import DietBadge from "./diet-badge.astro";
+import MealImage from "./meal-image.astro";
+import PriceTag from "./price-tag.astro";
+
+type Props = {
+  meal: Meal;
+  priority?: boolean;
+};
+
+const { meal, priority = false } = Astro.props;
+---
+
+<a
+  class="m-card group"
+  data-astro-prefetch
+  data-meal
+  data-vegan={meal.flags.isVegan ? "" : undefined}
+  data-veggie={meal.flags.isVeggie ? "" : undefined}
+  href={`/meal/${meal.id}?mmid=${meal.mensaMealId}`}
+>
+  <MealImage alt={meal.name} priority={priority} src={meal.imgPath} vt />
+  <div class="absolute -top-2 left-0.5 " data-vt="ingredients">
+    {
+      visibleIngredientTypes(meal.flags).map((type) => (
+        <DietBadge type={type} />
+      ))
+    }
+  </div>
+  <div class="m-body">
+    <h3 class="m-title" data-vt="title">
+      {`${meal.name} ${meal.subtitle}`}
+    </h3><div class="m-foot">
+      <PriceTag cents={meal.priceStud} vt /><span
+        aria-hidden="true"
+        class="m-go">→</span>
+    </div>
+  </div></a
+>

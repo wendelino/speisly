@@ -1,0 +1,31 @@
+---
+// Prerendered, wird auch für SSR-404 genutzt
+import { House, UtensilsCrossed } from "@lucide/astro";
+import Button from "@/components/ui/button.astro";
+import EmptyState from "@/components/ui/empty-state.astro";
+import BaseLayout from "@/layouts/base-layout.astro";
+---
+
+<BaseLayout title="Seite nicht gefunden">
+  <main class="container-page flex min-h-[60vh] flex-col items-center justify-center">
+    <p
+      aria-hidden="true"
+      class="-mb-6 select-none font-display font-extrabold text-[7rem] text-primary/15 leading-none sm:text-[10rem]"
+    >
+      404
+    </p>
+    <EmptyState
+      class="pt-0"
+      description="Diese Seite gibt’s leider nicht (mehr). Vielleicht findest du dein Gericht auf dem Speiseplan?"
+      headingLevel="h1"
+      title="Hier ist der Teller leer"
+      tone="peach"
+    >
+      <UtensilsCrossed slot="icon" />
+      <Button href="/" size="lg">
+        <House class="size-4" />
+        Zum Speiseplan
+      </Button>
+    </EmptyState>
+  </main>
+</BaseLayout>

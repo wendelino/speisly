@@ -1,0 +1,110 @@
+/*
+ * Kurze Klassen für Elemente, die sich pro Gerichtskarte wiederholen (~90× pro
+ * Seite): Das hält das HTML klein (komprimiert kaum ein Unterschied, aber
+ * weniger zu parsen). In @layer components, damit Utilities am Element
+ * weiter gewinnen.
+ */
+@layer components {
+  /* meal-list.astro */
+  .m-grid {
+    @apply grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3;
+  }
+  /* nicht sticky: die Mensa-Leiste der Toolbar klebt und markiert die aktuelle Mensa */
+  .m-head {
+    @apply mb-2 flex items-center gap-2.5 py-3 md:mb-3 md:py-0;
+  }
+  .m-count {
+    @apply inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-muted px-2 font-bold text-muted-foreground text-xs tabular-nums;
+  }
+  .m-more {
+    @apply rounded-3xl bg-muted/60 p-1.5;
+  }
+  .m-more > summary {
+    @apply flex cursor-pointer list-none items-center gap-2.5 rounded-[1.25rem] px-3.5 py-3 font-display font-semibold transition-colors hover:bg-card/70;
+  }
+  .m-more > summary::-webkit-details-marker {
+    display: none;
+  }
+  .m-more[open] > summary .m-chev {
+    @apply rotate-180;
+  }
+
+  /* meal-card.astro */
+  .m-card {
+    @apply relative grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 rounded-3xl bg-card p-2 shadow-soft ring-1 ring-border/60 outline-none transition-[translate,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lift focus-visible:ring-[3px] focus-visible:ring-ring sm:grid-cols-[8.5rem_minmax(0,1fr)];
+  }
+  .m-body {
+    @apply flex min-w-0 flex-col gap-1.5 self-stretch py-1.5 pr-2;
+  }
+  .m-title {
+    @apply line-clamp-2 font-display font-semibold text-[0.95rem] leading-snug tracking-tight transition-colors group-hover:text-primary;
+  }
+
+  /* Preis groß unten links, Pfeil rechts als Hinweis auf die Detailseite */
+  .m-foot {
+    @apply mt-auto flex items-end justify-between gap-2 pt-1;
+  }
+  .m-price {
+    @apply inline-flex items-baseline gap-0.5 font-bold font-display text-[1.25rem] text-primary tabular-nums leading-none tracking-tight;
+  }
+  .m-go {
+    @apply grid size-7 shrink-0 place-items-center rounded-full bg-secondary font-bold text-primary text-sm leading-none transition-[translate,background-color,color] duration-300 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground;
+  }
+
+  /* meal-image.astro */
+  /* Die Fotos sind freigestellte Teller auf Weiß, die bis an den Rand
+     reichen: weißer Hintergrund wie das Foto, Innenabstand und object-contain,
+     damit die runden Ecken nichts abschneiden */
+  .m-img {
+    @apply relative aspect-4/3 overflow-hidden rounded-2xl bg-white;
+  }
+  .m-photo {
+    @apply size-full object-contain p-1.5;
+  }
+  /* Skeleton als Hintergrund des Bildes, erst nach einer kurzen Verzögerung:
+     Bilder aus dem Cache sind bis dahin längst da und blitzen nicht auf */
+  .m-photo:not([data-loaded]) {
+    @apply animate-skeleton;
+  }
+  .m-photo[data-error] {
+    @apply invisible;
+  }
+  .m-noimg,
+  .m-img:has(.m-photo[data-error]) {
+    @apply bg-linear-to-br from-peach-soft to-sun-soft;
+  }
+  .m-noimg {
+    @apply flex size-full items-center justify-center text-peach/50;
+  }
+  /* Detailseite: Rahmen um das große Bild (in der Liste geht das Weiß
+     randlos in die Karte über) und mehr Luft um den Teller */
+  .m-img-lg {
+    @apply ring-1 ring-black/5;
+  }
+  .m-img-lg .m-photo {
+    @apply p-3 sm:p-5;
+  }
+
+  /* diet-badge.astro, Filter-Chips (filter-fab.astro) */
+  .ib {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[0.7rem] leading-4;
+  }
+  .ib-lg {
+    @apply gap-1.5 px-3 py-1 text-xs;
+  }
+  .ib-vegan {
+    @apply bg-mint-soft text-mint;
+  }
+  .ib-veggie {
+    @apply bg-sun-soft text-sun;
+  }
+  .ib-meat {
+    @apply bg-rose-soft text-rose;
+  }
+  .ib-fish {
+    @apply bg-sky-soft text-sky;
+  }
+  .ib-notVeggie {
+    @apply bg-stone-soft text-stone;
+  }
+}

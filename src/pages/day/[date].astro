@@ -1,0 +1,26 @@
+---
+// Speiseplan eines Tages. Nur gültige Daten im Fenster −365 … +14 Tage,
+// alles andere ist 404 (erzeugt so auch keine Cache-Einträge, siehe middleware).
+import PlanLayout from "@/layouts/plan-layout.astro";
+import { parseDayParam, todayBerlin } from "@/lib/dates";
+import { dayPolicy } from "@/server/cache-policy";
+import { getMealsForDate } from "@/server/queries/meals";
+import { getVisibleMensen } from "@/server/queries/mensen";
+
+export const prerender = false;
+
+// Ungültige Daten und /day/heute fängt src/middleware.ts ab
+const today = todayBerlin();
+const date = parseDayParam(Astro.params.date, today);
+if (!date) {
+  throw new Error(`invalid day param: ${Astro.params.date}`);
+}
+
+const [groups, mensen] = await Promise.all([
+  getMealsForDate(date),
+  getVisibleMensen(),
+]);
+Astro.cache.set(dayPolicy(date, today));
+---
+
+<PlanLayout date={date} groups={groups} mensen={mensen} today={today} />

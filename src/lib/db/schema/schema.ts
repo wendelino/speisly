@@ -1,4 +1,3 @@
-import { relations } from "drizzle-orm";
 import {
   index,
   integer,
@@ -9,14 +8,19 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { ID_LENGTH, timeStampUtils, uuid } from "../utils";
-import { dataSource } from "./dataSource";
+import { dataSource } from "./data-source";
 
-export const user = pgTable("user", {
-  ...uuid,
-  ipHash: varchar("ip_hash", { length: 255 }).notNull(),
-  cookieHash: varchar("cookie_hash", { length: 255 }),
-  ...timeStampUtils, // s s
-});
+export const user = pgTable(
+  "user",
+  {
+    ...uuid,
+    ipHash: varchar("ip_hash", { length: 255 }).notNull(),
+    cookieHash: varchar("cookie_hash", { length: 255 }),
+    ...timeStampUtils,
+  },
+  // Lookup per IP-Hash bei Bewertungen (getUserId/getOrCreateUser)
+  (table) => [index("user_ip_hash_idx").on(table.ipHash)]
+);
 
 // Mensa table
 export const mensa = pgTable("mensa", {
@@ -87,6 +91,8 @@ export const mensaMeal = pgTable(
     ),
     index("mensa_meal_date_idx").on(table.date),
     index("mensa_meal_mensa_id_idx").on(table.mensaId),
+    // Detailseite (neueste Ausgabe) und Angebotshistorie eines Gerichts
+    index("mensa_meal_meal_id_date_idx").on(table.mealId, table.date),
   ]
 );
 
@@ -115,40 +121,3 @@ export const mealRating = pgTable(
     uniqueIndex("meal_rating_meal_user_idx").on(table.mealId, table.userId),
   ]
 );
-
-export const userRelations = relations(user, ({ many }) => ({
-  mealRatings: many(mealRating),
-}));
-
-// Relations
-export const mensaRelations = relations(mensa, ({ many }) => ({
-  mensaMeals: many(mensaMeal),
-}));
-
-export const mealRelations = relations(meal, ({ many }) => ({
-  ratings: many(mealRating),
-  mensaMeals: many(mensaMeal),
-  updates: many(mealUpdate),
-}));
-
-export const mensaMealRelations = relations(mensaMeal, ({ one }) => ({
-  mensa: one(mensa, {
-    fields: [mensaMeal.mensaId],
-    references: [mensa.id],
-  }),
-  meal: one(meal, {
-    fields: [mensaMeal.mealId],
-    references: [meal.id],
-  }),
-}));
-
-export const mealRatingRelations = relations(mealRating, ({ one }) => ({
-  meal: one(meal, {
-    fields: [mealRating.mealId],
-    references: [meal.id],
-  }),
-  mensaMeal: one(mensaMeal, {
-    fields: [mealRating.mensaMealId],
-    references: [mensaMeal.id],
-  }),
-}));

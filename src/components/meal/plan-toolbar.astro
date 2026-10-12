@@ -1,0 +1,29 @@
+---
+// Tagesauswahl und Mensa-Sprungmarken über dem Speiseplan. Ab md ist die ganze
+// Toolbar sticky, auf dem Handy nur die Mensa-Leiste (der Wrapper wird dort per
+// `contents` aufgelöst, damit sie über die ganze Seite kleben kann). Der
+// Leisten-Wrapper ist leer (und versteckt), wenn es nur eine Mensa gibt.
+import DaySelector from "@/components/day/day-selector.astro";
+import MensaNav from "./mensa-nav.astro";
+
+type Props = {
+  /** heute in Berlin (`YYYY-MM-DD`) */
+  today: string;
+  /** angezeigter Tag (`YYYY-MM-DD`) */
+  date: string;
+  /** Mensen mit Gerichten an diesem Tag */
+  mensen: Mensa[];
+};
+
+const { today, date, mensen } = Astro.props;
+---
+
+<div
+  class="max-md:contents md:sticky md:top-0 md:z-30 md:border-border/60 md:border-b md:bg-background/90 md:backdrop-blur-lg"
+  data-plan-toolbar
+>
+  <div class="container-page pt-1 pb-1 md:pt-3 md:pb-2">
+    <DaySelector selected={date} today={today} />
+  </div>
+  <div class="container-page pb-1 md:pb-3 empty:hidden max-md:sticky max-md:top-0 max-md:z-30 max-md:border-border/60 max-md:border-b max-md:bg-background/90 max-md:pt-1 max-md:backdrop-blur-lg"><MensaNav mensen={mensen} /></div>
+</div>
