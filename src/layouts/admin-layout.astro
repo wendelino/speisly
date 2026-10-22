@@ -1,0 +1,69 @@
+---
+// Admin-Bereich: eigenes, schlichtes Gerüst ohne Analytics, nicht indexiert.
+// Zugang nur mit Session (src/middleware.ts).
+import { Font } from "astro:assets";
+import { cn } from "@/lib/utils";
+import "@/styles/globals.css";
+
+type Props = { title: string };
+const { title } = Astro.props;
+const admin = Astro.locals.admin;
+const path = Astro.url.pathname;
+
+const NAV = [
+  { href: "/admin", label: "Übersicht" },
+  { href: "/admin/sync", label: "Sync-Läufe" },
+  { href: "/admin/errors", label: "Fehler" },
+  { href: "/admin/changes", label: "Änderungen" },
+  { href: "/admin/feedback", label: "Feedback" },
+];
+const isActive = (href: string) =>
+  href === "/admin" ? path === "/admin" : path.startsWith(href);
+---
+
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <Font cssVariable="--font-bricolage" preload />
+    <title>{title} | Speisly Admin</title>
+    <link rel="icon" href="/favicon.ico" sizes="128x128" type="image/x-icon">
+  </head>
+  <body class="min-h-screen antialiased">
+    <header class="border-border/70 border-b bg-card">
+      <div class="container-page flex flex-wrap items-center gap-x-6 gap-y-3 py-4">
+        <a class="font-bold font-display text-lg" href="/admin">
+          Speisly <span class="text-primary">Admin</span>
+        </a>
+        <nav aria-label="Admin" class="-mx-1 flex flex-wrap gap-1 text-sm">
+          {
+            NAV.map((item) => (
+              <a
+                aria-current={isActive(item.href) ? "page" : undefined}
+                class={cn(
+                  "rounded-full px-3 py-1.5 font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  isActive(item.href) && "bg-secondary text-primary"
+                )}
+                href={item.href}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+        <div class="ml-auto flex items-center gap-3 text-muted-foreground text-sm">
+          <span>{admin?.name}</span>
+          <a class="font-semibold text-primary underline-offset-4 hover:underline" href="/admin/logout">
+            Abmelden
+          </a>
+        </div>
+      </div>
+    </header>
+    <main class="container-page py-8">
+      <h1 class="mb-6 font-bold font-display text-2xl sm:text-3xl">{title}</h1>
+      <slot />
+    </main>
+  </body>
+</html>

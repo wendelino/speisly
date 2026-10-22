@@ -1,0 +1,65 @@
+---
+// Gerichtsänderungen (vorher → nachher), optional mit Zeitpunkt
+import { FIELD_LABEL, formatChangeValue, formatDateTime } from "@/lib/admin-format";
+import type { MealChangeField } from "@/server/queries/admin";
+
+type Props = {
+  changes: {
+    id: string;
+    mealId: string;
+    mealName: string;
+    field: MealChangeField;
+    prev: unknown;
+    next: unknown;
+    createdAt?: Date;
+  }[];
+};
+const { changes } = Astro.props;
+const TH = "px-3 py-2 text-left font-semibold";
+const TD = "px-3 py-2 align-top";
+const withTime = changes.some((c) => c.createdAt);
+---
+
+{
+  changes.length === 0 ? (
+    <p class="text-muted-foreground">Keine Änderungen.</p>
+  ) : (
+    <div class="overflow-x-auto rounded-2xl ring-1 ring-border">
+      <table class="w-full min-w-[40rem] text-sm">
+        <thead class="bg-muted/60 text-muted-foreground">
+          <tr>
+            {withTime && <th class={TH}>Zeit</th>}
+            <th class={TH}>Gericht</th>
+            <th class={TH}>Feld</th>
+            <th class={TH}>Vorher</th>
+            <th class={TH}>Nachher</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border/70">
+          {changes.map((change) => (
+            <tr>
+              {withTime && (
+                <td class={`${TD} whitespace-nowrap`}>
+                  {formatDateTime(change.createdAt ?? null)}
+                </td>
+              )}
+              <td class={TD}>
+                <a
+                  class="font-semibold text-primary underline-offset-4 hover:underline"
+                  href={`/meal/${change.mealId}`}
+                >
+                  {change.mealName}
+                </a>
+              </td>
+              <td class={TD}>{FIELD_LABEL[change.field]}</td>
+              <td class={`${TD} break-all text-muted-foreground`}>
+                {formatChangeValue(change.prev)}
+              </td>
+              <td class={`${TD} break-all`}>{formatChangeValue(change.next)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}

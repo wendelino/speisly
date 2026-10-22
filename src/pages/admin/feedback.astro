@@ -1,0 +1,67 @@
+---
+// Admin: Feedback und Kontaktanfragen, offen oder erledigt
+import { actions } from "astro:actions";
+import DoneToggle from "@/components/admin/done-toggle.astro";
+import FilterLinks from "@/components/admin/filter-links.astro";
+import Badge from "@/components/ui/badge.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import { formatDateTime } from "@/lib/admin-format";
+import { type DoneFilter, listFeedback } from "@/server/queries/admin";
+
+export const prerender = false;
+
+const FILTERS = ["open", "done", "all"] as const;
+const param = Astro.url.searchParams.get("status");
+const filter: DoneFilter = FILTERS.find((f) => f === param) ?? "open";
+const entries = await listFeedback(filter);
+---
+
+<AdminLayout title="Feedback">
+  <FilterLinks
+    current={filter}
+    options={[
+      { value: "open", label: "Offen" },
+      { value: "done", label: "Erledigt" },
+      { value: "all", label: "Alle" },
+    ]}
+    param="status"
+  />
+  {
+    entries.length === 0 ? (
+      <p class="text-muted-foreground">Keine Nachrichten.</p>
+    ) : (
+      <ul class="space-y-3">
+        {entries.map((entry) => (
+          <li class="rounded-2xl bg-card p-4 shadow-soft ring-1 ring-border/70">
+            <div class="mb-2 flex flex-wrap items-center gap-2">
+              <Badge tone={entry.type === "contact" ? "sky" : "peach"}>
+                {entry.type === "contact" ? "Kontakt" : "Feedback"}
+              </Badge>
+              {entry.status === "done" && <Badge tone="mint">erledigt</Badge>}
+              <span class="text-muted-foreground text-xs">
+                {formatDateTime(entry.createdAt)}
+              </span>
+              {entry.email && (
+                <a
+                  class="text-primary text-sm underline-offset-4 hover:underline"
+                  href={`mailto:${entry.email}`}
+                >
+                  {entry.email}
+                </a>
+              )}
+              <div class="ml-auto">
+                <DoneToggle
+                  action={actions.admin.setFeedbackDone}
+                  done={entry.status === "done"}
+                  field="done"
+                  id={entry.id}
+                />
+              </div>
+            </div>
+            <p class="whitespace-pre-line text-sm leading-relaxed">{entry.message}</p>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</AdminLayout>

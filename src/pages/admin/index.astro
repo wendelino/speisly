@@ -1,0 +1,33 @@
+---
+// Admin: letzter Lauf je Scope, offene Fehler und offenes Feedback
+import RunTable from "@/components/admin/run-table.astro";
+import Card from "@/components/ui/card.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import { adminOverview } from "@/server/queries/admin";
+
+export const prerender = false;
+
+const { openErrors, openFeedback, latestRuns } = await adminOverview();
+const TILE = "block transition-transform hover:-translate-y-0.5";
+---
+
+<AdminLayout title="Übersicht">
+  <div class="mb-8 grid gap-4 sm:grid-cols-2">
+    <a class={TILE} href="/admin/errors">
+      <Card>
+        <p class="text-muted-foreground text-sm">Offene Fehler</p>
+        <p class:list={["font-bold font-display text-3xl", openErrors > 0 && "text-rose"]}>
+          {openErrors}
+        </p>
+      </Card>
+    </a>
+    <a class={TILE} href="/admin/feedback">
+      <Card>
+        <p class="text-muted-foreground text-sm">Offenes Feedback</p>
+        <p class="font-bold font-display text-3xl">{openFeedback}</p>
+      </Card>
+    </a>
+  </div>
+  <h2 class="mb-3 font-bold font-display text-xl">Letzter Lauf je Scope</h2>
+  <RunTable runs={latestRuns} />
+</AdminLayout>

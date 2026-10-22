@@ -24,6 +24,10 @@ plugin({
         IMAGE_DIR: env.IMAGE_DIR ?? "./data/img-test",
         TELEGRAM_BOT_TOKEN: undefined,
         TELEGRAM_CHAT_ID: undefined,
+        OIDC_ISSUER: "https://sso.example.test",
+        OIDC_CLIENT_ID: "speisly-test",
+        OIDC_CLIENT_SECRET: "test-client-secret",
+        ADMIN_GROUP: "speisly-admin",
       },
     }));
     build.module("astro:env/client", () => ({
