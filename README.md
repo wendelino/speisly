@@ -60,7 +60,7 @@ cp .env.example .env
 ### 4. Datenbank migrieren
 
 ```bash
-bun db:push
+bun db:migrate
 ```
 
 ### 5. Development Server starten
@@ -236,7 +236,6 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 - `bun format` – Formatiert Code mit Biome
 - `bun db:generate` – Generiert Drizzle-Migrationen
 - `bun db:migrate` – Führt Datenbank-Migrationen aus
-- `bun db:push` – Pusht Schema-Änderungen zur Datenbank
 
 ## Lizenz
 
