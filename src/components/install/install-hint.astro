@@ -1,0 +1,46 @@
+---
+// Hinweis „Speisly als App installieren“ auf Handy und Tablet. Kein Markup:
+// Das Script prüft Gerät, Browser und den gespeicherten Zustand und lädt den
+// Dialog (install-hint.mount.tsx) erst nach einer kurzen Verzögerung.
+---
+
+<script>
+  import {
+    markInstalled,
+    markInstallHintShown,
+    readInstallHint,
+    shouldShowInstallHint,
+  } from "@/lib/install-hint";
+  import { detectInstallPlatform, isStandalone } from "@/lib/install-platform";
+
+  /** Erst den Speiseplan zeigen, dann den Hinweis */
+  const DELAY_MS = 8000;
+  /** Ist gerade ein anderer Dialog offen, später erneut versuchen */
+  const RETRY_MS = 5000;
+
+  window.addEventListener("appinstalled", markInstalled);
+
+  const platform = isStandalone()
+    ? null
+    : detectInstallPlatform({
+        userAgent: navigator.userAgent,
+        maxTouchPoints: navigator.maxTouchPoints,
+      });
+
+  const show = async () => {
+    if (document.querySelector("[role='dialog']")) {
+      setTimeout(show, RETRY_MS);
+      return;
+    }
+    if (!(platform && shouldShowInstallHint(readInstallHint(), new Date()))) {
+      return;
+    }
+    const { openInstallHint } = await import("./install-hint.mount");
+    markInstallHintShown();
+    openInstallHint(platform);
+  };
+
+  if (platform && shouldShowInstallHint(readInstallHint(), new Date())) {
+    setTimeout(show, DELAY_MS);
+  }
+</script>
