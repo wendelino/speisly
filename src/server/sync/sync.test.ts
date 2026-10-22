@@ -3,7 +3,14 @@
  * Läuft gegen die Seed-DB in einem Datumsbereich ohne Seed-Daten und räumt
  * danach auf. Die Planung selbst ist in plan.test.ts getestet.
  */
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import { inArray, sql } from "drizzle-orm";
 import { addDays, todayBerlin } from "@/lib/dates";
 import { meal } from "@/lib/db/schema/schema";
@@ -12,6 +19,9 @@ import { handleSync } from "./index";
 import type { MeineMensaFoodPlanItem, MeineMensaResponse } from "./types";
 
 const hasDb = Boolean(process.env.DATABASE_URL);
+// Jeder Test macht mehrere Syncs mit Dutzenden Queries; gegen eine entfernte
+// DB (Tunnel) reichen die 5 s von bun nicht
+setDefaultTimeout(30_000);
 
 const DAY_1 = addDays(todayBerlin(), 60);
 const DAY_2 = addDays(DAY_1, 1);
@@ -298,5 +308,45 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
       );
       await db.execute(sql`delete from "user" where id = ${userId}`);
     }
+  });
+
+  test("changed ingredients of an existing serving are updated and logged", async () => {
+    stubApi([item(3, DAY_2, 1, food(SRC_IDS[1], 2.5))]);
+    await handleSync({ from: DAY_2, to: DAY_2 });
+    stubApi([
+      item(3, DAY_2, 1, {
+        ...food(SRC_IDS[1], 2.5),
+        ingredients: ["A"],
+        extra_1: "Salat",
+      }),
+    ]);
+    const result = await handleSync({ from: DAY_2, to: DAY_2 });
+    expect(result.changedDates).toEqual([DAY_2]);
+    expect(result.stats.changedServings).toBe(1);
+
+    const [row] = (
+      await db.execute(sql`
+        select mm.id, mm.ingredients, mm.extras from mensa_meal mm
+          join meal m on m.id = mm.meal_id
+         where m.src_id = ${String(SRC_IDS[1])} and mm.date::date = ${DAY_2}::date`)
+    ).rows as { id: string; ingredients: string[]; extras: string[] }[];
+    expect(row).toMatchObject({ ingredients: ["A:Gluten"], extras: ["Salat"] });
+    const logs = (
+      await db.execute(sql`
+        select field, prev, next from meal_change
+         where mensa_meal_id = ${row.id} order by field`)
+    ).rows;
+    expect(logs).toEqual([
+      {
+        field: "ingredients",
+        prev: ["51:vegetarisch", "A:Gluten"],
+        next: ["A:Gluten"],
+      },
+      { field: "extras", prev: [], next: ["Salat"] },
+    ]);
+
+    // unverändert: kein weiterer Eintrag
+    const again = await handleSync({ from: DAY_2, to: DAY_2 });
+    expect(again.stats.changedServings).toBe(0);
   });
 });

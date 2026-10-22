@@ -27,6 +27,7 @@ const STATS: SyncStats = {
   newMeals: 1,
   changedMeals: 0,
   newServings: 2,
+  changedServings: 0,
   removedServings: 0,
   keptServings: 0,
   massRemoval: false,

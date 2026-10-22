@@ -19,6 +19,9 @@ export const mealChangeField = pgEnum("meal_change_field", [
   "subtitle",
   "img_path",
   "price",
+  /** je Ausgabe (`meal_change.mensa_meal_id`) */
+  "ingredients",
+  "extras",
 ]);
 export const logLevel = pgEnum("log_level", ["error", "warn"]);
 export const feedbackType = pgEnum("feedback_type", ["contact", "feedback"]);

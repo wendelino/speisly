@@ -23,8 +23,8 @@ const facts = [
   ["Dauer", formatDuration(run.durationMs)],
   ["Gerichte neu / geändert", `${run.newMeals} / ${run.changedMeals}`],
   [
-    "Ausgaben neu / entfernt / behalten",
-    `${run.newServings} / ${run.removedServings} / ${run.keptServings}`,
+    "Ausgaben neu / geändert / entfernt / behalten",
+    `${run.newServings} / ${run.changedServings} / ${run.removedServings} / ${run.keptServings}`,
   ],
   ["Bilder neu / fehlgeschlagen", `${run.imagesCreated} / ${run.imagesFailed}`],
 ];

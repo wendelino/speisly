@@ -50,6 +50,13 @@
       "when": 1792648822581,
       "tag": "0006_sync_runs_and_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792655989291,
+      "tag": "0007_serving_changes",
+      "breakpoints": true
     }
   ]
 }

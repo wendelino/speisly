@@ -78,6 +78,11 @@ const LINK = "text-primary underline-offset-4 hover:underline";
             <p class="mb-1.5 flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
               {formatDateTime(change.createdAt)}
               <Badge>{FIELD_LABEL[change.field]}</Badge>
+              {change.servingDate && (
+                <a class={LINK} href={`/admin/search?q=${change.mensaMealId}`}>
+                  Ausgabe {day(change.servingDate)} · {change.mensaName}
+                </a>
+              )}
               {change.syncRunId && (
                 <a class={LINK} href={`/admin/sync/${change.syncRunId}`}>
                   Lauf

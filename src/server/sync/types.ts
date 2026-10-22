@@ -120,7 +120,10 @@ export type GetMealDataResult = {
   dates: string[];
 };
 
-/** Eine geänderte Eigenschaft eines Gerichts (Zeile in `meal_change`) */
+/**
+ * Eine geänderte Eigenschaft eines Gerichts oder einer Ausgabe (Zeile in
+ * `meal_change`)
+ */
 export type MealFieldChange = Pick<
   typeof mealChange.$inferInsert,
   "field" | "prev" | "next"

@@ -11,7 +11,7 @@ import { genId } from "@/lib/db/utils";
 import { db } from "../db";
 import { logError } from "../log";
 import { currentSyncRun } from "../sync-run-context";
-import type { MealChange, NewMeal, SyncPlan } from "./plan";
+import type { MealChange, NewMeal, ServingChange, SyncPlan } from "./plan";
 import type {
   GetExistingMensaMealsParams,
   MealFieldChange,
@@ -134,6 +134,25 @@ async function updateMeals(
   return applied;
 }
 
+/**
+ * Ein UPDATE … FROM (VALUES …) für Zutaten und Extras vieler Ausgaben. Die
+ * Listen gehen als JSON hinein, weil drizzle JS-Arrays im `sql`-Template als
+ * Werteliste einsetzt statt als ein Array-Parameter.
+ */
+function updateServings(tx: Tx, changes: ServingChange[]) {
+  const rows = changes.map(
+    ({ servingId, values: v }) =>
+      sql`(${servingId}, ${JSON.stringify(v.ingredients)}::jsonb, ${JSON.stringify(v.extras)}::jsonb)`
+  );
+  return tx.execute(sql`
+    update ${mensaMeal} set
+      ingredients = array(select jsonb_array_elements_text(v.ingredients)),
+      extras = array(select jsonb_array_elements_text(v.extras)),
+      updated_at = now()
+    from (values ${sql.join(rows, sql`, `)}) as v(id, ingredients, extras)
+    where ${mensaMeal.id} = v.id`);
+}
+
 function insertMealRows(tx: Tx, rows: NewMeal[]) {
   return tx
     .insert(meal)
@@ -191,9 +210,16 @@ async function insertMeals(tx: Tx, meals: NewMeal[]): Promise<Set<string>> {
 function changeRows(
   mealId: string,
   logs: MealFieldChange[],
-  syncRunId: string | null
+  syncRunId: string | null,
+  mensaMealId: string | null = null
 ) {
-  return logs.map((log) => ({ id: genId(), mealId, syncRunId, ...log }));
+  return logs.map((log) => ({
+    id: genId(),
+    mealId,
+    mensaMealId,
+    syncRunId,
+    ...log,
+  }));
 }
 
 export type ApplyResult = {
@@ -205,6 +231,7 @@ export type ApplyResult = {
     newMeals: number;
     changedMeals: number;
     newServings: number;
+    changedServings: number;
     removedServings: number;
   };
 };
@@ -262,6 +289,17 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
       }
     }
 
+    // Zutaten/Extras bestehender Ausgaben
+    for (const batch of chunks(plan.servingChanges)) {
+      await updateServings(tx, batch);
+    }
+    for (const change of plan.servingChanges) {
+      changeLog.push(
+        ...changeRows(change.mealId, change.logs, syncRunId, change.servingId)
+      );
+      changed(change.date, change.mealId);
+    }
+
     // Ausgaben, die die API nicht mehr liefert
     if (plan.removedServings.length > 0) {
       for (const batch of chunks(plan.removedServings)) {
@@ -299,6 +337,7 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
         newMeals: inserted.size,
         changedMeals: applied.length,
         newServings,
+        changedServings: plan.servingChanges.length,
         removedServings: plan.removedServings.length,
       },
     };

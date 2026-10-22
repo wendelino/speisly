@@ -12,6 +12,7 @@ export type SyncCounts = {
   newMeals: number;
   changedMeals: number;
   newServings: number;
+  changedServings: number;
   removedServings: number;
   keptServings: number;
   imagesCreated: number;
@@ -23,6 +24,7 @@ export const EMPTY_COUNTS: SyncCounts = {
   newMeals: 0,
   changedMeals: 0,
   newServings: 0,
+  changedServings: 0,
   removedServings: 0,
   keptServings: 0,
   imagesCreated: 0,

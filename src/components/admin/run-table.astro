@@ -23,7 +23,7 @@ const TD = "px-3 py-2 align-top";
             <th class={TH}>Status</th>
             <th class={TH}>Dauer</th>
             <th class={TH}>Gerichte neu / geändert</th>
-            <th class={TH}>Ausgaben neu / entfernt</th>
+            <th class={TH}>Ausgaben neu / geändert / entfernt</th>
             <th class={TH}>Bilder</th>
           </tr>
         </thead>
@@ -46,7 +46,7 @@ const TD = "px-3 py-2 align-top";
               <td class={TD}>{formatDuration(run.durationMs)}</td>
               <td class={TD}>{run.newMeals} / {run.changedMeals}</td>
               <td class={TD}>
-                {run.newServings} / {run.removedServings}
+                {run.newServings} / {run.changedServings} / {run.removedServings}
                 {run.keptServings > 0 && (
                   <span class="text-muted-foreground"> ({run.keptServings} behalten)</span>
                 )}

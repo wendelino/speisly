@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   date,
   index,
   integer,
@@ -66,7 +67,8 @@ export type MealPrices = { stud: number; work: number; guest: number };
 
 /**
  * Änderungen an Gerichten durch den Sync. `prev`/`next`: Text, bei `price`
- * ein `MealPrices`-Objekt.
+ * ein `MealPrices`-Objekt, bei `ingredients`/`extras` eine Liste; diese
+ * gehören zu einer Ausgabe (`mensa_meal_id`, null nach deren Löschen).
  */
 export const mealChange = pgTable(
   "meal_change",
@@ -79,9 +81,13 @@ export const mealChange = pgTable(
       () => syncRun.id,
       { onDelete: "set null" }
     ),
+    mensaMealId: varchar("mensa_meal_id", { length: ID_LENGTH }).references(
+      (): AnyPgColumn => mensaMeal.id,
+      { onDelete: "set null" }
+    ),
     field: mealChangeField("field").notNull(),
-    prev: jsonb("prev").$type<string | MealPrices>().notNull(),
-    next: jsonb("next").$type<string | MealPrices>().notNull(),
+    prev: jsonb("prev").$type<string | string[] | MealPrices>().notNull(),
+    next: jsonb("next").$type<string | string[] | MealPrices>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

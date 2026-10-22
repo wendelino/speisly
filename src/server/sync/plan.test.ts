@@ -48,7 +48,7 @@ function serving(mealId: string, date: string, id = `s-${date}`) {
     mealId,
     mensaId: HARZ.id,
     date: new Date(date),
-    ingredients: [],
+    ingredients: ["A:Gluten"],
     extras: [],
   } satisfies MensaMealRecord;
 }
@@ -71,9 +71,57 @@ describe("planSync", () => {
       newMeals: [],
       mealChanges: [],
       newServings: [],
+      servingChanges: [],
       removedServings: [],
       invalidMeals: [],
     });
+  });
+
+  test("changed ingredients and extras of an existing serving", () => {
+    const data = mealData("1");
+    data.availability[0].ingredients = ["G:Milch", "A:Gluten"];
+    data.availability[0].extras = ["Salat"];
+    const plan = planSync({
+      ...base,
+      data: [data],
+      existingMeals: [EXISTING],
+      existingServings: [serving("meal-1", "2026-11-02")],
+    });
+    expect(plan.servingChanges).toEqual([
+      {
+        servingId: "s-2026-11-02",
+        mealId: "meal-1",
+        date: "2026-11-02",
+        values: { ingredients: ["G:Milch", "A:Gluten"], extras: ["Salat"] },
+        logs: [
+          {
+            field: "ingredients",
+            prev: ["A:Gluten"],
+            next: ["G:Milch", "A:Gluten"],
+          },
+          { field: "extras", prev: [], next: ["Salat"] },
+        ],
+      },
+    ]);
+    expect(plan.newServings).toEqual([]);
+    expect(plan.removedServings).toEqual([]);
+  });
+
+  test("ingredients in a different order are no change", () => {
+    const data = mealData("1");
+    data.availability[0].ingredients = ["G:Milch", "A:Gluten"];
+    const plan = planSync({
+      ...base,
+      data: [data],
+      existingMeals: [EXISTING],
+      existingServings: [
+        {
+          ...serving("meal-1", "2026-11-02"),
+          ingredients: ["A:Gluten", "G:Milch"],
+        },
+      ],
+    });
+    expect(plan.servingChanges).toEqual([]);
   });
 
   test("new meal, new mensa, new servings (duplicates once)", () => {

@@ -27,6 +27,8 @@ export const syncRun = pgTable(
     newMeals: integer("new_meals").notNull().default(0),
     changedMeals: integer("changed_meals").notNull().default(0),
     newServings: integer("new_servings").notNull().default(0),
+    /** bestehende Ausgaben mit geänderten Zutaten/Extras */
+    changedServings: integer("changed_servings").notNull().default(0),
     removedServings: integer("removed_servings").notNull().default(0),
     keptServings: integer("kept_servings").notNull().default(0),
     imagesCreated: integer("images_created").notNull().default(0),

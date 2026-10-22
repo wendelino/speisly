@@ -20,6 +20,7 @@ export type SyncStats = {
   newMeals: number;
   changedMeals: number;
   newServings: number;
+  changedServings: number;
   removedServings: number;
   keptServings: number;
   massRemoval: boolean;
@@ -97,7 +98,7 @@ export async function handleSync(
     Math.round(performance.now() - start)
   );
   console.log(
-    `\n[DAL] Sync completed in ${formattedTime} (${plan.newMeals.length} new meals, ${plan.mealChanges.length} changed, ${plan.newServings.length} new / ${plan.removedServings.length} removed servings, ${plan.keptServings.length} kept)`
+    `\n[DAL] Sync completed in ${formattedTime} (${plan.newMeals.length} new meals, ${plan.mealChanges.length} changed, ${plan.newServings.length} new / ${plan.servingChanges.length} changed / ${plan.removedServings.length} removed servings, ${plan.keptServings.length} kept)`
   );
 
   return {

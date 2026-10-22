@@ -126,8 +126,14 @@ export async function getAdminMeal(id: string) {
         next: mealChange.next,
         syncRunId: mealChange.syncRunId,
         createdAt: mealChange.createdAt,
+        // Zutaten/Extras: zu welcher Ausgabe
+        mensaMealId: mealChange.mensaMealId,
+        servingDate: mensaMeal.date,
+        mensaName: mensa.name,
       })
       .from(mealChange)
+      .leftJoin(mensaMeal, eq(mensaMeal.id, mealChange.mensaMealId))
+      .leftJoin(mensa, eq(mensa.id, mensaMeal.mensaId))
       .where(eq(mealChange.mealId, id))
       .orderBy(desc(mealChange.createdAt)),
     db

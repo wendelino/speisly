@@ -18,8 +18,9 @@ import type {
  * - Gerichte mit Preis 0 werden übersprungen.
  * - Bestehende Gerichte (per `src_id`) werden aktualisiert, wenn sich Bild,
  *   Name, Untertitel oder Preise geändert haben, jeweils mit Änderungslog.
- * - Neue Ausgaben (Mensa + Gericht + Tag) werden angelegt, bestehende nicht
- *   verändert (Zutaten/Extras bleiben wie beim ersten Sync).
+ * - Neue Ausgaben (Mensa + Gericht + Tag) werden angelegt. Bei bestehenden
+ *   werden Zutaten und Extras abgeglichen (Reihenfolge egal), jeweils mit
+ *   Änderungslog.
  * - Ausgaben im Zeitraum, die die API nicht mehr liefert, werden entfernt –
  *   aber nur mit Schutzregeln (siehe `guardRemovals`), denn mit einer Ausgabe
  *   verschwinden per Cascade auch ihre Bewertungen.
@@ -58,6 +59,16 @@ export type MealChange = {
   dates: string[];
 };
 
+export type ServingChange = {
+  servingId: string;
+  mealId: string;
+  /** Tag der Ausgabe (`YYYY-MM-DD`) */
+  date: string;
+  /** vollständiger neuer Stand (für das Batch-Update) */
+  values: Pick<MensaMealRecord, "ingredients" | "extras">;
+  logs: MealFieldChange[];
+};
+
 type NewServing = {
   id: string;
   mensaId: string;
@@ -72,6 +83,8 @@ export type SyncPlan = {
   newMeals: NewMeal[];
   mealChanges: MealChange[];
   newServings: NewServing[];
+  /** bestehende Ausgaben mit geänderten Zutaten oder Extras */
+  servingChanges: ServingChange[];
   removedServings: MensaMealRecord[];
   /** fehlen in der API, werden aber zum Schutz nicht entfernt */
   keptServings: { serving: MensaMealRecord; reason: KeptReason }[];
@@ -149,6 +162,37 @@ function diffMeal(
   return { fields, logs };
 }
 
+function sameItems(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  const sorted = [...b].sort();
+  return [...a].sort().every((item, i) => item === sorted[i]);
+}
+
+/** Zutaten/Extras einer bestehenden Ausgabe gegen die API, null wenn gleich */
+function diffServing(
+  serving: MensaMealRecord,
+  next: Pick<MensaMealRecord, "ingredients" | "extras">
+): ServingChange | null {
+  const logs: MealFieldChange[] = [];
+  for (const field of ["ingredients", "extras"] as const) {
+    if (!sameItems(serving[field], next[field])) {
+      logs.push({ field, prev: serving[field], next: next[field] });
+    }
+  }
+  if (logs.length === 0) {
+    return null;
+  }
+  return {
+    servingId: serving.id,
+    mealId: serving.mealId,
+    date: toIsoDay(serving.date),
+    values: { ingredients: next.ingredients, extras: next.extras },
+    logs,
+  };
+}
+
 function servingKey(mealId: string, mensaId: string, date: Date): string {
   return `${mealId}|${mensaId}|${date.toISOString()}`;
 }
@@ -224,6 +268,7 @@ export function planSync({
     newMeals: [],
     mealChanges: [],
     newServings: [],
+    servingChanges: [],
     removedServings: [],
     keptServings: [],
     massRemoval: null,
@@ -301,7 +346,13 @@ export function planSync({
         continue;
       }
       seen.add(key);
-      if (unmatched.delete(key)) {
+      const existing = unmatched.get(key);
+      if (existing) {
+        unmatched.delete(key);
+        const change = diffServing(existing, avail);
+        if (change) {
+          plan.servingChanges.push(change);
+        }
         continue;
       }
       plan.newServings.push({

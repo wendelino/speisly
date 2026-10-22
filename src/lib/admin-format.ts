@@ -41,6 +41,10 @@ export function formatChangeValue(value: unknown): string {
   if (typeof value === "string") {
     return value === "" ? "(leer)" : value;
   }
+  // Zutaten/Extras einer Ausgabe
+  if (Array.isArray(value)) {
+    return value.length === 0 ? "(leer)" : value.join(", ");
+  }
   return JSON.stringify(value);
 }
 
@@ -91,6 +95,8 @@ export const FIELD_LABEL = {
   subtitle: "Untertitel",
   img_path: "Bild",
   price: "Preis",
+  ingredients: "Zutaten",
+  extras: "Extras",
 } as const;
 
 export const STATUS_LABEL = {
