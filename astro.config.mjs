@@ -111,6 +111,14 @@ export default defineConfig({
         access: "secret",
         default: "speisly-admin",
       }),
+      // Öffentliche Basis-URL für die OIDC-Redirects (/admin/callback und
+      // Post-Logout). Ohne: `site` in Produktion, Request-URL im Dev-Server.
+      SITE_URL: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+        url: true,
+      }),
       PUBLIC_COOKIE_CONSENT_NAME: envField.string({
         context: "client",
         access: "public",

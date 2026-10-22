@@ -4,6 +4,7 @@ import {
   OIDC_CLIENT_ID,
   OIDC_CLIENT_SECRET,
   OIDC_ISSUER,
+  SITE_URL,
 } from "astro:env/server";
 import type { AstroCookieSetOptions } from "astro";
 import { type AdminAuth, createAdminAuth } from "./admin-auth";
@@ -23,13 +24,14 @@ export const adminAuth: AdminAuth | null =
     : null;
 
 /**
- * Absolute URL unter /admin. In Produktion aus `site` (der Server setzt den
- * Host fest auf speisly.de und kennt das Protokoll hinter dem Proxy nicht),
- * im Dev-Server vom Request.
+ * Absolute URL für die OIDC-Redirects. Basis ist `SITE_URL`, sonst in
+ * Produktion `site` (der Server setzt den Host fest auf speisly.de und kennt
+ * das Protokoll hinter dem Proxy nicht), im Dev-Server der Request.
  */
 export function adminUrl(path: string, context: { url: URL; site?: URL }) {
   const base =
-    import.meta.env.DEV || !context.site ? context.url : context.site;
+    SITE_URL ??
+    (import.meta.env.DEV || !context.site ? context.url : context.site);
   return new URL(path, base).toString();
 }
 
