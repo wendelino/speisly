@@ -7,7 +7,7 @@ import {
   type JWTPayload,
   SignJWT,
 } from "jose";
-import { createAdminAuth, safeNext } from "./admin-auth";
+import { createAdminAuth, profileOf, safeNext } from "./admin-auth";
 
 const ISSUER = "https://sso.example.test";
 const CLIENT_ID = "speisly-test";
@@ -166,6 +166,41 @@ describe("admin login (OIDC)", () => {
       userinfo: { sub: "u1", groups: ["speisly-admin"] },
     }).login();
     expect(result.ok).toBe(true);
+  });
+
+  test("profile with picture, completed from userinfo", async () => {
+    const { auth, login } = setup({
+      claims: (nonce) =>
+        idToken({ sub: "u1", nonce, groups: ["speisly-admin"] }),
+      userinfo: {
+        sub: "u1",
+        name: "Ada Lovelace",
+        preferred_username: "ada",
+        email: "ada@example.test",
+        picture: "https://sso.example.test/avatar/u1.png",
+      },
+    });
+    const { result } = await login();
+    if (!result.ok) {
+      throw new Error("expected a session");
+    }
+    expect(await auth.readSession(result.session)).toEqual({
+      sub: "u1",
+      name: "Ada Lovelace",
+      email: "ada@example.test",
+      username: "ada",
+      picture: "https://sso.example.test/avatar/u1.png",
+    });
+  });
+
+  test("only http(s) pictures", () => {
+    expect(profileOf("u1", { picture: "javascript:alert(1)" })).toEqual({
+      sub: "u1",
+      name: "u1",
+    });
+    expect(
+      profileOf("u1", { picture: "data:image/png;base64,AAAA" }).picture
+    ).toBeUndefined();
   });
 
   test("without the admin group access is denied", async () => {

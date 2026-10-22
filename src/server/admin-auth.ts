@@ -43,7 +43,18 @@ type Discovery = {
   end_session_endpoint?: string;
 };
 
-export type AdminSession = { sub: string; name: string; email?: string };
+/** Profil aus ID-Token und Userinfo des Providers */
+export type AdminSession = {
+  sub: string;
+  name: string;
+  email?: string;
+  /** `preferred_username` */
+  username?: string;
+  /** Profilbild (`picture`), nur http(s) */
+  picture?: string;
+};
+
+const MAX_PICTURE_LENGTH = 2048;
 
 type Flow = { state: string; nonce: string; verifier: string; next: string };
 
@@ -79,6 +90,44 @@ function groupsOf(claims: Record<string, unknown>): string[] {
     return groups.filter((g): g is string => typeof g === "string");
   }
   return typeof groups === "string" ? [groups] : [];
+}
+
+const str = (value: unknown) =>
+  typeof value === "string" && value.trim() ? value.trim() : undefined;
+
+/** Nur absolute http(s)-URLs; Data-URLs würden das Session-Cookie sprengen */
+function pictureOf(value: unknown): string | undefined {
+  const url = str(value);
+  if (!url || url.length > MAX_PICTURE_LENGTH) {
+    return;
+  }
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "https:" || protocol === "http:" ? url : undefined;
+  } catch {
+    return;
+  }
+}
+
+/** Profil aus den Claims; Felder ohne Wert fehlen */
+export function profileOf(
+  sub: string,
+  claims: Record<string, unknown>
+): AdminSession {
+  const profile = {
+    sub,
+    name:
+      str(claims.name) ??
+      str(claims.preferred_username) ??
+      str(claims.email) ??
+      sub,
+    email: str(claims.email),
+    username: str(claims.preferred_username) ?? str(claims.username),
+    picture: pictureOf(claims.picture),
+  };
+  return Object.fromEntries(
+    Object.entries(profile).filter(([, value]) => value !== undefined)
+  ) as AdminSession;
 }
 
 export function createAdminAuth({
@@ -206,28 +255,34 @@ export function createAdminAuth({
     return (await res.json()) as { id_token?: string; access_token?: string };
   }
 
-  /** Gruppen aus dem ID-Token, sonst vom Userinfo-Endpoint */
-  async function groupsFor(
+  /**
+   * Claims vom Userinfo-Endpoint, falls dem ID-Token Gruppen oder
+   * Profilangaben (Bild, Name) fehlen. Gilt nur für denselben Nutzer.
+   */
+  async function userinfoFor(
     discovered: Discovery,
     idClaims: JWTPayload,
     accessToken: string | undefined
-  ): Promise<string[]> {
-    const fromToken = groupsOf(idClaims);
-    if (
-      fromToken.length > 0 ||
-      !(discovered.userinfo_endpoint && accessToken)
-    ) {
-      return fromToken;
+  ): Promise<Record<string, unknown>> {
+    const complete =
+      groupsOf(idClaims).length > 0 &&
+      str(idClaims.picture) &&
+      str(idClaims.name);
+    if (complete || !(discovered.userinfo_endpoint && accessToken)) {
+      return {};
     }
-    const res = await fetchImpl(discovered.userinfo_endpoint, {
-      headers: { authorization: `Bearer ${accessToken}` },
-    });
-    if (!res.ok) {
-      return [];
+    try {
+      const res = await fetchImpl(discovered.userinfo_endpoint, {
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) {
+        return {};
+      }
+      const info = (await res.json()) as Record<string, unknown>;
+      return info.sub === idClaims.sub ? info : {};
+    } catch {
+      return {};
     }
-    const info = (await res.json()) as Record<string, unknown>;
-    // Userinfo gehört nur zum selben Nutzer
-    return info.sub === idClaims.sub ? groupsOf(info) : [];
   }
 
   /** Callback des Providers: Code tauschen, Token und Gruppe prüfen */
@@ -295,7 +350,9 @@ export function createAdminAuth({
     if (claims.nonce !== flow.nonce || !claims.sub) {
       return { ok: false, status: 400, reason: "Ungültiges ID-Token" };
     }
-    const groups = await groupsFor(discovered, claims, accessToken);
+    const info = await userinfoFor(discovered, claims, accessToken);
+    const fromToken = groupsOf(claims);
+    const groups = fromToken.length > 0 ? fromToken : groupsOf(info);
     if (!groups.includes(settings.adminGroup)) {
       return {
         ok: false,
@@ -303,15 +360,8 @@ export function createAdminAuth({
         reason: "Kein Zugriff auf den Admin-Bereich",
       };
     }
-    const name =
-      (typeof claims.name === "string" && claims.name) ||
-      (typeof claims.email === "string" && claims.email) ||
-      claims.sub;
-    const session: AdminSession = {
-      sub: claims.sub,
-      name,
-      ...(typeof claims.email === "string" ? { email: claims.email } : {}),
-    };
+    // ID-Token hat Vorrang, Userinfo ergänzt
+    const session = profileOf(claims.sub, { ...info, ...claims });
     return {
       ok: true,
       session: await sign(session, SESSION_AUDIENCE, SESSION_TTL_SECONDS),
@@ -326,11 +376,10 @@ export function createAdminAuth({
     if (!(payload?.sub && typeof payload.name === "string")) {
       return null;
     }
-    return {
-      sub: payload.sub,
-      name: payload.name,
-      ...(typeof payload.email === "string" ? { email: payload.email } : {}),
-    };
+    return profileOf(payload.sub, {
+      ...payload,
+      preferred_username: payload.username,
+    });
   }
 
   /** Abmelden auch beim Provider, falls er das anbietet */

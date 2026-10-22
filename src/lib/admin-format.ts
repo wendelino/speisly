@@ -44,6 +44,26 @@ export function formatChangeValue(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/**
+ * Gericht, um das es in einem Fehler geht: `ctx.mealId` oder
+ * `ctx.change.mealId` (Sync, src/server/sync/db.ts)
+ */
+export function mealIdOf(ctx: unknown): string | null {
+  if (typeof ctx !== "object" || ctx === null) {
+    return null;
+  }
+  const { mealId, change } = ctx as { mealId?: unknown; change?: unknown };
+  if (typeof mealId === "string") {
+    return mealId;
+  }
+  return typeof change === "object" &&
+    change !== null &&
+    "mealId" in change &&
+    typeof change.mealId === "string"
+    ? change.mealId
+    : null;
+}
+
 export const FIELD_LABEL = {
   name: "Name",
   subtitle: "Untertitel",

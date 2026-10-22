@@ -1,0 +1,99 @@
+---
+// Konto im Admin-Header: Profil vom SSO-Provider (Bild, Name, Benutzername,
+// E-Mail) als Menü aus <details>, schließt bei Klick daneben oder Escape
+import { ChevronDown, ExternalLink, LogOut } from "@lucide/astro";
+import type { AdminSession } from "@/server/admin-auth";
+
+type Props = { admin: AdminSession };
+const { admin } = Astro.props;
+
+const initials =
+  admin.name
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "?";
+const ITEM =
+  "flex items-center gap-2.5 rounded-xl px-3 py-2 font-semibold transition-colors hover:bg-muted";
+---
+
+<details class="account-menu relative">
+  <summary
+    aria-label="Konto"
+    class="flex cursor-pointer list-none items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden"
+  >
+    <span class="avatar size-8 text-xs">
+      <span aria-hidden="true">{initials}</span>
+      {admin.picture && <img alt="" onerror="this.remove()" referrerpolicy="no-referrer" src={admin.picture}>}
+    </span>
+    <span class="hidden max-w-40 truncate font-semibold text-sm sm:inline">{admin.name}</span>
+    <ChevronDown aria-hidden="true" class="size-4 text-muted-foreground" />
+  </summary>
+  <div
+    class="absolute right-0 z-20 mt-2 w-72 rounded-2xl bg-card p-2 text-sm shadow-soft ring-1 ring-border/70"
+  >
+    <div class="flex items-center gap-3 p-3">
+      <span class="avatar size-12 text-base">
+        <span aria-hidden="true">{initials}</span>
+        {admin.picture && <img alt="" onerror="this.remove()" referrerpolicy="no-referrer" src={admin.picture}>}
+      </span>
+      <div class="min-w-0">
+        <p class="truncate font-semibold">{admin.name}</p>
+        {admin.username && admin.username !== admin.name && (
+          <p class="truncate text-muted-foreground text-xs">@{admin.username}</p>
+        )}
+        {admin.email && <p class="truncate text-muted-foreground text-xs">{admin.email}</p>}
+      </div>
+    </div>
+    <div class="my-1 border-border/70 border-t"></div>
+    <a class={ITEM} href="/">
+      <ExternalLink aria-hidden="true" class="size-4 text-muted-foreground" />
+      Zur Website
+    </a>
+    <a class={`${ITEM} text-rose`} href="/admin/logout">
+      <LogOut aria-hidden="true" class="size-4" />
+      Abmelden
+    </a>
+  </div>
+</details>
+
+<style>
+  .avatar {
+    position: relative;
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: var(--color-secondary);
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+  .avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+</style>
+
+<script>
+  // Menü schließen bei Klick außerhalb oder Escape
+  document.addEventListener("click", (event) => {
+    for (const menu of document.querySelectorAll<HTMLDetailsElement>(".account-menu[open]")) {
+      if (!menu.contains(event.target as Node)) {
+        menu.open = false;
+      }
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      for (const menu of document.querySelectorAll<HTMLDetailsElement>(".account-menu[open]")) {
+        menu.open = false;
+        menu.querySelector("summary")?.focus();
+      }
+    }
+  });
+</script>

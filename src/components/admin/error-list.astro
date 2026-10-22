@@ -2,7 +2,7 @@
 // Gruppierte Fehler mit letztem Kontext (ausklappbar) und Erledigt-Button
 import { actions } from "astro:actions";
 import Badge from "@/components/ui/badge.astro";
-import { formatDateTime } from "@/lib/admin-format";
+import { formatDateTime, mealIdOf } from "@/lib/admin-format";
 import type { errorLog } from "@/lib/db/schema/error-log";
 import DoneToggle from "./done-toggle.astro";
 
@@ -15,7 +15,9 @@ const { errors } = Astro.props;
     <p class="text-muted-foreground">Keine Fehler.</p>
   ) : (
     <ul class="space-y-3">
-      {errors.map((error) => (
+      {errors.map((error) => {
+        const mealId = mealIdOf(error.lastCtx);
+        return (
         <li class="rounded-2xl bg-card p-4 shadow-soft ring-1 ring-border/70">
           <div class="flex flex-wrap items-start gap-3">
             <div class="min-w-0 flex-1 space-y-1.5">
@@ -27,6 +29,17 @@ const { errors } = Astro.props;
               <p class="text-muted-foreground text-xs">
                 {error.count}× · zuerst {formatDateTime(error.firstSeenAt)} · zuletzt{" "}
                 {formatDateTime(error.lastSeenAt)}
+                {mealId && (
+                  <>
+                    {" "}·{" "}
+                    <a
+                      class="text-primary underline-offset-4 hover:underline"
+                      href={`/admin/meal/${mealId}`}
+                    >
+                      Gericht
+                    </a>
+                  </>
+                )}
                 {error.lastSyncRunId && (
                   <>
                     {" "}·{" "}
@@ -56,7 +69,8 @@ const { errors } = Astro.props;
             </details>
           )}
         </li>
-      ))}
+        );
+      })}
     </ul>
   )
 }

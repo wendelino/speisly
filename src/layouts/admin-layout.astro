@@ -2,23 +2,35 @@
 // Admin-Bereich: eigenes, schlichtes Gerüst ohne Analytics, nicht indexiert.
 // Zugang nur mit Session (src/middleware.ts).
 import { Font } from "astro:assets";
+import {
+  Activity,
+  History,
+  LayoutDashboard,
+  MessageSquare,
+  TriangleAlert,
+} from "@lucide/astro";
+import AccountMenu from "@/components/admin/account-menu.astro";
 import { cn } from "@/lib/utils";
+import { openCounts } from "@/server/queries/admin";
 import "@/styles/globals.css";
 
 type Props = { title: string };
 const { title } = Astro.props;
 const admin = Astro.locals.admin;
 const path = Astro.url.pathname;
+const { openErrors, openFeedback } = await openCounts();
 
 const NAV = [
-  { href: "/admin", label: "Übersicht" },
-  { href: "/admin/sync", label: "Sync-Läufe" },
-  { href: "/admin/errors", label: "Fehler" },
-  { href: "/admin/changes", label: "Änderungen" },
-  { href: "/admin/feedback", label: "Feedback" },
+  { href: "/admin", label: "Übersicht", icon: LayoutDashboard },
+  { href: "/admin/sync", label: "Sync-Läufe", icon: Activity },
+  { href: "/admin/errors", label: "Fehler", icon: TriangleAlert, count: openErrors },
+  { href: "/admin/changes", label: "Änderungen", icon: History, match: "/admin/meal" },
+  { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, count: openFeedback },
 ];
-const isActive = (href: string) =>
-  href === "/admin" ? path === "/admin" : path.startsWith(href);
+const isActive = (item: (typeof NAV)[number]) =>
+  item.href === "/admin"
+    ? path === "/admin"
+    : path.startsWith(item.href) || (item.match !== undefined && path.startsWith(item.match));
 ---
 
 <!doctype html>
@@ -32,37 +44,63 @@ const isActive = (href: string) =>
     <link rel="icon" href="/favicon.ico" sizes="128x128" type="image/x-icon">
   </head>
   <body class="min-h-screen antialiased">
-    <header class="border-border/70 border-b bg-card">
-      <div class="container-page flex flex-wrap items-center gap-x-6 gap-y-3 py-4">
-        <a class="font-bold font-display text-lg" href="/admin">
+    <header class="sticky top-0 z-10 border-border/70 border-b bg-card/90 backdrop-blur">
+      <div class="container-page flex items-center gap-4 py-3">
+        <a class="shrink-0 font-bold font-display text-lg" href="/admin">
           Speisly <span class="text-primary">Admin</span>
         </a>
-        <nav aria-label="Admin" class="-mx-1 flex flex-wrap gap-1 text-sm">
+        <nav aria-label="Admin" class="hidden flex-1 gap-1 text-sm md:flex">
           {
             NAV.map((item) => (
               <a
-                aria-current={isActive(item.href) ? "page" : undefined}
+                aria-current={isActive(item) ? "page" : undefined}
                 class={cn(
-                  "rounded-full px-3 py-1.5 font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                  isActive(item.href) && "bg-secondary text-primary"
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  isActive(item) && "bg-secondary text-primary hover:bg-secondary hover:text-primary"
                 )}
                 href={item.href}
               >
+                <item.icon aria-hidden="true" class="size-4" />
                 {item.label}
+                {item.count ? (
+                  <span class="min-w-5 rounded-full bg-rose px-1.5 text-center text-white text-xs leading-5">
+                    {item.count}
+                  </span>
+                ) : null}
               </a>
             ))
           }
         </nav>
-        <div class="ml-auto flex items-center gap-3 text-muted-foreground text-sm">
-          <span>{admin?.name}</span>
-          <a class="font-semibold text-primary underline-offset-4 hover:underline" href="/admin/logout">
-            Abmelden
-          </a>
-        </div>
+        <div class="ml-auto">{admin && <AccountMenu admin={admin} />}</div>
       </div>
+      <nav aria-label="Admin" class="container-page -mt-1 flex gap-1 overflow-x-auto pb-2 text-sm md:hidden">
+        {
+          NAV.map((item) => (
+            <a
+              aria-current={isActive(item) ? "page" : undefined}
+              class={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground",
+                isActive(item) && "bg-secondary text-primary"
+              )}
+              href={item.href}
+            >
+              <item.icon aria-hidden="true" class="size-4" />
+              {item.label}
+              {item.count ? (
+                <span class="min-w-5 rounded-full bg-rose px-1.5 text-center text-white text-xs leading-5">
+                  {item.count}
+                </span>
+              ) : null}
+            </a>
+          ))
+        }
+      </nav>
     </header>
     <main class="container-page py-8">
-      <h1 class="mb-6 font-bold font-display text-2xl sm:text-3xl">{title}</h1>
+      <div class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h1 class="font-bold font-display text-2xl sm:text-3xl">{title}</h1>
+        <slot name="actions" />
+      </div>
       <slot />
     </main>
   </body>

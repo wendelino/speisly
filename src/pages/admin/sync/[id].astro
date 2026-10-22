@@ -61,7 +61,7 @@ const facts = [
         {removals.map((r) => (
           <li>
             {formatDay(r.date, "EEE, dd.MM.yy")} · {r.mensaName ?? "Mensa unbekannt"} ·{" "}
-            <a class="text-primary underline-offset-4 hover:underline" href={`/meal/${r.mealId}`}>
+            <a class="text-primary underline-offset-4 hover:underline" href={`/admin/meal/${r.mealId}`}>
               {r.mealName}
             </a>
           </li>

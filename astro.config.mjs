@@ -15,6 +15,10 @@ export default defineConfig({
   // Default `output: "static"`: alles wird prerendered, außer Seiten mit
   // `export const prerender = false` (die laufen über den Node-Adapter).
   adapter: node({ mode: "standalone" }),
+  // Eigener CSRF-Schutz in src/middleware.ts: Astros Origin-Prüfung vergleicht
+  // mit der Request-URL, die hinter dem Proxy http:// und SITE_HOST ist, und
+  // lehnt deshalb jedes Formular ab (src/server/origin-check.ts)
+  security: { checkOrigin: false },
   integrations: [react()],
   // Route Cache: gerenderte Seiten und Server Islands liegen im Speicher des
   // Server-Prozesses (Cache-HIT = kein Render, keine DB). TTLs und Tags setzen

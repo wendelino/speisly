@@ -1,5 +1,7 @@
+import { SITE_URL } from "astro:env/server";
 import { defineMiddleware, sequence } from "astro:middleware";
 import { parseDayParam } from "@/lib/dates";
+import { isForbiddenCrossSite, originsOf } from "@/server/origin-check";
 
 const DAY_ROUTE = /^\/day\/([^/]+)\/?$/;
 
@@ -17,6 +19,26 @@ const dayRoute = defineMiddleware((context, next) => {
     if (!parseDayParam(param)) {
       return new Response(null, { status: 404 });
     }
+  }
+  return next();
+});
+
+/**
+ * CSRF-Schutz für Formulare statt Astros `checkOrigin`, das hinter dem Proxy
+ * jedes Formular ablehnt (src/server/origin-check.ts)
+ */
+const originCheck = defineMiddleware((context, next) => {
+  if (
+    !context.isPrerendered &&
+    isForbiddenCrossSite(
+      context.request,
+      originsOf(context.url, context.site, SITE_URL)
+    )
+  ) {
+    return new Response(
+      `Cross-site ${context.request.method} form submissions are forbidden`,
+      { status: 403 }
+    );
   }
   return next();
 });
@@ -91,4 +113,9 @@ const browserCaching = defineMiddleware(async (context, next) => {
   return response;
 });
 
-export const onRequest = sequence(dayRoute, adminGuard, browserCaching);
+export const onRequest = sequence(
+  originCheck,
+  dayRoute,
+  adminGuard,
+  browserCaching
+);
