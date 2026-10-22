@@ -7,8 +7,10 @@ import sharp from "sharp";
 /**
  * Vorab berechnete Bildvarianten der Gerichtsbilder.
  *
- * Der Sync lädt jedes neue Bild einmal von meine-mensa.de und legt AVIF und
- * WebP in zwei Breiten ab: `<dir>/<key>-<breite>.<format>`. Die kleine Breite
+ * Der Sync lädt jedes neue Bild einmal von meine-mensa.de und legt WebP in
+ * zwei Breiten ab: `<dir>/<key>-<breite>.webp`. Nur WebP, kein AVIF: Der
+ * iOS-Blockierungsmodus (Lockdown Mode) blockiert AVIF, Safari wählt eine
+ * AVIF-<source> dort trotzdem und zeigt dann nichts. Die kleine Breite
  * nutzt die Karte (~90–105 CSS-px, auch auf 3×-Displays scharf genug), die
  * große die Detailseite (max. 384 CSS-px). Feste URLs je Ansicht statt
  * `srcset`: Mit `srcset` würde die Karte auf Retina die große Datei wählen.
@@ -20,10 +22,10 @@ import sharp from "sharp";
 
 const IMAGE_WIDTHS = [240, 800] as const;
 const [SMALL_WIDTH, LARGE_WIDTH] = IMAGE_WIDTHS;
-const IMAGE_FORMATS = ["avif", "webp"] as const;
 const IMAGE_ROUTE = "/img";
 
-type Format = (typeof IMAGE_FORMATS)[number];
+/** Formate, die `/img/` ausliefert (AVIF nur noch für Altdateien, s. u.) */
+type Format = "avif" | "webp";
 
 export const IMAGE_CONTENT_TYPES: Record<Format, string> = {
   avif: "image/avif",
@@ -31,9 +33,10 @@ export const IMAGE_CONTENT_TYPES: Record<Format, string> = {
 };
 
 /**
- * Gültige Dateinamen unter `/img/` (alles andere ist 404). `400` stammt aus
- * der Zeit vor den 240er-Varianten: Die Dateien liegen noch auf der Platte
- * und gecachtes HTML verweist evtl. noch darauf. Kann später raus.
+ * Gültige Dateinamen unter `/img/` (alles andere ist 404). `400` und `avif`
+ * stammen aus der Zeit vor den 240er- bzw. reinen WebP-Varianten: Die
+ * Dateien liegen noch auf der Platte und gecachtes HTML verweist evtl. noch
+ * darauf. Kann später raus.
  */
 export const IMAGE_FILE_PATTERN = /^[0-9a-f]{16}-(240|400|800)\.(avif|webp)$/;
 
@@ -58,21 +61,19 @@ export function imageKey(url: string): string {
   return createHash("sha256").update(url).digest("hex").slice(0, 16);
 }
 
-function fileName(key: string, width: number, format: Format): string {
-  return `${key}-${width}.${format}`;
+function fileName(key: string, width: number): string {
+  return `${key}-${width}.webp`;
 }
 
 function variantFiles(key: string): string[] {
-  return IMAGE_WIDTHS.flatMap((w) =>
-    IMAGE_FORMATS.map((f) => fileName(key, w, f))
-  );
+  return IMAGE_WIDTHS.map((w) => fileName(key, w));
 }
 
 export type ImageVariants = {
-  /** Karte: URL je Format */
-  small: Record<Format, string>;
-  /** Detailseite: URL je Format */
-  large: Record<Format, string>;
+  /** Karte */
+  small: string;
+  /** Detailseite */
+  large: string;
 };
 
 export type EnsureResult = "exists" | "created" | "skipped" | "failed";
@@ -108,11 +109,8 @@ export function createImageStore({
     if (!hasVariants(key)) {
       return null;
     }
-    const urls = (width: number) => ({
-      avif: `${IMAGE_ROUTE}/${fileName(key, width, "avif")}`,
-      webp: `${IMAGE_ROUTE}/${fileName(key, width, "webp")}`,
-    });
-    return { small: urls(SMALL_WIDTH), large: urls(LARGE_WIDTH) };
+    const route = (width: number) => `${IMAGE_ROUTE}/${fileName(key, width)}`;
+    return { small: route(SMALL_WIDTH), large: route(LARGE_WIDTH) };
   }
 
   async function download(url: string): Promise<Buffer> {
@@ -137,19 +135,12 @@ export function createImageStore({
     return body;
   }
 
-  function encode(
-    input: Buffer,
-    width: number,
-    format: Format
-  ): Promise<Buffer> {
-    const pipeline = sharp(input, { limitInputPixels: 50_000_000 })
+  function encode(input: Buffer, width: number): Promise<Buffer> {
+    return sharp(input, { limitInputPixels: 50_000_000 })
       .rotate()
-      .resize({ width, withoutEnlargement: true });
-    // AVIF effort 2 statt Default 4: ~8× schneller (~150 ms statt ~1,2 s pro
-    // Bild mit allen Varianten), Dateien kaum größer (gemessen: 27 vs. 28 KB)
-    return format === "avif"
-      ? pipeline.avif({ quality: 55, effort: 2 }).toBuffer()
-      : pipeline.webp({ quality: 78 }).toBuffer();
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: 78 })
+      .toBuffer();
   }
 
   /**
@@ -174,14 +165,9 @@ export function createImageStore({
       // erst alles als .tmp schreiben, dann umbenennen: Eine Seite sieht nie
       // eine halbe Variante
       for (const width of IMAGE_WIDTHS) {
-        for (const format of IMAGE_FORMATS) {
-          const target = join(dir, fileName(key, width, format));
-          await writeFile(
-            target + tmpSuffix,
-            await encode(input, width, format)
-          );
-          written.push(target);
-        }
+        const target = join(dir, fileName(key, width));
+        await writeFile(target + tmpSuffix, await encode(input, width));
+        written.push(target);
       }
       for (const target of written) {
         await rename(target + tmpSuffix, target);

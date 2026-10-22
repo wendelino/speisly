@@ -91,7 +91,7 @@ speisly/
 │   ├── pages/             # Routen (/, /day/[date], /meal/[mealId], /api/*, /img/*)
 │   ├── server/            # nur Server: DB, Queries, Cache-Regeln, Sync, Bilder
 │   │   ├── sync/          # Abgleich mit der meine-mensa.de API
-│   │   └── images/        # Bildvarianten (AVIF/WebP) aus dem Sync
+│   │   └── images/        # Bildvarianten (WebP) aus dem Sync
 │   ├── stores/            # nanostores (Filter, Dialog-Zustand)
 │   └── lib/               # gemeinsame Hilfsfunktionen, DB-Schema
 ├── drizzle/               # Datenbank-Migrationen
@@ -163,7 +163,7 @@ bun run start        # Bun (empfohlen); bun run start:node für Node ≥ 22
 
 ### Bilder
 
-Gerichtsbilder werden beim Sync einmal von meine-mensa.de geladen und als AVIF/WebP (400 und 800 px) in `IMAGE_DIR` abgelegt (Default `./data/img`, in Produktion ein persistentes Volume). Ausgeliefert werden sie unter `/img/…` mit einjährigem Browser-Cache. Solange es für ein Bild keine Varianten gibt, zeigt die Seite das Original.
+Gerichtsbilder werden beim Sync einmal von meine-mensa.de geladen und als WebP (240 und 800 px; kein AVIF, das blockiert der iOS-Blockierungsmodus) in `IMAGE_DIR` abgelegt (Default `./data/img`, in Produktion ein persistentes Volume). Ausgeliefert werden sie unter `/img/…` mit einjährigem Browser-Cache. Solange es für ein Bild keine Varianten gibt, zeigt die Seite das Original.
 
 Der Sync deckt heute bis +7 Tage ab. Für ältere Gerichte (z. B. nach dem Umzug oder dem Verlust des Volumes) einmalig vor dem Serverstart:
 

@@ -4,8 +4,10 @@
 // noch lädt, pulsiert ein Skeleton (meal.css .m-photo); `data-loaded` setzt
 // ein einziger Load-Listener im <head> (lib/meal-assets.ts).
 // Bilder: vorberechnete Varianten aus dem Sync (src/server/images), feste URL
-// je Ansicht (Karte klein, Detail groß), AVIF per <source>, WebP als Fallback
-// im <img>; ohne Varianten das Original. Ohne Bild: Kochmützen-Platzhalter.
+// je Ansicht (Karte klein, Detail groß), nur WebP; ohne Varianten das
+// Original. Lädt eine Variante nicht (WebP war in einzelnen iOS-Versionen im
+// Blockierungsmodus kaputt), lädt das Boot-Script das Original aus
+// `data-fallback`. Ohne Bild: Kochmützen-Platzhalter.
 // Klassen m-*: src/styles/meal.css. Die Seite braucht das Sprite-Icon
 // "chef-hat", wenn Gerichte ohne Bild vorkommen.
 import Icon from "@/components/icons/icon.astro";
@@ -31,7 +33,7 @@ const {
   vt = false,
 } = Astro.props;
 const variants = src ? images.variants(src) : null;
-const urls = variants?.[view === "card" ? "small" : "large"];
+const url = variants?.[view === "card" ? "small" : "large"];
 ---
 
 <div
@@ -40,10 +42,7 @@ const urls = variants?.[view === "card" ? "small" : "large"];
 >
   {
     src ? (
-      <picture class="contents">
-        {urls && <source srcset={urls.avif} type="image/avif" />}
-        <img alt={alt} class="m-photo" decoding={priority ? "sync" : "async"} fetchpriority={priority ? "high" : undefined} height="375" loading={priority ? "eager" : "lazy"} src={urls?.webp ?? src} width="500" />
-      </picture>
+      <img alt={alt} class="m-photo" data-fallback={url ? src : undefined} decoding={priority ? "sync" : "async"} fetchpriority={priority ? "high" : undefined} height="375" loading={priority ? "eager" : "lazy"} src={url ?? src} width="500" />
     ) : (
       <div class="m-noimg">
         <Icon class={view === "detail" ? "size-24 -rotate-12" : "size-10 -rotate-12"} name="chef-hat" />
