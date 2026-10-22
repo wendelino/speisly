@@ -20,62 +20,44 @@ const STATUS_LABEL: Record<SyncStatus, string> = {
 };
 
 /**
- * Gemeldet wird ein Lauf, wenn er nicht glatt lief, neue bzw. wiederkehrende
- * Fehler hatte oder die Notbremse gezogen hat – der nächtliche Wochen-Sync
- * immer. Ruhige Läufe tagsüber bleiben still.
+ * Gemeldet wird ein Lauf nur bei Fehlern: nicht glatt gelaufen, neue bzw.
+ * wiederkehrende Fehler oder Notbremse. Erfolgreiche Läufe bleiben still,
+ * ihre Zahlen stehen im Admin-Bereich (/admin/sync).
  */
-export function shouldReport({ scope, status, counts, errors }: RunSummary) {
+export function shouldReport({ status, counts, errors }: RunSummary) {
   return (
     status !== "success" ||
     counts.massRemoval ||
-    errors.some((e) => e.noteworthy) ||
-    scope === "week"
+    errors.some((e) => e.noteworthy)
   );
 }
 
-function plural(count: number, one: string, many: string) {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
+/** Fehlermeldung zum Lauf: Status, Notbremse und neue Fehler */
 export function formatSummary({
   scope,
   status,
   durationMs,
-  counts: c,
+  counts,
   errors,
 }: RunSummary): string {
   const lines = [
     `Sync ${scope}: ${STATUS_LABEL[status]} (${formatDecimal(durationMs / 1000)} s)`,
   ];
-  if (scope === "today" || scope === "week") {
-    lines.push(
-      `Neu: ${plural(c.newMeals, "Gericht", "Gerichte")}, ${plural(c.newServings, "Ausgabe", "Ausgaben")}`,
-      `Geändert: ${plural(c.changedMeals, "Gericht", "Gerichte")}`,
-      `Entfernt: ${plural(c.removedServings, "Ausgabe", "Ausgaben")} (${c.keptServings} behalten)`,
-      `Bilder: ${c.imagesCreated} neu, ${c.imagesFailed} fehlgeschlagen`
-    );
-  }
-  if (c.massRemoval) {
+  if (counts.massRemoval) {
     lines.push("Notbremse gezogen – keine Ausgaben entfernt.");
   }
   const noteworthy = errors.filter((e) => e.noteworthy);
-  const known = errors.length - noteworthy.length;
-  if (errors.length > 0) {
+  if (noteworthy.length > 0) {
     lines.push("", "Fehler:");
     for (const e of noteworthy) {
       const times = e.occurrences > 1 ? ` ×${e.occurrences}` : "";
       lines.push(`• [${e.source}] ${e.message}${times}`);
     }
-    if (known > 0) {
-      lines.push(
-        `+ ${plural(known, "bekannte Meldung", "bekannte Meldungen")}`
-      );
-    }
   }
   return lines.join("\n");
 }
 
-/** Schickt die Zusammenfassung, falls meldenswert, und merkt sich das */
+/** Schickt die Meldung, falls der Lauf Fehler hatte, und merkt sich das */
 export async function reportSyncRun(summary: RunSummary): Promise<void> {
   if (!shouldReport(summary)) {
     return;

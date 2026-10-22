@@ -26,19 +26,19 @@ describe("shouldReport", () => {
     ).toBe(false);
   });
 
-  test("failures, the brake, new errors and the weekly sync are reported", () => {
+  test("failures, the brake and new errors are reported", () => {
     expect(shouldReport({ ...quiet, status: "failed" })).toBe(true);
     expect(shouldReport({ ...quiet, status: "partial" })).toBe(true);
     expect(
       shouldReport({ ...quiet, counts: { ...EMPTY_COUNTS, massRemoval: true } })
     ).toBe(true);
     expect(shouldReport({ ...quiet, errors: [error("Neu", true)] })).toBe(true);
-    expect(shouldReport({ ...quiet, scope: "week" })).toBe(true);
+    expect(shouldReport({ ...quiet, scope: "week" })).toBe(false);
   });
 });
 
 describe("formatSummary", () => {
-  test("counts, new errors and a hint for known ones", () => {
+  test("status, the brake and new errors, no counts or known errors", () => {
     const text = formatSummary({
       scope: "week",
       status: "partial",
@@ -63,15 +63,10 @@ describe("formatSummary", () => {
     expect(text).toBe(
       [
         "Sync week: teilweise (12,3 s)",
-        "Neu: 1 Gericht, 40 Ausgaben",
-        "Geändert: 3 Gerichte",
-        "Entfernt: 2 Ausgaben (1 behalten)",
-        "Bilder: 4 neu, 1 fehlgeschlagen",
         "Notbremse gezogen – keine Ausgaben entfernt.",
         "",
         "Fehler:",
         "• [sync] Error creating meal ×2",
-        "+ 2 bekannte Meldungen",
       ].join("\n")
     );
   });

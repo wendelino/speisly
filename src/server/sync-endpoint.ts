@@ -47,7 +47,7 @@ type Deps = {
       result: { status: SyncStatus; counts: SyncCounts; error?: string | null }
     ) => Promise<{ durationMs: number }>;
   };
-  /** Telegram-Zusammenfassung (src/server/sync-summary.ts) */
+  /** Telegram-Meldung bei Fehlern (src/server/sync-summary.ts) */
   report: (summary: RunSummary) => Promise<void>;
 };
 
