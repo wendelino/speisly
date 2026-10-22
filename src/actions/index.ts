@@ -9,12 +9,29 @@ import { hasConsent } from "@/server/consent";
 import { db } from "@/server/db";
 import { saveFeedback } from "@/server/feedback";
 import { logError } from "@/server/log";
+import { setErrorResolved, setFeedbackDone } from "@/server/queries/admin";
 import {
   deleteUserRating,
   getUserRating,
   upsertRating,
 } from "@/server/ratings";
 import { getOrCreateUser, getUserId } from "@/server/user";
+
+/**
+ * Admin-Actions: die Middleware lässt sie nur mit Session durch
+ * (src/middleware.ts), hier wird zur Sicherheit noch einmal geprüft
+ */
+function requireAdmin(locals: App.Locals) {
+  if (!locals.admin) {
+    throw new ActionError({
+      code: "UNAUTHORIZED",
+      message: "Nicht angemeldet",
+    });
+  }
+}
+
+/** Formularwert "true"/"false" (z.coerce.boolean macht aus "false" true) */
+const flag = z.enum(["true", "false"]).transform((value) => value === "true");
 
 const NO_CONSENT = "Bewertungen sind nur mit Cookie-Consent möglich";
 const id = z.string().min(1).max(64);
@@ -23,8 +40,8 @@ const stars = z.number().int().min(1).max(5);
 type RatingResult = { success: boolean; message: string; updatedAt?: Date };
 
 /**
- * Astro Actions (POST /_actions/*, nie gecacht) für Feedback und
- * Bewertungen.
+ * Astro Actions (POST /_actions/*, nie gecacht) für Feedback, Bewertungen
+ * und den Admin-Bereich.
  */
 export const server = {
   feedback: {
@@ -155,6 +172,24 @@ export const server = {
             message: "Fehler beim Löschen der Bewertung",
           };
         }
+      },
+    }),
+  },
+  admin: {
+    setErrorResolved: defineAction({
+      accept: "form",
+      input: z.object({ id, resolved: flag }),
+      handler: async ({ id: errorId, resolved }, context) => {
+        requireAdmin(context.locals);
+        return { updated: await setErrorResolved(errorId, resolved) };
+      },
+    }),
+    setFeedbackDone: defineAction({
+      accept: "form",
+      input: z.object({ id, done: flag }),
+      handler: async ({ id: feedbackId, done }, context) => {
+        requireAdmin(context.locals);
+        return { updated: await setFeedbackDone(feedbackId, done) };
       },
     }),
   },

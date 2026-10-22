@@ -88,6 +88,29 @@ export default defineConfig({
         access: "secret",
         optional: true,
       }),
+      // Admin-Bereich (/admin): Login über den eigenen OIDC-Provider. Ohne
+      // Client-ID/Secret ist /admin abgeschaltet (src/server/admin.ts).
+      OIDC_ISSUER: envField.string({
+        context: "server",
+        access: "secret",
+        default: "https://sso.lnio.de",
+      }),
+      OIDC_CLIENT_ID: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      OIDC_CLIENT_SECRET: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      // Nur Mitglieder dieser Gruppe (Claim `groups`) kommen hinein
+      ADMIN_GROUP: envField.string({
+        context: "server",
+        access: "secret",
+        default: "speisly-admin",
+      }),
       PUBLIC_COOKIE_CONSENT_NAME: envField.string({
         context: "client",
         access: "public",

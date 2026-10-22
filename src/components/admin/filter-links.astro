@@ -1,0 +1,35 @@
+---
+// Filter als Linkgruppe (Query-Parameter), ohne Client-JS
+import { cn } from "@/lib/utils";
+
+type Props = {
+  param: string;
+  current: string;
+  options: { value: string; label: string }[];
+};
+const { param, current, options } = Astro.props;
+const href = (value: string) => {
+  const url = new URL(Astro.url);
+  url.searchParams.delete("_action");
+  url.searchParams.set(param, value);
+  return `${url.pathname}${url.search}`;
+};
+---
+
+<nav aria-label="Filter" class="mb-5 flex flex-wrap gap-2">
+  {
+    options.map((option) => (
+      <a
+        aria-current={option.value === current ? "true" : undefined}
+        class={cn(
+          "rounded-full px-3.5 py-1.5 font-semibold text-sm ring-1 ring-border transition-colors hover:bg-muted",
+          option.value === current &&
+            "bg-primary text-primary-foreground ring-primary hover:bg-primary/90"
+        )}
+        href={href(option.value)}
+      >
+        {option.label}
+      </a>
+    ))
+  }
+</nav>

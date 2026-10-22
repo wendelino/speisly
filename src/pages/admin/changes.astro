@@ -1,0 +1,27 @@
+---
+// Admin: Gerichtsänderungen aus dem Sync, nach Feld filterbar
+import ChangeTable from "@/components/admin/change-table.astro";
+import FilterLinks from "@/components/admin/filter-links.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import { FIELD_LABEL } from "@/lib/admin-format";
+import { listMealChanges, type MealChangeField } from "@/server/queries/admin";
+
+export const prerender = false;
+
+const FIELDS = Object.keys(FIELD_LABEL) as MealChangeField[];
+const param = Astro.url.searchParams.get("field");
+const field = FIELDS.find((f) => f === param) ?? null;
+const changes = await listMealChanges(field);
+---
+
+<AdminLayout title="Gerichtsänderungen">
+  <FilterLinks
+    current={field ?? "all"}
+    options={[
+      { value: "all", label: "Alle" },
+      ...FIELDS.map((f) => ({ value: f, label: FIELD_LABEL[f] })),
+    ]}
+    param="field"
+  />
+  <ChangeTable changes={changes} />
+</AdminLayout>

@@ -21,6 +21,48 @@ const dayRoute = defineMiddleware((context, next) => {
   return next();
 });
 
+/** Ohne Session erreichbar: der Login selbst */
+const ADMIN_PUBLIC = new Set([
+  "/admin/login",
+  "/admin/callback",
+  "/admin/logout",
+]);
+const ADMIN_ACTION = "/_actions/admin.";
+
+/**
+ * /admin und die Admin-Actions nur mit gültiger Session (src/server/admin.ts).
+ * Antworten dort nie cachen und nicht indexieren.
+ */
+const adminGuard = defineMiddleware(async (context, next) => {
+  const path = context.url.pathname;
+  const isAdmin = path === "/admin" || path.startsWith("/admin/");
+  if (!(isAdmin || path.startsWith(ADMIN_ACTION))) {
+    return next();
+  }
+  if (!ADMIN_PUBLIC.has(path)) {
+    // erst hier laden: liest Secrets, die beim Prerendern fehlen
+    const [{ adminAuth }, { SESSION_COOKIE }] = await Promise.all([
+      import("@/server/admin"),
+      import("@/server/admin-auth"),
+    ]);
+    const session = await adminAuth?.readSession(
+      context.cookies.get(SESSION_COOKIE)?.value
+    );
+    if (!session) {
+      if (!isAdmin) {
+        return new Response(null, { status: 401 });
+      }
+      const login = `/admin/login?next=${encodeURIComponent(path + context.url.search)}`;
+      return context.redirect(login, 302);
+    }
+    context.locals.admin = session;
+  }
+  const response = await next();
+  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+});
+
 /**
  * Browser-Caching für on-demand gerenderte Antworten. Gecacht wird
  * serverseitig (Route Cache, Treffer kosten ~1 ms); der Browser soll HTML
@@ -49,4 +91,4 @@ const browserCaching = defineMiddleware(async (context, next) => {
   return response;
 });
 
-export const onRequest = sequence(dayRoute, browserCaching);
+export const onRequest = sequence(dayRoute, adminGuard, browserCaching);

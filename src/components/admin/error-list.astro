@@ -1,0 +1,62 @@
+---
+// Gruppierte Fehler mit letztem Kontext (ausklappbar) und Erledigt-Button
+import { actions } from "astro:actions";
+import Badge from "@/components/ui/badge.astro";
+import { formatDateTime } from "@/lib/admin-format";
+import type { errorLog } from "@/lib/db/schema/error-log";
+import DoneToggle from "./done-toggle.astro";
+
+type Props = { errors: (typeof errorLog.$inferSelect)[] };
+const { errors } = Astro.props;
+---
+
+{
+  errors.length === 0 ? (
+    <p class="text-muted-foreground">Keine Fehler.</p>
+  ) : (
+    <ul class="space-y-3">
+      {errors.map((error) => (
+        <li class="rounded-2xl bg-card p-4 shadow-soft ring-1 ring-border/70">
+          <div class="flex flex-wrap items-start gap-3">
+            <div class="min-w-0 flex-1 space-y-1.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <Badge tone={error.level === "error" ? "rose" : "sun"}>{error.source}</Badge>
+                {error.resolvedAt && <Badge tone="mint">erledigt</Badge>}
+                <span class="font-semibold">{error.message}</span>
+              </div>
+              <p class="text-muted-foreground text-xs">
+                {error.count}× · zuerst {formatDateTime(error.firstSeenAt)} · zuletzt{" "}
+                {formatDateTime(error.lastSeenAt)}
+                {error.lastSyncRunId && (
+                  <>
+                    {" "}·{" "}
+                    <a
+                      class="text-primary underline-offset-4 hover:underline"
+                      href={`/admin/sync/${error.lastSyncRunId}`}
+                    >
+                      Lauf
+                    </a>
+                  </>
+                )}
+              </p>
+            </div>
+            <DoneToggle
+              action={actions.admin.setErrorResolved}
+              done={error.resolvedAt !== null}
+              field="resolved"
+              id={error.id}
+            />
+          </div>
+          {error.lastCtx !== null && (
+            <details class="mt-3">
+              <summary class="cursor-pointer text-muted-foreground text-xs">
+                Letzter Kontext
+              </summary>
+              <pre class="mt-2 max-h-80 overflow-auto rounded-xl bg-muted p-3 text-xs">{JSON.stringify(error.lastCtx, null, 2)}</pre>
+            </details>
+          )}
+        </li>
+      ))}
+    </ul>
+  )
+}
