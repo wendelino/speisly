@@ -7,6 +7,7 @@ import {
   History,
   LayoutDashboard,
   MessageSquare,
+  Search,
   TriangleAlert,
 } from "@lucide/astro";
 import AccountMenu from "@/components/admin/account-menu.astro";
@@ -71,7 +72,19 @@ const isActive = (item: (typeof NAV)[number]) =>
             ))
           }
         </nav>
-        <div class="ml-auto">{admin && <AccountMenu admin={admin} />}</div>
+        <form action="/admin/search" class="ml-auto hidden md:block" method="get" role="search">
+          <label class="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm focus-within:ring-2 focus-within:ring-primary">
+            <Search aria-hidden="true" class="size-4 text-muted-foreground" />
+            <input
+              aria-label="ID suchen"
+              class="w-36 bg-transparent font-mono text-xs focus:outline-none lg:w-56"
+              name="q"
+              placeholder="ID suchen"
+              value={path === "/admin/search" ? (Astro.url.searchParams.get("q") ?? "") : ""}
+            >
+          </label>
+        </form>
+        <div class="ml-auto md:ml-0">{admin && <AccountMenu admin={admin} />}</div>
       </div>
       <nav aria-label="Admin" class="container-page -mt-1 flex gap-1 overflow-x-auto pb-2 text-sm md:hidden">
         {
@@ -94,6 +107,17 @@ const isActive = (item: (typeof NAV)[number]) =>
             </a>
           ))
         }
+        <a
+          aria-current={path === "/admin/search" ? "page" : undefined}
+          class={cn(
+            "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground",
+            path === "/admin/search" && "bg-secondary text-primary"
+          )}
+          href="/admin/search"
+        >
+          <Search aria-hidden="true" class="size-4" />
+          Suche
+        </a>
       </nav>
     </header>
     <main class="container-page py-8">

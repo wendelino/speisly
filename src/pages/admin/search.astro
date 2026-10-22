@@ -1,0 +1,213 @@
+---
+// Admin: Suche nach einer ID in allen Tabellen (Gericht, Ausgabe, Bewertung,
+// Mensa, Sync-Lauf, Änderung, Feedback, Fehler)
+import ErrorList from "@/components/admin/error-list.astro";
+import MealThumb from "@/components/admin/meal-thumb.astro";
+import Badge from "@/components/ui/badge.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import { FIELD_LABEL, formatDateTime, STATUS_LABEL, STATUS_TONE } from "@/lib/admin-format";
+import { toIsoDay } from "@/lib/dates";
+import { formatDay } from "@/lib/format";
+import { searchById } from "@/server/queries/admin";
+
+export const prerender = false;
+
+const query = Astro.url.searchParams.get("q")?.trim() ?? "";
+const result = query ? await searchById(query) : null;
+const total = result ? Object.values(result).reduce((sum, rows) => sum + rows.length, 0) : 0;
+
+const day = (date: Date | string) =>
+  formatDay(typeof date === "string" ? date : toIsoDay(date), "EEE, dd.MM.yy");
+const LINK = "text-primary underline-offset-4 hover:underline";
+const ITEM = "rounded-2xl bg-card p-4 shadow-soft ring-1 ring-border/70";
+const HEADING = "mb-3 font-bold font-display text-xl";
+---
+
+<AdminLayout title="ID-Suche">
+  <form action="/admin/search" class="mb-8 flex max-w-2xl gap-2" method="get">
+    <input
+      aria-label="ID"
+      autofocus={!query}
+      class="min-w-0 flex-1 rounded-full bg-card px-4 py-2 font-mono text-sm ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary"
+      name="q"
+      placeholder="ID, src_id, Mensa-Slug oder Fingerprint"
+      value={query}
+    >
+    <button
+      class="rounded-full bg-primary px-4 py-2 font-semibold text-primary-foreground text-sm"
+      type="submit"
+    >
+      Suchen
+    </button>
+  </form>
+
+  {result && total === 0 && <p class="text-muted-foreground">Nichts gefunden für <code>{query}</code>.</p>}
+
+  {
+    result && result.servings.length > 0 && (
+      <section class="mb-8">
+        <h2 class={HEADING}>Ausgaben</h2>
+        <ul class="space-y-3">
+          {result.servings.map((s) => (
+            <li class={ITEM}>
+              <p class="font-semibold">
+                <a class={LINK} href={`/admin/meal/${s.mealId}`}>{s.mealName}</a>
+              </p>
+              <p class="text-muted-foreground text-sm">
+                {day(s.date)} · {s.mensaName} · {s.ratings > 0 ? `${s.ratings} Bewertung(en)` : "keine Bewertungen"} ·{" "}
+                <a class={LINK} href={`/meal/${s.mealId}?mmid=${s.id}`} target="_blank">öffentlich</a>
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result && result.removals.length > 0 && (
+      <section class="mb-8">
+        <h2 class={HEADING}>Entfernte Ausgaben</h2>
+        <ul class="space-y-3">
+          {result.removals.map((r) => (
+            <li class={ITEM}>
+              <p class="font-semibold">
+                <a class={LINK} href={`/admin/meal/${r.mealId}`}>{r.mealName}</a>
+              </p>
+              <p class="text-muted-foreground text-sm">
+                {day(r.date)} · {r.mensaName ?? "Mensa unbekannt"}
+                {r.syncRunId && (
+                  <>
+                    {" "}· <a class={LINK} href={`/admin/sync/${r.syncRunId}`}>Lauf</a>
+                  </>
+                )}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result && result.meals.length > 0 && (
+      <section class="mb-8">
+        <h2 class={HEADING}>Gerichte</h2>
+        <ul class="space-y-3">
+          {result.meals.map((m) => (
+            <li class:list={[ITEM, "flex items-center gap-4"]}>
+              <MealThumb src={m.imgPath} />
+              <div class="min-w-0">
+                <a class:list={[LINK, "font-semibold"]} href={`/admin/meal/${m.id}`}>{m.name}</a>
+                <p class="break-all text-muted-foreground text-xs">src_id {m.srcId}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result && result.ratings.length > 0 && (
+      <section class="mb-8">
+        <h2 class={HEADING}>Bewertungen</h2>
+        <ul class="space-y-3">
+          {result.ratings.map((r) => (
+            <li class={ITEM}>
+              <p class="font-semibold">
+                {r.value} ★ für <a class={LINK} href={`/admin/meal/${r.mealId}`}>{r.mealName}</a>
+              </p>
+              <p class="text-muted-foreground text-sm">
+                {formatDateTime(r.createdAt)} ·{" "}
+                <a class={LINK} href={`/admin/search?q=${r.mensaMealId}`}>Ausgabe</a>
+              </p>
+              {r.comment && <p class="mt-2 text-sm">{r.comment}</p>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result && result.runs.length > 0 && (
+      <section class="mb-8">
+        <h2 class={HEADING}>Sync-Läufe</h2>
+        <ul class="space-y-3">
+          {result.runs.map((run) => (
+            <li class:list={[ITEM, "flex flex-wrap items-center gap-2"]}>
+              <Badge tone={STATUS_TONE[run.status]}>{STATUS_LABEL[run.status]}</Badge>
+              <a class={LINK} href={`/admin/sync/${run.id}`}>{formatDateTime(run.startedAt)}</a>
+              <span class="text-muted-foreground text-sm">{run.scope}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result && result.changes.length > 0 && (
+      <section class="mb-8">
+        <h2 class={HEADING}>Änderungen</h2>
+        <ul class="space-y-3">
+          {result.changes.map((c) => (
+            <li class:list={[ITEM, "flex flex-wrap items-center gap-2"]}>
+              <Badge>{FIELD_LABEL[c.field]}</Badge>
+              <a class={LINK} href={`/admin/meal/${c.mealId}`}>{c.mealName}</a>
+              <span class="text-muted-foreground text-sm">{formatDateTime(c.createdAt)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result && result.mensen.length > 0 && (
+      <section class="mb-8">
+        <h2 class={HEADING}>Mensen</h2>
+        <ul class="space-y-3">
+          {result.mensen.map((m) => (
+            <li class={ITEM}>
+              <span class="font-semibold">{m.name}</span>
+              <span class="text-muted-foreground text-sm"> · {m.slug}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result && result.feedbacks.length > 0 && (
+      <section class="mb-8">
+        <h2 class={HEADING}>Feedback</h2>
+        <ul class="space-y-3">
+          {result.feedbacks.map((f) => (
+            <li class={ITEM}>
+              <p class="mb-1 text-muted-foreground text-xs">
+                {formatDateTime(f.createdAt)} · {f.status === "done" ? "erledigt" : "offen"} ·{" "}
+                <a class={LINK} href="/admin/feedback?status=all">alle Nachrichten</a>
+              </p>
+              <p class="whitespace-pre-line text-sm">{f.message}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result && result.errors.length > 0 && (
+      <section class="mb-8">
+        <h2 class="mb-1 font-bold font-display text-xl">Fehler</h2>
+        <p class="mb-3 text-muted-foreground text-sm">
+          Per ID oder weil der letzte Kontext die ID nennt.
+        </p>
+        <ErrorList errors={result.errors} />
+      </section>
+    )
+  }
+</AdminLayout>

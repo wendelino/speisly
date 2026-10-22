@@ -2,7 +2,7 @@
 // Gruppierte Fehler mit letztem Kontext (ausklappbar) und Erledigt-Button
 import { actions } from "astro:actions";
 import Badge from "@/components/ui/badge.astro";
-import { formatDateTime, mealIdOf } from "@/lib/admin-format";
+import { ctxToHtml, formatDateTime, mealIdOf } from "@/lib/admin-format";
 import type { errorLog } from "@/lib/db/schema/error-log";
 import DoneToggle from "./done-toggle.astro";
 
@@ -65,7 +65,7 @@ const { errors } = Astro.props;
               <summary class="cursor-pointer text-muted-foreground text-xs">
                 Letzter Kontext
               </summary>
-              <pre class="mt-2 max-h-80 overflow-auto rounded-xl bg-muted p-3 text-xs">{JSON.stringify(error.lastCtx, null, 2)}</pre>
+              <pre class="mt-2 max-h-80 overflow-auto rounded-xl bg-muted p-3 text-xs" set:html={ctxToHtml(error.lastCtx)} />
             </details>
           )}
         </li>

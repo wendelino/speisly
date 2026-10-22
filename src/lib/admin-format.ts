@@ -64,6 +64,28 @@ export function mealIdOf(ctx: unknown): string | null {
     : null;
 }
 
+const ID_PATTERN = /\b[0-9a-f]{32}\b/g;
+const HTML_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+};
+
+/**
+ * Fehlerkontext als HTML, IDs (32 Hex-Zeichen, `genId`) verlinkt auf die
+ * ID-Suche (src/pages/admin/search.astro)
+ */
+export function ctxToHtml(ctx: unknown): string {
+  return JSON.stringify(ctx, null, 2)
+    .replace(/[&<>"]/g, (char) => HTML_ESCAPES[char])
+    .replace(
+      ID_PATTERN,
+      (id) =>
+        `<a class="text-primary underline-offset-4 hover:underline" href="/admin/search?q=${id}">${id}</a>`
+    );
+}
+
 export const FIELD_LABEL = {
   name: "Name",
   subtitle: "Untertitel",
