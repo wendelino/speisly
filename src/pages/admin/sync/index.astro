@@ -1,0 +1,14 @@
+---
+// Admin: die letzten Sync-Läufe
+import RunTable from "@/components/admin/run-table.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import { listSyncRuns } from "@/server/queries/admin";
+
+export const prerender = false;
+
+const runs = await listSyncRuns();
+---
+
+<AdminLayout title="Sync-Läufe">
+  <RunTable runs={runs} />
+</AdminLayout>

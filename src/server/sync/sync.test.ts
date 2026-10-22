@@ -3,15 +3,25 @@
  * Läuft gegen die Seed-DB in einem Datumsbereich ohne Seed-Daten und räumt
  * danach auf. Die Planung selbst ist in plan.test.ts getestet.
  */
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
 import { inArray, sql } from "drizzle-orm";
 import { addDays, todayBerlin } from "@/lib/dates";
-import { meal, mealUpdate } from "@/lib/db/schema/schema";
+import { meal } from "@/lib/db/schema/schema";
 import { db } from "../db";
 import { handleSync } from "./index";
 import type { MeineMensaFoodPlanItem, MeineMensaResponse } from "./types";
 
 const hasDb = Boolean(process.env.DATABASE_URL);
+// Jeder Test macht mehrere Syncs mit Dutzenden Queries; gegen eine entfernte
+// DB (Tunnel) reichen die 5 s von bun nicht
+setDefaultTimeout(30_000);
 
 const DAY_1 = addDays(todayBerlin(), 60);
 const DAY_2 = addDays(DAY_1, 1);
@@ -107,8 +117,8 @@ async function cleanup() {
       .where(inArray(meal.srcId, SRC_IDS.map(String)))
   ).map((m) => m.id);
   if (ids.length > 0) {
-    await db.delete(mealUpdate).where(inArray(mealUpdate.mealId, ids));
-    // mensa_meal hängt per ON DELETE CASCADE an meal
+    // mensa_meal, meal_change und serving_removal hängen per ON DELETE
+    // CASCADE an meal
     await db.delete(meal).where(inArray(meal.id, ids));
   }
 }
@@ -132,6 +142,8 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
     const result = await handleSync({ from: DAY_1, to: DAY_2 });
     expect(result.changedDates).toEqual([DAY_1, DAY_2]);
     expect(result.changedMealIds).toHaveLength(2);
+    // das Gericht der ausgeschlossenen Mensa wird angelegt, aber ohne Ausgabe
+    expect(result.stats).toMatchObject({ newMeals: 3, newServings: 3 });
 
     const rows = await servingsInRange();
     expect(rows.map((r) => [r.src_id, r.slug, r.day])).toEqual([
@@ -147,7 +159,13 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
     const before = await servingsInRange();
     const result = await handleSync({ from: DAY_1, to: DAY_2 });
     expect(await servingsInRange()).toEqual(before);
-    expect(result).toEqual({ changedDates: [], changedMealIds: [] });
+    expect(result).toMatchObject({ changedDates: [], changedMealIds: [] });
+    expect(result.stats).toMatchObject({
+      newMeals: 0,
+      changedMeals: 0,
+      newServings: 0,
+      removedServings: 0,
+    });
   });
 
   test("updates prices and removes servings missing from the API", async () => {
@@ -167,13 +185,23 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
       [String(SRC_IDS[1]), "harzmensa", DAY_2, 250],
     ]);
 
-    const updates = await db.execute(sql`
-      select u.key, u.new from meal_update u join meal m on m.id = u.meal_id
-       where m.src_id = ${String(SRC_IDS[0])} order by u.key`);
-    expect(updates.rows).toEqual([
-      { key: "price", new: "350 / 500 / 650" },
-      { key: "remove", new: "Entfernt" },
+    expect(result.stats).toMatchObject({ changedMeals: 1, removedServings: 1 });
+
+    const changes = await db.execute(sql`
+      select c.field, c.prev, c.next from meal_change c join meal m on m.id = c.meal_id
+       where m.src_id = ${String(SRC_IDS[0])}`);
+    expect(changes.rows).toEqual([
+      {
+        field: "price",
+        prev: { stud: 320, work: 470, guest: 620 },
+        next: { stud: 350, work: 500, guest: 650 },
+      },
     ]);
+    const removals = await db.execute(sql`
+      select r.date::text as day, ms.slug from serving_removal r
+        join meal m on m.id = r.meal_id join mensa ms on ms.id = r.mensa_id
+       where m.src_id = ${String(SRC_IDS[0])}`);
+    expect(removals.rows).toEqual([{ day: DAY_1, slug: "weinbergmensa" }]);
   });
 
   test("all or nothing: a failing write leaves the DB untouched", async () => {
@@ -244,7 +272,7 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
     // Störung: API liefert gar nichts
     stubApi([]);
     const empty = await handleSync({ from: DAY_1, to: DAY_2 });
-    expect(empty).toEqual({ changedDates: [], changedMealIds: [] });
+    expect(empty).toMatchObject({ changedDates: [], changedMealIds: [] });
     expect(await servingsInRange()).toEqual(before);
 
     // lückenhaft: nur DAY_2, DAY_1 bleibt unangetastet
@@ -280,5 +308,45 @@ describe.skipIf(!hasDb)("handleSync (integration, stubbed API)", () => {
       );
       await db.execute(sql`delete from "user" where id = ${userId}`);
     }
+  });
+
+  test("changed ingredients of an existing serving are updated and logged", async () => {
+    stubApi([item(3, DAY_2, 1, food(SRC_IDS[1], 2.5))]);
+    await handleSync({ from: DAY_2, to: DAY_2 });
+    stubApi([
+      item(3, DAY_2, 1, {
+        ...food(SRC_IDS[1], 2.5),
+        ingredients: ["A"],
+        extra_1: "Salat",
+      }),
+    ]);
+    const result = await handleSync({ from: DAY_2, to: DAY_2 });
+    expect(result.changedDates).toEqual([DAY_2]);
+    expect(result.stats.changedServings).toBe(1);
+
+    const [row] = (
+      await db.execute(sql`
+        select mm.id, mm.ingredients, mm.extras from mensa_meal mm
+          join meal m on m.id = mm.meal_id
+         where m.src_id = ${String(SRC_IDS[1])} and mm.date::date = ${DAY_2}::date`)
+    ).rows as { id: string; ingredients: string[]; extras: string[] }[];
+    expect(row).toMatchObject({ ingredients: ["A:Gluten"], extras: ["Salat"] });
+    const logs = (
+      await db.execute(sql`
+        select field, prev, next from meal_change
+         where mensa_meal_id = ${row.id} order by field`)
+    ).rows;
+    expect(logs).toEqual([
+      {
+        field: "ingredients",
+        prev: ["51:vegetarisch", "A:Gluten"],
+        next: ["A:Gluten"],
+      },
+      { field: "extras", prev: [], next: ["Salat"] },
+    ]);
+
+    // unverändert: kein weiterer Eintrag
+    const again = await handleSync({ from: DAY_2, to: DAY_2 });
+    expect(again.stats.changedServings).toBe(0);
   });
 });

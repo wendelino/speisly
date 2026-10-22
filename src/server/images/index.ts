@@ -71,7 +71,8 @@ export async function syncImages(
       logError({
         message: "Image variants failed",
         ctx: { url, error },
-        disableTelegram: true,
+        source: "images",
+        notify: false,
       });
     }
   }

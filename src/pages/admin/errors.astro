@@ -1,0 +1,27 @@
+---
+// Admin: gruppierte Fehler, offen oder erledigt
+import ErrorList from "@/components/admin/error-list.astro";
+import FilterLinks from "@/components/admin/filter-links.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import { type DoneFilter, listErrors } from "@/server/queries/admin";
+
+export const prerender = false;
+
+const FILTERS = ["open", "done", "all"] as const;
+const param = Astro.url.searchParams.get("status");
+const filter: DoneFilter = FILTERS.find((f) => f === param) ?? "open";
+const errors = await listErrors(filter);
+---
+
+<AdminLayout title="Fehler">
+  <FilterLinks
+    current={filter}
+    options={[
+      { value: "open", label: "Offen" },
+      { value: "done", label: "Erledigt" },
+      { value: "all", label: "Alle" },
+    ]}
+    param="status"
+  />
+  <ErrorList errors={errors} />
+</AdminLayout>

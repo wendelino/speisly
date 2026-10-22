@@ -60,7 +60,7 @@ cp .env.example .env
 ### 4. Datenbank migrieren
 
 ```bash
-bun db:push
+bun db:migrate
 ```
 
 ### 5. Development Server starten
@@ -187,6 +187,8 @@ Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`
 | `SITE_HOST` | nein | Default `speisly.de`: einheitlicher Host für den Seiten-Cache, damit Pre-Warm und Besucher dieselben Einträge treffen |
 | `PUBLIC_COOKIE_CONSENT_NAME` | nein | **muss** dem bisherigen `NEXT_PUBLIC_COOKIE_CONSENT_NAME` entsprechen, sonst ist der Cookie-Consent aller Nutzer weg |
 | `PUBLIC_PRIVACY_POLICY_PATH`, `PUBLIC_UMAMI_WEBSITE_ID` | nein | |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ADMIN_GROUP` | nein | Login für `/admin`; ohne Client-ID/Secret ist der Admin-Bereich aus |
+| `SITE_URL` | nein | Basis-URL der OIDC-Redirects (`<SITE_URL>/admin/callback`, Post-Logout `<SITE_URL>/`). Default: `site` (`https://speisly.de`), im Dev-Server die Request-URL |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | nein | Fehler- und Kontaktnachrichten per Telegram |
 | `CRON_DISABLED` | nein | `1` = kein Cron, kein Pre-Warm |
 
@@ -236,7 +238,6 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 - `bun format` – Formatiert Code mit Biome
 - `bun db:generate` – Generiert Drizzle-Migrationen
 - `bun db:migrate` – Führt Datenbank-Migrationen aus
-- `bun db:push` – Pusht Schema-Änderungen zur Datenbank
 
 ## Lizenz
 

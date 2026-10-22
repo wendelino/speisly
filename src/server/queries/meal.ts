@@ -64,6 +64,7 @@ export async function findMeal(
     logError({
       message: "Error getting meal",
       ctx: { mealId, mensaMealId, error },
+      source: "queries",
     });
     throw error;
   }

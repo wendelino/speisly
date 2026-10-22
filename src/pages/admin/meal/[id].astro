@@ -1,0 +1,161 @@
+---
+// Admin: ein Gericht mit Änderungsverlauf, Ausgaben, Bewertungen und Fehlern
+import { ExternalLink } from "@lucide/astro";
+import ErrorList from "@/components/admin/error-list.astro";
+import MealThumb from "@/components/admin/meal-thumb.astro";
+import Badge from "@/components/ui/badge.astro";
+import Card from "@/components/ui/card.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import { FIELD_LABEL, formatChangeValue, formatDateTime } from "@/lib/admin-format";
+import { toIsoDay } from "@/lib/dates";
+import { formatDay, formatDecimal, formatEuro } from "@/lib/format";
+import { getAdminMeal } from "@/server/queries/admin";
+
+export const prerender = false;
+
+const detail = await getAdminMeal(Astro.params.id ?? "");
+if (!detail) {
+  return new Response(null, { status: 404 });
+}
+const { meal, changes, servings, removals, ratings, errors } = detail;
+const day = (date: Date | string) =>
+  formatDay(typeof date === "string" ? date : toIsoDay(date), "EEE, dd.MM.yy");
+const euro = (cents: number) => `${formatEuro(cents)} €`;
+const facts = [
+  ["Preise (Stud. / Mitarb. / Gast)", `${euro(meal.priceStud)} / ${euro(meal.priceWork)} / ${euro(meal.priceGuest)}`],
+  ["Quelle", `${meal.dataSourceSlug} · ${meal.srcId}`],
+  ["Angelegt", formatDateTime(meal.createdAt)],
+  ["Zuletzt geändert", formatDateTime(meal.updatedAt)],
+  [
+    "Bewertungen",
+    ratings.count > 0 && ratings.avg !== null
+      ? `${ratings.count} · Ø ${formatDecimal(ratings.avg)} ★`
+      : "keine",
+  ],
+];
+const LINK = "text-primary underline-offset-4 hover:underline";
+---
+
+<AdminLayout title={meal.name}>
+  <a
+    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-primary text-sm ring-1 ring-border transition-colors hover:bg-muted"
+    href={`/meal/${meal.id}`}
+    slot="actions"
+    target="_blank"
+  >
+    Öffentliche Seite
+    <ExternalLink aria-hidden="true" class="size-4" />
+  </a>
+
+  <Card class="mb-8">
+    <div class="flex flex-wrap gap-5">
+      <MealThumb class="size-28" src={meal.imgPath} />
+      <div class="min-w-0 flex-1">
+        {meal.subtitle && <p class="mb-3 text-muted-foreground">{meal.subtitle}</p>}
+        <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+          {
+            facts.map(([label, value]) => (
+              <div>
+                <dt class="text-muted-foreground">{label}</dt>
+                <dd class="break-all font-semibold">{value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+    </div>
+  </Card>
+
+  <h2 class="mb-3 font-bold font-display text-xl">Änderungsverlauf ({changes.length})</h2>
+  {
+    changes.length === 0 ? (
+      <p class="mb-8 text-muted-foreground">Seit dem Anlegen unverändert.</p>
+    ) : (
+      <ol class="mb-8 space-y-3 border-border border-l-2 pl-5">
+        {changes.map((change) => (
+          <li class="relative">
+            <span class="absolute top-1.5 -left-[1.6rem] size-2.5 rounded-full bg-primary ring-4 ring-background" />
+            <p class="mb-1.5 flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
+              {formatDateTime(change.createdAt)}
+              <Badge>{FIELD_LABEL[change.field]}</Badge>
+              {change.servingDate && (
+                <a class={LINK} href={`/admin/search?q=${change.mensaMealId}`}>
+                  Ausgabe {day(change.servingDate)} · {change.mensaName}
+                </a>
+              )}
+              {change.syncRunId && (
+                <a class={LINK} href={`/admin/sync/${change.syncRunId}`}>
+                  Lauf
+                </a>
+              )}
+            </p>
+            {change.field === "img_path" ? (
+              <div class="flex items-center gap-3">
+                <MealThumb class="opacity-60" src={change.prev as string} />
+                <span class="text-muted-foreground">→</span>
+                <MealThumb src={change.next as string} />
+              </div>
+            ) : (
+              <p class="text-sm">
+                <span class="break-all text-muted-foreground line-through">
+                  {formatChangeValue(change.prev)}
+                </span>{" "}
+                → <span class="break-all font-semibold">{formatChangeValue(change.next)}</span>
+              </p>
+            )}
+          </li>
+        ))}
+      </ol>
+    )
+  }
+
+  <div class="mb-8 grid gap-8 lg:grid-cols-2">
+    <section>
+      <h2 class="mb-3 font-bold font-display text-xl">Ausgaben ({servings.length})</h2>
+      {
+        servings.length === 0 ? (
+          <p class="text-muted-foreground">Keine.</p>
+        ) : (
+          <ul class="space-y-1 text-sm">
+            {servings.map((s) => (
+              <li>
+                <a class={LINK} href={`/meal/${meal.id}?mmid=${s.id}`}>
+                  {day(s.date)}
+                </a>{" "}
+                · {s.mensaName}
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </section>
+    <section>
+      <h2 class="mb-3 font-bold font-display text-xl">Entfernte Ausgaben ({removals.length})</h2>
+      {
+        removals.length === 0 ? (
+          <p class="text-muted-foreground">Keine.</p>
+        ) : (
+          <ul class="space-y-1 text-sm">
+            {removals.map((r) => (
+              <li>
+                {day(r.date)} · {r.mensaName ?? "Mensa unbekannt"}
+                {r.syncRunId && (
+                  <>
+                    {" "}·{" "}
+                    <a class={LINK} href={`/admin/sync/${r.syncRunId}`}>
+                      Lauf
+                    </a>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </section>
+  </div>
+
+  <h2 class="mb-1 font-bold font-display text-xl">Fehler ({errors.length})</h2>
+  <p class="mb-3 text-muted-foreground text-sm">Fehler, deren letzter Kontext dieses Gericht nennt.</p>
+  <ErrorList errors={errors} />
+</AdminLayout>

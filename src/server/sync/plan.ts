@@ -3,8 +3,8 @@ import type { meal } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
 import type {
   MealData,
+  MealFieldChange,
   MealRecord,
-  MealUpdateLog,
   MensaMealRecord,
   MensaRecord,
 } from "./types";
@@ -18,8 +18,9 @@ import type {
  * - Gerichte mit Preis 0 werden übersprungen.
  * - Bestehende Gerichte (per `src_id`) werden aktualisiert, wenn sich Bild,
  *   Name, Untertitel oder Preise geändert haben, jeweils mit Änderungslog.
- * - Neue Ausgaben (Mensa + Gericht + Tag) werden angelegt, bestehende nicht
- *   verändert (Zutaten/Extras bleiben wie beim ersten Sync).
+ * - Neue Ausgaben (Mensa + Gericht + Tag) werden angelegt. Bei bestehenden
+ *   werden Zutaten und Extras abgeglichen (Reihenfolge egal), jeweils mit
+ *   Änderungslog.
  * - Ausgaben im Zeitraum, die die API nicht mehr liefert, werden entfernt –
  *   aber nur mit Schutzregeln (siehe `guardRemovals`), denn mit einer Ausgabe
  *   verschwinden per Cascade auch ihre Bewertungen.
@@ -53,9 +54,19 @@ export type MealChange = {
   /** vollständiger neuer Stand (für das Batch-Update) */
   values: MealValues;
   fields: Partial<MealValues>;
-  logs: MealUpdateLog[];
+  logs: MealFieldChange[];
   /** Tage dieses Syncs, an denen das Gericht angeboten wird */
   dates: string[];
+};
+
+export type ServingChange = {
+  servingId: string;
+  mealId: string;
+  /** Tag der Ausgabe (`YYYY-MM-DD`) */
+  date: string;
+  /** vollständiger neuer Stand (für das Batch-Update) */
+  values: Pick<MensaMealRecord, "ingredients" | "extras">;
+  logs: MealFieldChange[];
 };
 
 type NewServing = {
@@ -72,6 +83,8 @@ export type SyncPlan = {
   newMeals: NewMeal[];
   mealChanges: MealChange[];
   newServings: NewServing[];
+  /** bestehende Ausgaben mit geänderten Zutaten oder Extras */
+  servingChanges: ServingChange[];
   removedServings: MensaMealRecord[];
   /** fehlen in der API, werden aber zum Schutz nicht entfernt */
   keptServings: { serving: MensaMealRecord; reason: KeptReason }[];
@@ -100,27 +113,27 @@ function valuesFrom(data: MealData): MealValues {
 function diffMeal(
   current: MealValues,
   next: MealValues
-): { fields: Partial<MealValues>; logs: MealUpdateLog[] } {
+): { fields: Partial<MealValues>; logs: MealFieldChange[] } {
   const fields: Partial<MealValues> = {};
-  const logs: MealUpdateLog[] = [];
+  const logs: MealFieldChange[] = [];
 
   if (current.imgPath !== next.imgPath) {
     logs.push({
+      field: "img_path",
       prev: current.imgPath ?? "",
-      new: next.imgPath ?? "",
-      key: "imgPath",
+      next: next.imgPath ?? "",
     });
     fields.imgPath = next.imgPath;
   }
   if (current.name !== next.name) {
-    logs.push({ prev: current.name, new: next.name, key: "name" });
+    logs.push({ field: "name", prev: current.name, next: next.name });
     fields.name = next.name;
   }
   if (current.subtitle !== next.subtitle) {
     logs.push({
+      field: "subtitle",
       prev: current.subtitle ?? "",
-      new: next.subtitle ?? "",
-      key: "subtitle",
+      next: next.subtitle ?? "",
     });
     fields.subtitle = next.subtitle;
   }
@@ -130,15 +143,54 @@ function diffMeal(
     current.priceGuest !== next.priceGuest
   ) {
     logs.push({
-      prev: `${current.priceStud} / ${current.priceWork} / ${current.priceGuest}`,
-      new: `${next.priceStud} / ${next.priceWork} / ${next.priceGuest}`,
-      key: "price",
+      field: "price",
+      prev: {
+        stud: current.priceStud,
+        work: current.priceWork,
+        guest: current.priceGuest,
+      },
+      next: {
+        stud: next.priceStud,
+        work: next.priceWork,
+        guest: next.priceGuest,
+      },
     });
     fields.priceStud = next.priceStud;
     fields.priceWork = next.priceWork;
     fields.priceGuest = next.priceGuest;
   }
   return { fields, logs };
+}
+
+function sameItems(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  const sorted = [...b].sort();
+  return [...a].sort().every((item, i) => item === sorted[i]);
+}
+
+/** Zutaten/Extras einer bestehenden Ausgabe gegen die API, null wenn gleich */
+function diffServing(
+  serving: MensaMealRecord,
+  next: Pick<MensaMealRecord, "ingredients" | "extras">
+): ServingChange | null {
+  const logs: MealFieldChange[] = [];
+  for (const field of ["ingredients", "extras"] as const) {
+    if (!sameItems(serving[field], next[field])) {
+      logs.push({ field, prev: serving[field], next: next[field] });
+    }
+  }
+  if (logs.length === 0) {
+    return null;
+  }
+  return {
+    servingId: serving.id,
+    mealId: serving.mealId,
+    date: toIsoDay(serving.date),
+    values: { ingredients: next.ingredients, extras: next.extras },
+    logs,
+  };
 }
 
 function servingKey(mealId: string, mensaId: string, date: Date): string {
@@ -216,6 +268,7 @@ export function planSync({
     newMeals: [],
     mealChanges: [],
     newServings: [],
+    servingChanges: [],
     removedServings: [],
     keptServings: [],
     massRemoval: null,
@@ -293,7 +346,13 @@ export function planSync({
         continue;
       }
       seen.add(key);
-      if (unmatched.delete(key)) {
+      const existing = unmatched.get(key);
+      if (existing) {
+        unmatched.delete(key);
+        const change = diffServing(existing, avail);
+        if (change) {
+          plan.servingChanges.push(change);
+        }
         continue;
       }
       plan.newServings.push({

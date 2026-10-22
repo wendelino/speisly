@@ -40,3 +40,12 @@ declare type MealRatingStats = {
     value_taste: number | null;
   };
 };
+
+// biome-ignore lint/style/noNamespace: so erweitert Astro die Locals
+declare namespace App {
+  // biome-ignore lint/style/useConsistentTypeDefinitions: Declaration Merging braucht ein Interface
+  interface Locals {
+    /** angemeldeter Admin (src/middleware.ts), nur unter /admin gesetzt */
+    admin?: import("@/server/admin-auth").AdminSession;
+  }
+}

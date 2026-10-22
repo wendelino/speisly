@@ -149,7 +149,7 @@ async function insertChunked<T>(
 
 async function main() {
   await db.execute(
-    sql`TRUNCATE meal_rating, meal_update, mensa_meal, meal, mensa, "user", data_source, error_log, feedback CASCADE`
+    sql`TRUNCATE meal_rating, meal_change, serving_removal, mensa_meal, meal, mensa, "user", data_source, error_log, sync_run, feedback CASCADE`
   );
 
   const dataSourceSlug = "meine-mensa-api";

@@ -1,0 +1,131 @@
+---
+// Admin-Bereich: eigenes, schlichtes Gerüst ohne Analytics, nicht indexiert.
+// Zugang nur mit Session (src/middleware.ts).
+import { Font } from "astro:assets";
+import {
+  Activity,
+  History,
+  LayoutDashboard,
+  MessageSquare,
+  Search,
+  TriangleAlert,
+} from "@lucide/astro";
+import AccountMenu from "@/components/admin/account-menu.astro";
+import { cn } from "@/lib/utils";
+import { openCounts } from "@/server/queries/admin";
+import "@/styles/globals.css";
+
+type Props = { title: string };
+const { title } = Astro.props;
+const admin = Astro.locals.admin;
+const path = Astro.url.pathname;
+const { openErrors, openFeedback } = await openCounts();
+
+const NAV = [
+  { href: "/admin", label: "Übersicht", icon: LayoutDashboard },
+  { href: "/admin/sync", label: "Sync-Läufe", icon: Activity },
+  { href: "/admin/errors", label: "Fehler", icon: TriangleAlert, count: openErrors },
+  { href: "/admin/changes", label: "Änderungen", icon: History, match: "/admin/meal" },
+  { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, count: openFeedback },
+];
+const isActive = (item: (typeof NAV)[number]) =>
+  item.href === "/admin"
+    ? path === "/admin"
+    : path.startsWith(item.href) || (item.match !== undefined && path.startsWith(item.match));
+---
+
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <Font cssVariable="--font-bricolage" preload />
+    <title>{title} | Speisly Admin</title>
+    <link rel="icon" href="/favicon.ico" sizes="128x128" type="image/x-icon">
+  </head>
+  <body class="min-h-screen antialiased">
+    <header class="sticky top-0 z-10 border-border/70 border-b bg-card/90 backdrop-blur">
+      <div class="container-page flex items-center gap-4 py-3">
+        <a class="shrink-0 font-bold font-display text-lg" href="/admin">
+          Speisly <span class="text-primary">Admin</span>
+        </a>
+        <nav aria-label="Admin" class="hidden flex-1 gap-1 text-sm md:flex">
+          {
+            NAV.map((item) => (
+              <a
+                aria-current={isActive(item) ? "page" : undefined}
+                class={cn(
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  isActive(item) && "bg-secondary text-primary hover:bg-secondary hover:text-primary"
+                )}
+                href={item.href}
+              >
+                <item.icon aria-hidden="true" class="size-4" />
+                {item.label}
+                {item.count ? (
+                  <span class="min-w-5 rounded-full bg-rose px-1.5 text-center text-white text-xs leading-5">
+                    {item.count}
+                  </span>
+                ) : null}
+              </a>
+            ))
+          }
+        </nav>
+        <form action="/admin/search" class="ml-auto hidden md:block" method="get" role="search">
+          <label class="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm focus-within:ring-2 focus-within:ring-primary">
+            <Search aria-hidden="true" class="size-4 text-muted-foreground" />
+            <input
+              aria-label="ID suchen"
+              class="w-36 bg-transparent font-mono text-xs focus:outline-none lg:w-56"
+              name="q"
+              placeholder="ID suchen"
+              value={path === "/admin/search" ? (Astro.url.searchParams.get("q") ?? "") : ""}
+            >
+          </label>
+        </form>
+        <div class="ml-auto md:ml-0">{admin && <AccountMenu admin={admin} />}</div>
+      </div>
+      <nav aria-label="Admin" class="container-page -mt-1 flex gap-1 overflow-x-auto pb-2 text-sm md:hidden">
+        {
+          NAV.map((item) => (
+            <a
+              aria-current={isActive(item) ? "page" : undefined}
+              class={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground",
+                isActive(item) && "bg-secondary text-primary"
+              )}
+              href={item.href}
+            >
+              <item.icon aria-hidden="true" class="size-4" />
+              {item.label}
+              {item.count ? (
+                <span class="min-w-5 rounded-full bg-rose px-1.5 text-center text-white text-xs leading-5">
+                  {item.count}
+                </span>
+              ) : null}
+            </a>
+          ))
+        }
+        <a
+          aria-current={path === "/admin/search" ? "page" : undefined}
+          class={cn(
+            "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground",
+            path === "/admin/search" && "bg-secondary text-primary"
+          )}
+          href="/admin/search"
+        >
+          <Search aria-hidden="true" class="size-4" />
+          Suche
+        </a>
+      </nav>
+    </header>
+    <main class="container-page py-8">
+      <div class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h1 class="font-bold font-display text-2xl sm:text-3xl">{title}</h1>
+        <slot name="actions" />
+      </div>
+      <slot />
+    </main>
+  </body>
+</html>

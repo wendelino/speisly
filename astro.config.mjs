@@ -15,6 +15,10 @@ export default defineConfig({
   // Default `output: "static"`: alles wird prerendered, außer Seiten mit
   // `export const prerender = false` (die laufen über den Node-Adapter).
   adapter: node({ mode: "standalone" }),
+  // Eigener CSRF-Schutz in src/middleware.ts: Astros Origin-Prüfung vergleicht
+  // mit der Request-URL, die hinter dem Proxy http:// und SITE_HOST ist, und
+  // lehnt deshalb jedes Formular ab (src/server/origin-check.ts)
+  security: { checkOrigin: false },
   integrations: [react()],
   // Route Cache: gerenderte Seiten und Server Islands liegen im Speicher des
   // Server-Prozesses (Cache-HIT = kein Render, keine DB). TTLs und Tags setzen
@@ -87,6 +91,37 @@ export default defineConfig({
         context: "server",
         access: "secret",
         optional: true,
+      }),
+      // Admin-Bereich (/admin): Login über den eigenen OIDC-Provider. Ohne
+      // Client-ID/Secret ist /admin abgeschaltet (src/server/admin.ts).
+      OIDC_ISSUER: envField.string({
+        context: "server",
+        access: "secret",
+        default: "https://sso.lnio.de",
+      }),
+      OIDC_CLIENT_ID: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      OIDC_CLIENT_SECRET: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      // Nur Mitglieder dieser Gruppe (Claim `groups`) kommen hinein
+      ADMIN_GROUP: envField.string({
+        context: "server",
+        access: "secret",
+        default: "speisly-admin",
+      }),
+      // Öffentliche Basis-URL für die OIDC-Redirects (/admin/callback und
+      // Post-Logout). Ohne: `site` in Produktion, Request-URL im Dev-Server.
+      SITE_URL: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+        url: true,
       }),
       PUBLIC_COOKIE_CONSENT_NAME: envField.string({
         context: "client",

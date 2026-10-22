@@ -46,6 +46,7 @@ export async function getMealServingStats(
     logError({
       message: "Error getting meal serving stats",
       ctx: { mealId, error },
+      source: "queries",
     });
     throw error;
   }

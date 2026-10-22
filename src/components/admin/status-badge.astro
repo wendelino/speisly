@@ -1,0 +1,11 @@
+---
+// Status eines Sync-Laufs als farbiges Etikett
+import Badge from "@/components/ui/badge.astro";
+import { STATUS_LABEL, STATUS_TONE } from "@/lib/admin-format";
+import type { SyncStatus } from "@/server/sync-runs";
+
+type Props = { status: SyncStatus };
+const { status } = Astro.props;
+---
+
+<Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
