@@ -1,18 +1,23 @@
-import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, gte, inArray, lte, sql } from "drizzle-orm";
 import { toIsoDay } from "@/lib/dates";
-import { dataSource } from "@/lib/db/schema/data-source";
-import { meal, mealUpdate, mensa, mensaMeal } from "@/lib/db/schema/schema";
+import {
+  meal,
+  mealChange,
+  mensa,
+  mensaMeal,
+  servingRemoval,
+} from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
 import { db } from "../db";
 import { logError } from "../log";
+import { currentSyncRun } from "../sync-run-context";
 import type { MealChange, NewMeal, SyncPlan } from "./plan";
 import type {
-  DataSourceRecord,
   GetExistingMensaMealsParams,
-  MealUpdateLog,
+  MealFieldChange,
   MensaMealRecord,
 } from "./types";
-import { normalizeDateRange, toSlug } from "./utils";
+import { normalizeDateRange } from "./utils";
 
 /** Zeilen pro INSERT (Postgres erlaubt max. 65 535 Parameter je Statement) */
 const CHUNK = 500;
@@ -23,30 +28,6 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
     out.push(items.slice(i, i + size));
   }
   return out;
-}
-
-/**
- * Gets an existing data source or creates a new one
- */
-export async function getOrCreateDataSource(
-  name: string
-): Promise<DataSourceRecord> {
-  const existingSource = await db
-    .select({ slug: dataSource.slug })
-    .from(dataSource)
-    .where(eq(dataSource.name, name))
-    .limit(1);
-
-  if (existingSource.length > 0) {
-    return existingSource[0];
-  }
-
-  const newDataSource = await db
-    .insert(dataSource)
-    .values({ id: genId(), name, slug: toSlug(name) })
-    .returning({ slug: dataSource.slug });
-
-  return newDataSource[0];
 }
 
 /**
@@ -142,7 +123,11 @@ async function updateMeals(
         // Die Ausgaben des Gerichts werden trotzdem abgeglichen. Vorher
         // fielen sie dabei heraus und wurden als „nicht mehr in der API“
         // gelöscht.
-        logError({ message: "Error updating meal", ctx: { change, error } });
+        logError({
+          message: "Error updating meal",
+          ctx: { change, error },
+          source: "sync",
+        });
       }
     }
   }
@@ -182,6 +167,7 @@ async function insertMeals(tx: Tx, meals: NewMeal[]): Promise<Set<string>> {
           logError({
             message: "Error creating meal",
             ctx: { meal: row, error },
+            source: "sync",
           });
         }
       }
@@ -195,20 +181,32 @@ async function insertMeals(tx: Tx, meals: NewMeal[]): Promise<Set<string>> {
       logError({
         message: "Error creating meal",
         ctx: { meal: m, reason: "meal_unique" },
+        source: "sync",
       });
     }
   }
   return inserted;
 }
 
-function updateRows(mealId: string, logs: MealUpdateLog[]) {
-  return logs.map((log) => ({ id: genId(), mealId, ...log }));
+function changeRows(
+  mealId: string,
+  logs: MealFieldChange[],
+  syncRunId: string | null
+) {
+  return logs.map((log) => ({ id: genId(), mealId, syncRunId, ...log }));
 }
 
 export type ApplyResult = {
   dates: Set<string>;
   mealIds: Set<string>;
   newMensen: number;
+  /** tatsächlich geschrieben (ohne übersprungene Gerichte und Konflikte) */
+  counts: {
+    newMeals: number;
+    changedMeals: number;
+    newServings: number;
+    removedServings: number;
+  };
 };
 
 /**
@@ -218,6 +216,7 @@ export type ApplyResult = {
  * Batch-Statements.
  */
 export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
+  const syncRunId = currentSyncRun()?.id ?? null;
   return db.transaction(async (tx) => {
     const dates = new Set<string>();
     const mealIds = new Set<string>();
@@ -235,9 +234,10 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
       plan.newMeals.filter((m) => !inserted.has(m.id)).map((m) => m.id)
     );
 
-    const logRows: ReturnType<typeof updateRows> = [];
-    for (const change of await updateMeals(tx, plan.mealChanges)) {
-      logRows.push(...updateRows(change.mealId, change.logs));
+    const changeLog: ReturnType<typeof changeRows> = [];
+    const applied = await updateMeals(tx, plan.mealChanges);
+    for (const change of applied) {
+      changeLog.push(...changeRows(change.mealId, change.logs, syncRunId));
       for (const day of change.dates) {
         changed(day, change.mealId);
       }
@@ -249,12 +249,14 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
     const servings = plan.newServings.filter(
       (s) => !skippedMeals.has(s.mealId)
     );
+    let newServings = 0;
     for (const batch of chunks(servings)) {
       const rows = await tx
         .insert(mensaMeal)
         .values(batch)
         .onConflictDoNothing()
         .returning({ mealId: mensaMeal.mealId, date: mensaMeal.date });
+      newServings += rows.length;
       for (const row of rows) {
         changed(toIsoDay(row.date), row.mealId);
       }
@@ -270,22 +272,35 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
           )
         );
       }
+      const removals = plan.removedServings.map((s) => ({
+        id: genId(),
+        mealId: s.mealId,
+        mensaId: s.mensaId,
+        date: toIsoDay(s.date),
+        syncRunId,
+      }));
+      for (const batch of chunks(removals)) {
+        await tx.insert(servingRemoval).values(batch);
+      }
       for (const s of plan.removedServings) {
-        logRows.push({
-          id: genId(),
-          mealId: s.mealId,
-          prev: toIsoDay(s.date),
-          new: "Entfernt",
-          key: "remove",
-        });
         changed(toIsoDay(s.date), s.mealId);
       }
     }
 
-    for (const batch of chunks(logRows)) {
-      await tx.insert(mealUpdate).values(batch);
+    for (const batch of chunks(changeLog)) {
+      await tx.insert(mealChange).values(batch);
     }
 
-    return { dates, mealIds, newMensen: plan.newMensen.length };
+    return {
+      dates,
+      mealIds,
+      newMensen: plan.newMensen.length,
+      counts: {
+        newMeals: inserted.size,
+        changedMeals: applied.length,
+        newServings,
+        removedServings: plan.removedServings.length,
+      },
+    };
   });
 }

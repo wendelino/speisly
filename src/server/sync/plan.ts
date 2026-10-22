@@ -3,8 +3,8 @@ import type { meal } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
 import type {
   MealData,
+  MealFieldChange,
   MealRecord,
-  MealUpdateLog,
   MensaMealRecord,
   MensaRecord,
 } from "./types";
@@ -53,7 +53,7 @@ export type MealChange = {
   /** vollständiger neuer Stand (für das Batch-Update) */
   values: MealValues;
   fields: Partial<MealValues>;
-  logs: MealUpdateLog[];
+  logs: MealFieldChange[];
   /** Tage dieses Syncs, an denen das Gericht angeboten wird */
   dates: string[];
 };
@@ -100,27 +100,27 @@ function valuesFrom(data: MealData): MealValues {
 function diffMeal(
   current: MealValues,
   next: MealValues
-): { fields: Partial<MealValues>; logs: MealUpdateLog[] } {
+): { fields: Partial<MealValues>; logs: MealFieldChange[] } {
   const fields: Partial<MealValues> = {};
-  const logs: MealUpdateLog[] = [];
+  const logs: MealFieldChange[] = [];
 
   if (current.imgPath !== next.imgPath) {
     logs.push({
+      field: "img_path",
       prev: current.imgPath ?? "",
-      new: next.imgPath ?? "",
-      key: "imgPath",
+      next: next.imgPath ?? "",
     });
     fields.imgPath = next.imgPath;
   }
   if (current.name !== next.name) {
-    logs.push({ prev: current.name, new: next.name, key: "name" });
+    logs.push({ field: "name", prev: current.name, next: next.name });
     fields.name = next.name;
   }
   if (current.subtitle !== next.subtitle) {
     logs.push({
+      field: "subtitle",
       prev: current.subtitle ?? "",
-      new: next.subtitle ?? "",
-      key: "subtitle",
+      next: next.subtitle ?? "",
     });
     fields.subtitle = next.subtitle;
   }
@@ -130,9 +130,17 @@ function diffMeal(
     current.priceGuest !== next.priceGuest
   ) {
     logs.push({
-      prev: `${current.priceStud} / ${current.priceWork} / ${current.priceGuest}`,
-      new: `${next.priceStud} / ${next.priceWork} / ${next.priceGuest}`,
-      key: "price",
+      field: "price",
+      prev: {
+        stud: current.priceStud,
+        work: current.priceWork,
+        guest: current.priceGuest,
+      },
+      next: {
+        stud: next.priceStud,
+        work: next.priceWork,
+        guest: next.priceGuest,
+      },
     });
     fields.priceStud = next.priceStud;
     fields.priceWork = next.priceWork;

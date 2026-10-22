@@ -17,14 +17,18 @@ describe("escapeMarkdown", () => {
 describe.skipIf(!process.env.DATABASE_URL)("saveFeedback (integration)", () => {
   test("stores the message even though Telegram is not configured", async () => {
     const message = `Test ${crypto.randomUUID()} mit _Markdown_`;
-    await saveFeedback({ message, email: "test@speisly.de" });
+    await saveFeedback({ message, email: "test@speisly.de", type: "contact" });
 
     const rows = await db
       .select()
       .from(feedback)
       .where(eq(feedback.message, message));
     expect(rows).toHaveLength(1);
-    expect(rows[0].email).toBe("test@speisly.de");
+    expect(rows[0]).toMatchObject({
+      email: "test@speisly.de",
+      type: "contact",
+      status: "open",
+    });
 
     await db.delete(feedback).where(eq(feedback.message, message));
   });

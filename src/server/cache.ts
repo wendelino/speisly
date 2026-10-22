@@ -16,6 +16,10 @@ export async function invalidateTags(
   try {
     await cache.invalidate({ tags });
   } catch (error) {
-    logError({ message: "Cache invalidation failed", ctx: { tags, error } });
+    logError({
+      message: "Cache invalidation failed",
+      ctx: { tags, error },
+      source: "cache",
+    });
   }
 }

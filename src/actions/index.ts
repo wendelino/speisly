@@ -36,12 +36,17 @@ export const server = {
           .min(FEEDBACK_MESSAGE.min)
           .max(FEEDBACK_MESSAGE.max),
         email: z.email().max(255).optional(),
+        type: z.enum(["contact", "feedback"]).default("feedback"),
       }),
       handler: async (input) => {
         try {
           await saveFeedback(input);
         } catch (error) {
-          logError({ message: "Error saving feedback", ctx: { error } });
+          logError({
+            message: "Error saving feedback",
+            ctx: { error },
+            source: "feedback",
+          });
           throw new ActionError({
             code: "INTERNAL_SERVER_ERROR",
             message:
@@ -108,7 +113,8 @@ export const server = {
           logError({
             message: "Error submitting rating",
             ctx: { mealId: input.mealId, error },
-            disableTelegram: true,
+            source: "ratings",
+            notify: false,
           });
           return {
             success: false,
@@ -141,7 +147,8 @@ export const server = {
           logError({
             message: "Error deleting rating",
             ctx: { mealId, error },
-            disableTelegram: true,
+            source: "ratings",
+            notify: false,
           });
           return {
             success: false,

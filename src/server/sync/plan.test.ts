@@ -128,8 +128,12 @@ describe("planSync", () => {
           priceGuest: 550,
         },
         logs: [
-          { key: "imgPath", prev: "", new: "https://x/y.jpg" },
-          { key: "price", prev: "250 / 400 / 550", new: "280 / 400 / 550" },
+          { field: "img_path", prev: "", next: "https://x/y.jpg" },
+          {
+            field: "price",
+            prev: { stud: 250, work: 400, guest: 550 },
+            next: { stud: 280, work: 400, guest: 550 },
+          },
         ],
         dates: ["2026-11-02", "2026-11-03"],
       },

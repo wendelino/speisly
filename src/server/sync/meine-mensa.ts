@@ -98,6 +98,7 @@ function addAvailabilityToMeal(
     logError({
       message: "Mensa not found",
       ctx: rest,
+      source: "sync",
     });
     return;
   }
@@ -157,6 +158,7 @@ export default async function getMealData({
       logError({
         message: "Too many food plans found",
         ctx: { dateFrom, dateTo, count },
+        source: "sync",
       });
     }
     return { data: [], dates: [] };

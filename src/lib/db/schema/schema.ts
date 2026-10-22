@@ -1,6 +1,8 @@
 import {
+  date,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -9,6 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { ID_LENGTH, timeStampUtils, uuid } from "../utils";
 import { dataSource } from "./data-source";
+import { mealChangeField } from "./enums";
+import { syncRun } from "./sync-run";
 
 export const user = pgTable(
   "user",
@@ -57,16 +61,68 @@ export const meal = pgTable(
   ]
 );
 
-export const mealUpdate = pgTable("meal_update", {
-  ...uuid,
-  mealId: varchar("meal_id", { length: ID_LENGTH })
-    .notNull()
-    .references(() => meal.id, { onDelete: "cascade" }),
-  prev: text("prev").notNull(),
-  new: text("new").notNull(),
-  key: varchar("key", { length: 255 }).notNull(),
-  ...timeStampUtils,
-});
+/** Preise in Cent, wie in `meal` */
+export type MealPrices = { stud: number; work: number; guest: number };
+
+/**
+ * Änderungen an Gerichten durch den Sync. `prev`/`next`: Text, bei `price`
+ * ein `MealPrices`-Objekt.
+ */
+export const mealChange = pgTable(
+  "meal_change",
+  {
+    ...uuid,
+    mealId: varchar("meal_id", { length: ID_LENGTH })
+      .notNull()
+      .references(() => meal.id, { onDelete: "cascade" }),
+    syncRunId: varchar("sync_run_id", { length: ID_LENGTH }).references(
+      () => syncRun.id,
+      { onDelete: "set null" }
+    ),
+    field: mealChangeField("field").notNull(),
+    prev: jsonb("prev").$type<string | MealPrices>().notNull(),
+    next: jsonb("next").$type<string | MealPrices>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("meal_change_meal_id_idx").on(t.mealId),
+    index("meal_change_sync_run_id_idx").on(t.syncRunId),
+  ]
+);
+
+/**
+ * Ausgaben, die der Sync entfernt hat, weil die API sie nicht mehr liefert
+ * (die Zeile in `mensa_meal` ist danach weg). `mensa_id` fehlt bei
+ * migrierten Altdaten.
+ */
+export const servingRemoval = pgTable(
+  "serving_removal",
+  {
+    ...uuid,
+    mealId: varchar("meal_id", { length: ID_LENGTH })
+      .notNull()
+      .references(() => meal.id, { onDelete: "cascade" }),
+    mensaId: varchar("mensa_id", { length: ID_LENGTH }).references(
+      () => mensa.id,
+      { onDelete: "set null" }
+    ),
+    date: date("date").notNull(),
+    syncRunId: varchar("sync_run_id", { length: ID_LENGTH }).references(
+      () => syncRun.id,
+      { onDelete: "set null" }
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("serving_removal_meal_id_idx").on(t.mealId),
+    index("serving_removal_sync_run_id_idx").on(t.syncRunId),
+  ]
+);
+
 // MensaMeal junction table
 export const mensaMeal = pgTable(
   "mensa_meal",
