@@ -12,12 +12,16 @@ export const GET: APIRoute = () =>
       display: "standalone",
       background_color: "#901C4B",
       theme_color: "#000000",
-      icons: [512, 256, 192].map((size) => ({
-        src: `/icons/icon-${size}x${size}.png`,
-        sizes: `${size}x${size}`,
-        type: "image/png",
-        purpose: "maskable",
-      })),
+      // Chrome verlangt ein Icon mit `any`, sonst gilt die Seite nicht als
+      // installierbar (kein `beforeinstallprompt`, components/install)
+      icons: (["any", "maskable"] as const).flatMap((purpose) =>
+        [512, 256, 192].map((size) => ({
+          src: `/icons/icon-${size}x${size}.png`,
+          sizes: `${size}x${size}`,
+          type: "image/png",
+          purpose,
+        }))
+      ),
     },
     { headers: { "Content-Type": "application/manifest+json" } }
   );
