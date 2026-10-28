@@ -1,3 +1,4 @@
+import { saveApiResponse } from "../api-responses";
 import type { DateInput, DateRange } from "./types";
 
 /**
@@ -11,15 +12,23 @@ export function normalizeDateRange(date: DateInput): DateRange {
 }
 
 /**
- * Fetches JSON data from a URL
+ * Fetches JSON data from a URL. Jede Antwort wird roh gespeichert
+ * (`api_response`), auch Fehlerstatus und ungültiges JSON.
  */
 export async function fetchJson<T>(url: string): Promise<T> {
+  const start = performance.now();
   const response = await fetch(url);
+  const body = await response.text();
+  await saveApiResponse({
+    url,
+    status: response.status,
+    durationMs: Math.round(performance.now() - start),
+    body,
+  });
   if (!response.ok) {
     throw new Error(`Failed to fetch: ${response.statusText}`);
   }
-  const data: T = await response.json();
-  return data;
+  return JSON.parse(body) as T;
 }
 
 /**

@@ -1,11 +1,12 @@
 ---
-// Admin: ein Sync-Lauf mit Änderungen, entfernten Ausgaben und Fehlern
+// Admin: ein Sync-Lauf mit Änderungen, entfernten Ausgaben, Fehlern und den
+// rohen API-Antworten
 import ChangeTable from "@/components/admin/change-table.astro";
 import ErrorList from "@/components/admin/error-list.astro";
 import StatusBadge from "@/components/admin/status-badge.astro";
 import Card from "@/components/ui/card.astro";
 import AdminLayout from "@/layouts/admin-layout.astro";
-import { formatDateTime, formatDuration } from "@/lib/admin-format";
+import { formatBytes, formatDateTime, formatDuration } from "@/lib/admin-format";
 import { formatDay } from "@/lib/format";
 import { getSyncRun } from "@/server/queries/admin";
 
@@ -15,7 +16,7 @@ const detail = await getSyncRun(Astro.params.id ?? "");
 if (!detail) {
   return new Response(null, { status: 404 });
 }
-const { run, changes, removals, errors } = detail;
+const { run, changes, removals, errors, responses } = detail;
 const facts = [
   ["Scope", run.scope],
   ["Zeitraum", run.rangeFrom ? `${run.rangeFrom} – ${run.rangeTo}` : "–"],
@@ -60,7 +61,10 @@ const facts = [
       <ul class="mb-8 space-y-1 text-sm">
         {removals.map((r) => (
           <li>
-            {formatDay(r.date, "EEE, dd.MM.yy")} · {r.mensaName ?? "Mensa unbekannt"} ·{" "}
+            <a class="text-primary underline-offset-4 hover:underline" href={`/admin/change/${r.id}`}>
+              {formatDay(r.date, "EEE, dd.MM.yy")}
+            </a>{" "}
+            · {r.mensaName ?? "Mensa unbekannt"} ·{" "}
             <a class="text-primary underline-offset-4 hover:underline" href={`/admin/meal/${r.mealId}`}>
               {r.mealName}
             </a>
@@ -75,4 +79,27 @@ const facts = [
     Fehler, die zuletzt in diesem Lauf aufgetreten sind.
   </p>
   <ErrorList errors={errors} />
+
+  <h2 class="mt-8 mb-3 font-bold font-display text-xl">API-Antworten ({responses.length})</h2>
+  {
+    responses.length === 0 ? (
+      <p class="text-muted-foreground">Keine gespeichert.</p>
+    ) : (
+      <ul class="space-y-1 text-sm">
+        {responses.map((r) => (
+          <li class="break-all">
+            <span class={r.status >= 400 ? "font-semibold text-rose" : "font-semibold"}>{r.status}</span> ·{" "}
+            {formatDuration(r.durationMs)} · {formatBytes(r.bytes)} ·{" "}
+            <a
+              class="text-primary underline-offset-4 hover:underline"
+              href={`/admin/api-response/${r.id}`}
+              target="_blank"
+            >
+              {r.url}
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
 </AdminLayout>

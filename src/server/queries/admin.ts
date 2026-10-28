@@ -9,6 +9,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { apiResponse } from "@/lib/db/schema/api-response";
 import type { mealChangeField } from "@/lib/db/schema/enums";
 import { errorLog } from "@/lib/db/schema/error-log";
 import { feedback } from "@/lib/db/schema/feedback";
@@ -22,6 +23,13 @@ import {
 } from "@/lib/db/schema/schema";
 import { syncRun } from "@/lib/db/schema/sync-run";
 import { db } from "../db";
+import {
+  type Location,
+  MEAL_SRC_ID_MAPPINGS,
+  type MeineMensaFoodPlanItem,
+  type MeineMensaResponse,
+} from "../sync/types";
+import { normalizeSrcId } from "../sync/utils";
 
 /** Abfragen für den Admin-Bereich (src/pages/admin), nie gecacht */
 
@@ -70,7 +78,7 @@ export async function getSyncRun(id: string) {
   if (!run) {
     return null;
   }
-  const [changes, removals, errors] = await Promise.all([
+  const [changes, removals, errors, responses] = await Promise.all([
     db
       .select({
         id: mealChange.id,
@@ -103,8 +111,130 @@ export async function getSyncRun(id: string) {
       .from(errorLog)
       .where(eq(errorLog.lastSyncRunId, id))
       .orderBy(desc(errorLog.lastSeenAt)),
+    // rohe API-Antworten, ohne Body (der kann mehrere MB groß sein)
+    db
+      .select({
+        id: apiResponse.id,
+        url: apiResponse.url,
+        status: apiResponse.status,
+        durationMs: apiResponse.durationMs,
+        bytes: sql<number>`octet_length(${apiResponse.body})`,
+        createdAt: apiResponse.createdAt,
+      })
+      .from(apiResponse)
+      .where(eq(apiResponse.syncRunId, id))
+      .orderBy(apiResponse.createdAt),
   ]);
-  return { run, changes, removals, errors };
+  return { run, changes, removals, errors, responses };
+}
+
+/** Eine rohe API-Antwort samt Body (src/pages/admin/api-response/[id].ts) */
+export async function getApiResponse(id: string) {
+  const [row] = await db
+    .select()
+    .from(apiResponse)
+    .where(eq(apiResponse.id, id));
+  return row ?? null;
+}
+
+/** Ein Eintrag aus `/food_plans` mit dem Namen der Mensa (`/locations`) */
+export type OriginalItem = MeineMensaFoodPlanItem & { locationName?: string };
+
+/**
+ * Die Einträge eines Gerichts in den rohen API-Antworten eines Laufs
+ * (Zuordnung wie im Sync über `normalizeSrcId`). `null`: keine Antwort
+ * gespeichert, z. B. bei Läufen vor `api_response`.
+ */
+async function originalItems(
+  syncRunId: string,
+  srcId: string
+): Promise<OriginalItem[] | null> {
+  const rows = await db
+    .select({ url: apiResponse.url, body: apiResponse.body })
+    .from(apiResponse)
+    .where(
+      and(eq(apiResponse.syncRunId, syncRunId), eq(apiResponse.status, 200))
+    );
+  const plans = rows.filter((r) => r.url.includes("/food_plans?"));
+  if (plans.length === 0) {
+    return null;
+  }
+  const names = new Map<number, string>();
+  for (const row of rows.filter((r) => r.url.endsWith("/locations"))) {
+    for (const location of JSON.parse(row.body) as Location[]) {
+      names.set(location.id, location.name);
+    }
+  }
+  return plans
+    .flatMap((row) => (JSON.parse(row.body) as MeineMensaResponse).data)
+    .filter(
+      (item) => normalizeSrcId(item.food.id, MEAL_SRC_ID_MAPPINGS) === srcId
+    )
+    .map((item) => ({ ...item, locationName: names.get(item.location_id) }))
+    .sort(
+      (a, b) => a.date.localeCompare(b.date) || a.location_id - b.location_id
+    );
+}
+
+/**
+ * Eine Änderung oder entfernte Ausgabe (gleicher ID-Raum, `genId`) mit
+ * Gericht, Sync-Lauf und den Originaldaten aus der API
+ * (src/pages/admin/change/[id].astro)
+ */
+export async function getChangeDetail(id: string) {
+  const [change] = await db
+    .select({
+      id: mealChange.id,
+      field: mealChange.field,
+      prev: mealChange.prev,
+      next: mealChange.next,
+      createdAt: mealChange.createdAt,
+      syncRunId: mealChange.syncRunId,
+      mealId: meal.id,
+      mealName: meal.name,
+      srcId: meal.srcId,
+      mensaMealId: mealChange.mensaMealId,
+      servingDate: mensaMeal.date,
+      mensaName: mensa.name,
+    })
+    .from(mealChange)
+    .innerJoin(meal, eq(meal.id, mealChange.mealId))
+    .leftJoin(mensaMeal, eq(mensaMeal.id, mealChange.mensaMealId))
+    .leftJoin(mensa, eq(mensa.id, mensaMeal.mensaId))
+    .where(eq(mealChange.id, id));
+  const [removal] = change
+    ? []
+    : await db
+        .select({
+          id: servingRemoval.id,
+          date: servingRemoval.date,
+          createdAt: servingRemoval.createdAt,
+          syncRunId: servingRemoval.syncRunId,
+          mealId: meal.id,
+          mealName: meal.name,
+          srcId: meal.srcId,
+          mensaName: mensa.name,
+        })
+        .from(servingRemoval)
+        .innerJoin(meal, eq(meal.id, servingRemoval.mealId))
+        .leftJoin(mensa, eq(mensa.id, servingRemoval.mensaId))
+        .where(eq(servingRemoval.id, id));
+  const entry = change ?? removal;
+  if (!entry) {
+    return null;
+  }
+  const [run, original] = entry.syncRunId
+    ? await Promise.all([
+        getSyncRun(entry.syncRunId),
+        originalItems(entry.syncRunId, entry.srcId),
+      ])
+    : [null, null];
+  return {
+    change: change ?? null,
+    removal: removal ?? null,
+    run: run && { ...run.run, responses: run.responses },
+    original,
+  };
 }
 
 /**
@@ -224,6 +354,25 @@ export function listMealChanges(
     .innerJoin(meal, eq(meal.id, mealChange.mealId))
     .where(field ? eq(mealChange.field, field) : undefined)
     .orderBy(desc(mealChange.createdAt))
+    .limit(limit);
+}
+
+/** Entfernte Ausgaben, neueste zuerst (src/pages/admin/changes.astro) */
+export function listServingRemovals(limit = PAGE) {
+  return db
+    .select({
+      id: servingRemoval.id,
+      mealId: servingRemoval.mealId,
+      mealName: meal.name,
+      mensaName: mensa.name,
+      date: servingRemoval.date,
+      syncRunId: servingRemoval.syncRunId,
+      createdAt: servingRemoval.createdAt,
+    })
+    .from(servingRemoval)
+    .innerJoin(meal, eq(meal.id, servingRemoval.mealId))
+    .leftJoin(mensa, eq(mensa.id, servingRemoval.mensaId))
+    .orderBy(desc(servingRemoval.createdAt))
     .limit(limit);
 }
 

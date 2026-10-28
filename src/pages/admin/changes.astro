@@ -1,27 +1,55 @@
 ---
-// Admin: Gerichtsänderungen aus dem Sync, nach Feld filterbar
+// Admin: Gerichtsänderungen und entfernte Ausgaben aus dem Sync, nach Feld
+// filterbar
 import ChangeTable from "@/components/admin/change-table.astro";
 import FilterLinks from "@/components/admin/filter-links.astro";
 import AdminLayout from "@/layouts/admin-layout.astro";
 import { FIELD_LABEL } from "@/lib/admin-format";
-import { listMealChanges, type MealChangeField } from "@/server/queries/admin";
+import { formatDay } from "@/lib/format";
+import {
+  listMealChanges,
+  listServingRemovals,
+  type MealChangeField,
+} from "@/server/queries/admin";
 
 export const prerender = false;
 
+const PAGE = 100;
 const FIELDS = Object.keys(FIELD_LABEL) as MealChangeField[];
 const param = Astro.url.searchParams.get("field");
+const removed = param === "removed";
 const field = FIELDS.find((f) => f === param) ?? null;
-const changes = await listMealChanges(field);
+const all = !(removed || field);
+
+const [changes, removals] = await Promise.all([
+  removed ? [] : listMealChanges(field, PAGE),
+  removed || all ? listServingRemovals(PAGE) : [],
+]);
+const rows = [
+  ...changes,
+  ...removals.map((r) => ({
+    id: r.id,
+    mealId: r.mealId,
+    mealName: r.mealName,
+    field: "removed" as const,
+    prev: `${formatDay(r.date, "EEE, dd.MM.yy")} · ${r.mensaName ?? "Mensa unbekannt"}`,
+    next: null,
+    createdAt: r.createdAt,
+  })),
+]
+  .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  .slice(0, PAGE);
 ---
 
 <AdminLayout title="Gerichtsänderungen">
   <FilterLinks
-    current={field ?? "all"}
+    current={removed ? "removed" : (field ?? "all")}
     options={[
       { value: "all", label: "Alle" },
       ...FIELDS.map((f) => ({ value: f, label: FIELD_LABEL[f] })),
+      { value: "removed", label: "Entfernte Ausgaben" },
     ]}
     param="field"
   />
-  <ChangeTable changes={changes} />
+  <ChangeTable changes={rows} />
 </AdminLayout>

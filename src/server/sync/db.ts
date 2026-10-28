@@ -153,10 +153,10 @@ function updateServings(tx: Tx, changes: ServingChange[]) {
     where ${mensaMeal.id} = v.id`);
 }
 
-function insertMealRows(tx: Tx, rows: NewMeal[]) {
+function insertMealRows(tx: Tx, rows: NewMeal[], syncRunId: string | null) {
   return tx
     .insert(meal)
-    .values(rows)
+    .values(rows.map((row) => ({ ...row, syncRunId })))
     .onConflictDoNothing()
     .returning({ id: meal.id });
 }
@@ -168,18 +168,24 @@ function insertMealRows(tx: Tx, rows: NewMeal[]) {
  * src_id) oder die die DB ablehnt (z. B. zu langer Name). Ein einzelnes
  * fehlerhaftes Gericht blockiert so nicht den ganzen Sync.
  */
-async function insertMeals(tx: Tx, meals: NewMeal[]): Promise<Set<string>> {
+async function insertMeals(
+  tx: Tx,
+  meals: NewMeal[],
+  syncRunId: string | null
+): Promise<Set<string>> {
   const inserted = new Set<string>();
   const failed = new Set<string>();
   for (const batch of chunks(meals)) {
     let rows: { id: string }[] = [];
     try {
-      rows = await tx.transaction((sp) => insertMealRows(sp, batch));
+      rows = await tx.transaction((sp) => insertMealRows(sp, batch, syncRunId));
     } catch {
       for (const row of batch) {
         try {
           rows.push(
-            ...(await tx.transaction((sp) => insertMealRows(sp, [row])))
+            ...(await tx.transaction((sp) =>
+              insertMealRows(sp, [row], syncRunId)
+            ))
           );
         } catch (error) {
           failed.add(row.id);
@@ -253,10 +259,12 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
     };
 
     if (plan.newMensen.length > 0) {
-      await tx.insert(mensa).values(plan.newMensen);
+      await tx
+        .insert(mensa)
+        .values(plan.newMensen.map((m) => ({ ...m, syncRunId })));
     }
 
-    const inserted = await insertMeals(tx, plan.newMeals);
+    const inserted = await insertMeals(tx, plan.newMeals, syncRunId);
     const skippedMeals = new Set(
       plan.newMeals.filter((m) => !inserted.has(m.id)).map((m) => m.id)
     );
@@ -280,7 +288,7 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
     for (const batch of chunks(servings)) {
       const rows = await tx
         .insert(mensaMeal)
-        .values(batch)
+        .values(batch.map((s) => ({ ...s, syncRunId })))
         .onConflictDoNothing()
         .returning({ mealId: mensaMeal.mealId, date: mensaMeal.date });
       newServings += rows.length;

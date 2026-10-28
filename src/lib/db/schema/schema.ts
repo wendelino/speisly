@@ -32,6 +32,11 @@ export const mensa = pgTable("mensa", {
   ...uuid,
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull().unique(),
+  /** Sync-Lauf, der die Mensa angelegt hat (null: vor 0009 angelegt) */
+  syncRunId: varchar("sync_run_id", { length: ID_LENGTH }).references(
+    () => syncRun.id,
+    { onDelete: "set null" }
+  ),
   ...timeStampUtils,
 });
 // Meal table
@@ -49,9 +54,15 @@ export const meal = pgTable(
     priceStud: integer("price_stud").notNull(),
     priceWork: integer("price_work").notNull(),
     priceGuest: integer("price_guest").notNull(),
+    /** Sync-Lauf, der das Gericht angelegt hat (null: vor 0009 angelegt) */
+    syncRunId: varchar("sync_run_id", { length: ID_LENGTH }).references(
+      () => syncRun.id,
+      { onDelete: "set null" }
+    ),
     ...timeStampUtils,
   },
   (t) => [
+    index("meal_sync_run_id_idx").on(t.syncRunId),
     uniqueIndex("meal_unique").on(
       t.name,
       t.dataSourceSlug,
@@ -143,9 +154,15 @@ export const mensaMeal = pgTable(
     date: timestamp("date").notNull(),
     ingredients: text("ingredients").array().notNull().default([]),
     extras: text("extras").array().notNull().default([]),
+    /** Sync-Lauf, der die Ausgabe angelegt hat (null: vor 0009 angelegt) */
+    syncRunId: varchar("sync_run_id", { length: ID_LENGTH }).references(
+      () => syncRun.id,
+      { onDelete: "set null" }
+    ),
     ...timeStampUtils,
   },
   (table) => [
+    index("mensa_meal_sync_run_id_idx").on(table.syncRunId),
     uniqueIndex("mensa_meal_unique_idx").on(
       table.mensaId,
       table.mealId,

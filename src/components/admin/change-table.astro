@@ -1,8 +1,10 @@
 ---
 // Gerichtsänderungen (vorher → nachher), optional mit Zeitpunkt. Der Name
 // führt zur Admin-Seite des Gerichts, das Icon zur öffentlichen.
+// `field: "removed"`: entfernte Ausgabe, `prev` beschreibt sie. Das Feld
+// führt zur Detailseite mit den Originaldaten (src/pages/admin/change/[id]).
 import { ExternalLink } from "@lucide/astro";
-import { FIELD_LABEL, formatChangeValue, formatDateTime } from "@/lib/admin-format";
+import { CHANGE_LABEL, formatChangeValue, formatDateTime } from "@/lib/admin-format";
 import type { MealChangeField } from "@/server/queries/admin";
 
 type Props = {
@@ -10,7 +12,7 @@ type Props = {
     id: string;
     mealId: string;
     mealName: string;
-    field: MealChangeField;
+    field: MealChangeField | "removed";
     prev: unknown;
     next: unknown;
     createdAt?: Date;
@@ -64,7 +66,15 @@ const withTime = changes.some((c) => c.createdAt);
                   </a>
                 </span>
               </td>
-              <td class={TD}>{FIELD_LABEL[change.field]}</td>
+              <td class={TD}>
+                <a
+                  class="text-primary underline-offset-4 hover:underline"
+                  href={`/admin/change/${change.id}`}
+                  title="Details und Originaldaten"
+                >
+                  {CHANGE_LABEL[change.field]}
+                </a>
+              </td>
               <td class={`${TD} break-all text-muted-foreground`}>
                 {formatChangeValue(change.prev)}
               </td>

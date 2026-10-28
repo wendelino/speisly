@@ -21,6 +21,15 @@ export function formatDuration(ms: number | null): string {
   return ms < 1000 ? `${ms} ms` : `${formatDecimal(ms / 1000)} s`;
 }
 
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  return bytes < 1024 * 1024
+    ? `${formatDecimal(bytes / 1024)} KB`
+    : `${formatDecimal(bytes / 1024 / 1024)} MB`;
+}
+
 type Prices = { stud: number; work: number; guest: number };
 
 function isPrices(value: unknown): value is Prices {
@@ -44,6 +53,9 @@ export function formatChangeValue(value: unknown): string {
   // Zutaten/Extras einer Ausgabe
   if (Array.isArray(value)) {
     return value.length === 0 ? "(leer)" : value.join(", ");
+  }
+  if (value === null || value === undefined) {
+    return "–";
   }
   return JSON.stringify(value);
 }
@@ -97,6 +109,12 @@ export const FIELD_LABEL = {
   price: "Preis",
   ingredients: "Zutaten",
   extras: "Extras",
+} as const;
+
+/** Spalte „Feld“ der Änderungstabelle, inkl. entfernter Ausgaben */
+export const CHANGE_LABEL = {
+  ...FIELD_LABEL,
+  removed: "Ausgabe entfernt",
 } as const;
 
 export const STATUS_LABEL = {

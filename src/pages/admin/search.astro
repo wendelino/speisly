@@ -75,7 +75,8 @@ const HEADING = "mb-3 font-bold font-display text-xl";
                 <a class={LINK} href={`/admin/meal/${r.mealId}`}>{r.mealName}</a>
               </p>
               <p class="text-muted-foreground text-sm">
-                {day(r.date)} · {r.mensaName ?? "Mensa unbekannt"}
+                <a class={LINK} href={`/admin/change/${r.id}`}>{day(r.date)}</a> ·{" "}
+                {r.mensaName ?? "Mensa unbekannt"}
                 {r.syncRunId && (
                   <>
                     {" "}· <a class={LINK} href={`/admin/sync/${r.syncRunId}`}>Lauf</a>
@@ -154,7 +155,9 @@ const HEADING = "mb-3 font-bold font-display text-xl";
         <ul class="space-y-3">
           {result.changes.map((c) => (
             <li class:list={[ITEM, "flex flex-wrap items-center gap-2"]}>
-              <Badge>{FIELD_LABEL[c.field]}</Badge>
+              <a href={`/admin/change/${c.id}`} title="Details und Originaldaten">
+                <Badge>{FIELD_LABEL[c.field]}</Badge>
+              </a>
               <a class={LINK} href={`/admin/meal/${c.mealId}`}>{c.mealName}</a>
               <span class="text-muted-foreground text-sm">{formatDateTime(c.createdAt)}</span>
             </li>
