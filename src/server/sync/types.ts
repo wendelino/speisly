@@ -1,3 +1,5 @@
+import type { mealChange } from "@/lib/db/schema/schema";
+
 // Date range types
 export type DateRange = {
   from: string;
@@ -118,11 +120,14 @@ export type GetMealDataResult = {
   dates: string[];
 };
 
-export type MealUpdateLog = {
-  prev: string;
-  new: string;
-  key: string;
-};
+/**
+ * Eine geänderte Eigenschaft eines Gerichts oder einer Ausgabe (Zeile in
+ * `meal_change`)
+ */
+export type MealFieldChange = Pick<
+  typeof mealChange.$inferInsert,
+  "field" | "prev" | "next"
+>;
 
 // Constants
 export const MEAL_SRC_ID_MAPPINGS: Record<number, string> = {
@@ -133,4 +138,8 @@ export const MEAL_SRC_ID_MAPPINGS: Record<number, string> = {
   1614: "k_suppe",
   1641: "k_suppe",
 } as const;
-export const DATA_SOURCE_NAME = "Meine Mensa API" as const;
+/**
+ * Einzige Datenquelle; die Zeile in `data_source` legt die Migration 0006 an
+ * (Fremdschlüssel von `meal`)
+ */
+export const DATA_SOURCE_SLUG = "meine-mensa-api" as const;

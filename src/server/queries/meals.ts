@@ -45,6 +45,7 @@ export async function getMealsForDate(
     logError({
       message: "Error getting meals for date",
       ctx: { isoDay, error },
+      source: "queries",
     });
     throw error;
   }

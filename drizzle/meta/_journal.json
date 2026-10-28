@@ -43,6 +43,34 @@
       "when": 1791275064805,
       "tag": "0005_lean_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792648822581,
+      "tag": "0006_sync_runs_and_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792655989291,
+      "tag": "0007_serving_changes",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793158950424,
+      "tag": "0008_api_responses",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793159700780,
+      "tag": "0009_sync_run_refs",
+      "breakpoints": true
     }
   ]
 }

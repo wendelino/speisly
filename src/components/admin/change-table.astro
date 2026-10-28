@@ -1,0 +1,88 @@
+---
+// Gerichtsänderungen (vorher → nachher), optional mit Zeitpunkt. Der Name
+// führt zur Admin-Seite des Gerichts, das Icon zur öffentlichen.
+// `field: "removed"`: entfernte Ausgabe, `prev` beschreibt sie. Das Feld
+// führt zur Detailseite mit den Originaldaten (src/pages/admin/change/[id]).
+import { ExternalLink } from "@lucide/astro";
+import { CHANGE_LABEL, formatChangeValue, formatDateTime } from "@/lib/admin-format";
+import type { MealChangeField } from "@/server/queries/admin";
+
+type Props = {
+  changes: {
+    id: string;
+    mealId: string;
+    mealName: string;
+    field: MealChangeField | "removed";
+    prev: unknown;
+    next: unknown;
+    createdAt?: Date;
+  }[];
+};
+const { changes } = Astro.props;
+const TH = "px-3 py-2 text-left font-semibold";
+const TD = "px-3 py-2 align-top";
+const withTime = changes.some((c) => c.createdAt);
+---
+
+{
+  changes.length === 0 ? (
+    <p class="text-muted-foreground">Keine Änderungen.</p>
+  ) : (
+    <div class="overflow-x-auto rounded-2xl ring-1 ring-border">
+      <table class="w-full min-w-[40rem] text-sm">
+        <thead class="bg-muted/60 text-muted-foreground">
+          <tr>
+            {withTime && <th class={TH}>Zeit</th>}
+            <th class={TH}>Gericht</th>
+            <th class={TH}>Feld</th>
+            <th class={TH}>Vorher</th>
+            <th class={TH}>Nachher</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border/70">
+          {changes.map((change) => (
+            <tr>
+              {withTime && (
+                <td class={`${TD} whitespace-nowrap`}>
+                  {formatDateTime(change.createdAt ?? null)}
+                </td>
+              )}
+              <td class={TD}>
+                <span class="inline-flex items-center gap-1.5">
+                  <a
+                    class="font-semibold text-primary underline-offset-4 hover:underline"
+                    href={`/admin/meal/${change.mealId}`}
+                  >
+                    {change.mealName}
+                  </a>
+                  <a
+                    aria-label="Öffentliche Seite"
+                    class="text-muted-foreground hover:text-primary"
+                    href={`/meal/${change.mealId}`}
+                    target="_blank"
+                    title="Öffentliche Seite"
+                  >
+                    <ExternalLink aria-hidden="true" class="size-3.5" />
+                  </a>
+                </span>
+              </td>
+              <td class={TD}>
+                <a
+                  class="text-primary underline-offset-4 hover:underline"
+                  href={`/admin/change/${change.id}`}
+                  title="Details und Originaldaten"
+                >
+                  {CHANGE_LABEL[change.field]}
+                </a>
+              </td>
+              <td class={`${TD} break-all text-muted-foreground`}>
+                {formatChangeValue(change.prev)}
+              </td>
+              <td class={`${TD} break-all`}>{formatChangeValue(change.next)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}

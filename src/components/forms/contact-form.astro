@@ -24,7 +24,7 @@ const successText = isContact
 const STATUS = "flex items-start gap-3 rounded-2xl p-4 text-sm";
 ---
 
-<form class="space-y-5" data-contact-form data-success={successText} novalidate>
+<form class="space-y-5" data-contact-form data-success={successText} data-type={variant} novalidate>
   {
     isContact && (
       <Field id="email" label="Deine E-Mail-Adresse">
@@ -212,6 +212,7 @@ const STATUS = "flex items-start gap-3 rounded-2xl p-4 text-sm";
         const { error } = await actions.feedback.submit({
           message: String(data.get("message")),
           email: data.get("email")?.toString(),
+          type: form.dataset.type === "contact" ? "contact" : "feedback",
         });
         if (error) {
           const internal = error.code === "INTERNAL_SERVER_ERROR";

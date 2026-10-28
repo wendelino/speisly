@@ -1,5 +1,7 @@
+import { SITE_URL } from "astro:env/server";
 import { defineMiddleware, sequence } from "astro:middleware";
 import { parseDayParam } from "@/lib/dates";
+import { isForbiddenCrossSite, originsOf } from "@/server/origin-check";
 
 const DAY_ROUTE = /^\/day\/([^/]+)\/?$/;
 
@@ -19,6 +21,68 @@ const dayRoute = defineMiddleware((context, next) => {
     }
   }
   return next();
+});
+
+/**
+ * CSRF-Schutz für Formulare statt Astros `checkOrigin`, das hinter dem Proxy
+ * jedes Formular ablehnt (src/server/origin-check.ts)
+ */
+const originCheck = defineMiddleware((context, next) => {
+  if (
+    !context.isPrerendered &&
+    isForbiddenCrossSite(
+      context.request,
+      originsOf(context.url, context.site, SITE_URL)
+    )
+  ) {
+    return new Response(
+      `Cross-site ${context.request.method} form submissions are forbidden`,
+      { status: 403 }
+    );
+  }
+  return next();
+});
+
+/** Ohne Session erreichbar: der Login selbst */
+const ADMIN_PUBLIC = new Set([
+  "/admin/login",
+  "/admin/callback",
+  "/admin/logout",
+]);
+const ADMIN_ACTION = "/_actions/admin.";
+
+/**
+ * /admin und die Admin-Actions nur mit gültiger Session (src/server/admin.ts).
+ * Antworten dort nie cachen und nicht indexieren.
+ */
+const adminGuard = defineMiddleware(async (context, next) => {
+  const path = context.url.pathname;
+  const isAdmin = path === "/admin" || path.startsWith("/admin/");
+  if (!(isAdmin || path.startsWith(ADMIN_ACTION))) {
+    return next();
+  }
+  if (!ADMIN_PUBLIC.has(path)) {
+    // erst hier laden: liest Secrets, die beim Prerendern fehlen
+    const [{ adminAuth }, { SESSION_COOKIE }] = await Promise.all([
+      import("@/server/admin"),
+      import("@/server/admin-auth"),
+    ]);
+    const session = await adminAuth?.readSession(
+      context.cookies.get(SESSION_COOKIE)?.value
+    );
+    if (!session) {
+      if (!isAdmin) {
+        return new Response(null, { status: 401 });
+      }
+      const login = `/admin/login?next=${encodeURIComponent(path + context.url.search)}`;
+      return context.redirect(login, 302);
+    }
+    context.locals.admin = session;
+  }
+  const response = await next();
+  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
 });
 
 /**
@@ -49,4 +113,9 @@ const browserCaching = defineMiddleware(async (context, next) => {
   return response;
 });
 
-export const onRequest = sequence(dayRoute, browserCaching);
+export const onRequest = sequence(
+  originCheck,
+  dayRoute,
+  adminGuard,
+  browserCaching
+);

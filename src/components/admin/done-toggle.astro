@@ -1,0 +1,22 @@
+---
+// Erledigt / wieder öffnen über eine Astro Action (Formular, ohne Client-JS)
+import Button from "@/components/ui/button.astro";
+
+type Props = {
+  /** `actions.admin.…` (wird zur Formular-URL) */
+  action: string;
+  id: string;
+  /** Feldname der Action: `resolved` (Fehler) oder `done` (Feedback) */
+  field: "resolved" | "done";
+  done: boolean;
+};
+const { action, id, field, done } = Astro.props;
+---
+
+<form action={action} method="POST">
+  <input name="id" type="hidden" value={id}>
+  <input name={field} type="hidden" value={done ? "false" : "true"}>
+  <Button size="sm" type="submit" variant={done ? "ghost" : "outline"}>
+    {done ? "Wieder öffnen" : "Erledigt"}
+  </Button>
+</form>

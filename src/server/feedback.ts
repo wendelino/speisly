@@ -12,17 +12,24 @@ import { sendTelegramMessage } from "./telegram";
 export async function saveFeedback({
   message,
   email,
+  type = "feedback",
 }: {
   message: string;
   email?: string;
+  type?: "contact" | "feedback";
 }): Promise<void> {
-  await db.insert(feedback).values({ id: genId(), message, email });
+  await db.insert(feedback).values({ id: genId(), message, email, type });
 
-  sendTelegramMessage(message).catch((error: unknown) => {
-    logError({
-      message: "Failed to forward feedback to Telegram",
-      ctx: { error },
-      disableTelegram: true,
-    });
-  });
+  const label = type === "contact" ? "Kontaktanfrage" : "Feedback";
+  const from = email ? ` von ${email}` : "";
+  sendTelegramMessage(`${label}${from}:\n${message}`).catch(
+    (error: unknown) => {
+      logError({
+        message: "Failed to forward feedback to Telegram",
+        ctx: { error },
+        source: "feedback",
+        notify: false,
+      });
+    }
+  );
 }

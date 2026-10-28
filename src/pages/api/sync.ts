@@ -4,11 +4,15 @@ import { syncImages } from "@/server/images";
 import { prewarm } from "@/server/prewarm";
 import { handleSync } from "@/server/sync";
 import { createSyncHandler } from "@/server/sync-endpoint";
+import { finishSyncRun, startSyncRun } from "@/server/sync-runs";
+import { reportSyncRun } from "@/server/sync-summary";
 
 /**
  * Daten-Sync mit meine-mensa.de und gezielte Cache-Invalidierung.
  *
- * Danach erzeugt er fehlende Bildvarianten (src/server/images).
+ * Danach erzeugt er fehlende Bildvarianten (src/server/images). Jeder Aufruf
+ * landet als Lauf in `sync_run` (src/server/sync-runs.ts), Läufe mit Fehlern
+ * werden per Telegram gemeldet (src/server/sync-summary.ts).
  *
  *   POST /api/sync?scope=today     Speiseplan von heute (tagsüber)
  *   POST /api/sync?scope=week      heute bis +7 Tage (nachts)
@@ -26,4 +30,6 @@ export const POST: APIRoute = createSyncHandler({
   handleSync,
   syncImages,
   prewarm,
+  runs: { start: startSyncRun, finish: finishSyncRun },
+  report: reportSyncRun,
 });

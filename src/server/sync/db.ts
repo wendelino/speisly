@@ -1,18 +1,23 @@
-import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, gte, inArray, lte, sql } from "drizzle-orm";
 import { toIsoDay } from "@/lib/dates";
-import { dataSource } from "@/lib/db/schema/data-source";
-import { meal, mealUpdate, mensa, mensaMeal } from "@/lib/db/schema/schema";
+import {
+  meal,
+  mealChange,
+  mensa,
+  mensaMeal,
+  servingRemoval,
+} from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
 import { db } from "../db";
 import { logError } from "../log";
-import type { MealChange, NewMeal, SyncPlan } from "./plan";
+import { currentSyncRun } from "../sync-run-context";
+import type { MealChange, NewMeal, ServingChange, SyncPlan } from "./plan";
 import type {
-  DataSourceRecord,
   GetExistingMensaMealsParams,
-  MealUpdateLog,
+  MealFieldChange,
   MensaMealRecord,
 } from "./types";
-import { normalizeDateRange, toSlug } from "./utils";
+import { normalizeDateRange } from "./utils";
 
 /** Zeilen pro INSERT (Postgres erlaubt max. 65 535 Parameter je Statement) */
 const CHUNK = 500;
@@ -23,30 +28,6 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
     out.push(items.slice(i, i + size));
   }
   return out;
-}
-
-/**
- * Gets an existing data source or creates a new one
- */
-export async function getOrCreateDataSource(
-  name: string
-): Promise<DataSourceRecord> {
-  const existingSource = await db
-    .select({ slug: dataSource.slug })
-    .from(dataSource)
-    .where(eq(dataSource.name, name))
-    .limit(1);
-
-  if (existingSource.length > 0) {
-    return existingSource[0];
-  }
-
-  const newDataSource = await db
-    .insert(dataSource)
-    .values({ id: genId(), name, slug: toSlug(name) })
-    .returning({ slug: dataSource.slug });
-
-  return newDataSource[0];
 }
 
 /**
@@ -142,17 +123,40 @@ async function updateMeals(
         // Die Ausgaben des Gerichts werden trotzdem abgeglichen. Vorher
         // fielen sie dabei heraus und wurden als „nicht mehr in der API“
         // gelöscht.
-        logError({ message: "Error updating meal", ctx: { change, error } });
+        logError({
+          message: "Error updating meal",
+          ctx: { change, error },
+          source: "sync",
+        });
       }
     }
   }
   return applied;
 }
 
-function insertMealRows(tx: Tx, rows: NewMeal[]) {
+/**
+ * Ein UPDATE … FROM (VALUES …) für Zutaten und Extras vieler Ausgaben. Die
+ * Listen gehen als JSON hinein, weil drizzle JS-Arrays im `sql`-Template als
+ * Werteliste einsetzt statt als ein Array-Parameter.
+ */
+function updateServings(tx: Tx, changes: ServingChange[]) {
+  const rows = changes.map(
+    ({ servingId, values: v }) =>
+      sql`(${servingId}, ${JSON.stringify(v.ingredients)}::jsonb, ${JSON.stringify(v.extras)}::jsonb)`
+  );
+  return tx.execute(sql`
+    update ${mensaMeal} set
+      ingredients = array(select jsonb_array_elements_text(v.ingredients)),
+      extras = array(select jsonb_array_elements_text(v.extras)),
+      updated_at = now()
+    from (values ${sql.join(rows, sql`, `)}) as v(id, ingredients, extras)
+    where ${mensaMeal.id} = v.id`);
+}
+
+function insertMealRows(tx: Tx, rows: NewMeal[], syncRunId: string | null) {
   return tx
     .insert(meal)
-    .values(rows)
+    .values(rows.map((row) => ({ ...row, syncRunId })))
     .onConflictDoNothing()
     .returning({ id: meal.id });
 }
@@ -164,24 +168,31 @@ function insertMealRows(tx: Tx, rows: NewMeal[]) {
  * src_id) oder die die DB ablehnt (z. B. zu langer Name). Ein einzelnes
  * fehlerhaftes Gericht blockiert so nicht den ganzen Sync.
  */
-async function insertMeals(tx: Tx, meals: NewMeal[]): Promise<Set<string>> {
+async function insertMeals(
+  tx: Tx,
+  meals: NewMeal[],
+  syncRunId: string | null
+): Promise<Set<string>> {
   const inserted = new Set<string>();
   const failed = new Set<string>();
   for (const batch of chunks(meals)) {
     let rows: { id: string }[] = [];
     try {
-      rows = await tx.transaction((sp) => insertMealRows(sp, batch));
+      rows = await tx.transaction((sp) => insertMealRows(sp, batch, syncRunId));
     } catch {
       for (const row of batch) {
         try {
           rows.push(
-            ...(await tx.transaction((sp) => insertMealRows(sp, [row])))
+            ...(await tx.transaction((sp) =>
+              insertMealRows(sp, [row], syncRunId)
+            ))
           );
         } catch (error) {
           failed.add(row.id);
           logError({
             message: "Error creating meal",
             ctx: { meal: row, error },
+            source: "sync",
           });
         }
       }
@@ -195,20 +206,40 @@ async function insertMeals(tx: Tx, meals: NewMeal[]): Promise<Set<string>> {
       logError({
         message: "Error creating meal",
         ctx: { meal: m, reason: "meal_unique" },
+        source: "sync",
       });
     }
   }
   return inserted;
 }
 
-function updateRows(mealId: string, logs: MealUpdateLog[]) {
-  return logs.map((log) => ({ id: genId(), mealId, ...log }));
+function changeRows(
+  mealId: string,
+  logs: MealFieldChange[],
+  syncRunId: string | null,
+  mensaMealId: string | null = null
+) {
+  return logs.map((log) => ({
+    id: genId(),
+    mealId,
+    mensaMealId,
+    syncRunId,
+    ...log,
+  }));
 }
 
 export type ApplyResult = {
   dates: Set<string>;
   mealIds: Set<string>;
   newMensen: number;
+  /** tatsächlich geschrieben (ohne übersprungene Gerichte und Konflikte) */
+  counts: {
+    newMeals: number;
+    changedMeals: number;
+    newServings: number;
+    changedServings: number;
+    removedServings: number;
+  };
 };
 
 /**
@@ -218,6 +249,7 @@ export type ApplyResult = {
  * Batch-Statements.
  */
 export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
+  const syncRunId = currentSyncRun()?.id ?? null;
   return db.transaction(async (tx) => {
     const dates = new Set<string>();
     const mealIds = new Set<string>();
@@ -227,17 +259,20 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
     };
 
     if (plan.newMensen.length > 0) {
-      await tx.insert(mensa).values(plan.newMensen);
+      await tx
+        .insert(mensa)
+        .values(plan.newMensen.map((m) => ({ ...m, syncRunId })));
     }
 
-    const inserted = await insertMeals(tx, plan.newMeals);
+    const inserted = await insertMeals(tx, plan.newMeals, syncRunId);
     const skippedMeals = new Set(
       plan.newMeals.filter((m) => !inserted.has(m.id)).map((m) => m.id)
     );
 
-    const logRows: ReturnType<typeof updateRows> = [];
-    for (const change of await updateMeals(tx, plan.mealChanges)) {
-      logRows.push(...updateRows(change.mealId, change.logs));
+    const changeLog: ReturnType<typeof changeRows> = [];
+    const applied = await updateMeals(tx, plan.mealChanges);
+    for (const change of applied) {
+      changeLog.push(...changeRows(change.mealId, change.logs, syncRunId));
       for (const day of change.dates) {
         changed(day, change.mealId);
       }
@@ -249,15 +284,28 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
     const servings = plan.newServings.filter(
       (s) => !skippedMeals.has(s.mealId)
     );
+    let newServings = 0;
     for (const batch of chunks(servings)) {
       const rows = await tx
         .insert(mensaMeal)
-        .values(batch)
+        .values(batch.map((s) => ({ ...s, syncRunId })))
         .onConflictDoNothing()
         .returning({ mealId: mensaMeal.mealId, date: mensaMeal.date });
+      newServings += rows.length;
       for (const row of rows) {
         changed(toIsoDay(row.date), row.mealId);
       }
+    }
+
+    // Zutaten/Extras bestehender Ausgaben
+    for (const batch of chunks(plan.servingChanges)) {
+      await updateServings(tx, batch);
+    }
+    for (const change of plan.servingChanges) {
+      changeLog.push(
+        ...changeRows(change.mealId, change.logs, syncRunId, change.servingId)
+      );
+      changed(change.date, change.mealId);
     }
 
     // Ausgaben, die die API nicht mehr liefert
@@ -270,22 +318,36 @@ export function applySyncPlan(plan: SyncPlan): Promise<ApplyResult> {
           )
         );
       }
+      const removals = plan.removedServings.map((s) => ({
+        id: genId(),
+        mealId: s.mealId,
+        mensaId: s.mensaId,
+        date: toIsoDay(s.date),
+        syncRunId,
+      }));
+      for (const batch of chunks(removals)) {
+        await tx.insert(servingRemoval).values(batch);
+      }
       for (const s of plan.removedServings) {
-        logRows.push({
-          id: genId(),
-          mealId: s.mealId,
-          prev: toIsoDay(s.date),
-          new: "Entfernt",
-          key: "remove",
-        });
         changed(toIsoDay(s.date), s.mealId);
       }
     }
 
-    for (const batch of chunks(logRows)) {
-      await tx.insert(mealUpdate).values(batch);
+    for (const batch of chunks(changeLog)) {
+      await tx.insert(mealChange).values(batch);
     }
 
-    return { dates, mealIds, newMensen: plan.newMensen.length };
+    return {
+      dates,
+      mealIds,
+      newMensen: plan.newMensen.length,
+      counts: {
+        newMeals: inserted.size,
+        changedMeals: applied.length,
+        newServings,
+        changedServings: plan.servingChanges.length,
+        removedServings: plan.removedServings.length,
+      },
+    };
   });
 }

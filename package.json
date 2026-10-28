@@ -16,8 +16,7 @@
     "lint": "biome check",
     "format": "biome format --write",
     "db:generate": "drizzle-kit generate --config=src/lib/db/drizzle.config.ts",
-    "db:migrate": "drizzle-kit migrate --config=src/lib/db/drizzle.config.ts",
-    "db:push": "drizzle-kit push --config=src/lib/db/drizzle.config.ts"
+    "db:migrate": "bun drizzle/migrate.ts"
   },
   "dependencies": {
     "@astrojs/node": "11.1.6",

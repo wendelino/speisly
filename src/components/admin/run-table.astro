@@ -1,0 +1,66 @@
+---
+// Tabelle der Sync-Läufe (Übersicht und /admin/sync)
+import { formatDateTime, formatDuration } from "@/lib/admin-format";
+import type { syncRun } from "@/lib/db/schema/sync-run";
+import StatusBadge from "./status-badge.astro";
+
+type Props = { runs: (typeof syncRun.$inferSelect)[] };
+const { runs } = Astro.props;
+const TH = "px-3 py-2 text-left font-semibold";
+const TD = "px-3 py-2 align-top";
+---
+
+{
+  runs.length === 0 ? (
+    <p class="text-muted-foreground">Noch keine Läufe protokolliert.</p>
+  ) : (
+    <div class="overflow-x-auto rounded-2xl ring-1 ring-border">
+      <table class="w-full min-w-[42rem] text-sm">
+        <thead class="bg-muted/60 text-muted-foreground">
+          <tr>
+            <th class={TH}>Start</th>
+            <th class={TH}>Scope</th>
+            <th class={TH}>Status</th>
+            <th class={TH}>Dauer</th>
+            <th class={TH}>Gerichte neu / geändert</th>
+            <th class={TH}>Ausgaben neu / geändert / entfernt</th>
+            <th class={TH}>Bilder</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border/70">
+          {runs.map((run) => (
+            <tr class="hover:bg-muted/40">
+              <td class={TD}>
+                <a
+                  class="font-semibold text-primary underline-offset-4 hover:underline"
+                  href={`/admin/sync/${run.id}`}
+                >
+                  {formatDateTime(run.startedAt)}
+                </a>
+              </td>
+              <td class={TD}>{run.scope}</td>
+              <td class={TD}>
+                <StatusBadge status={run.status} />
+                {run.massRemoval && <span class="ml-1 text-rose text-xs">Notbremse</span>}
+              </td>
+              <td class={TD}>{formatDuration(run.durationMs)}</td>
+              <td class={TD}>{run.newMeals} / {run.changedMeals}</td>
+              <td class={TD}>
+                {run.newServings} / {run.changedServings} / {run.removedServings}
+                {run.keptServings > 0 && (
+                  <span class="text-muted-foreground"> ({run.keptServings} behalten)</span>
+                )}
+              </td>
+              <td class={TD}>
+                {run.imagesCreated}
+                {run.imagesFailed > 0 && (
+                  <span class="text-rose"> ({run.imagesFailed} fehlgeschlagen)</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
