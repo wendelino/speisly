@@ -1,0 +1,206 @@
+---
+// Admin: eine gespeicherte API-Antwort als einklappbarer JSON-Baum,
+// mit `?raw` unverändert als Text
+import Button from "@/components/ui/button.astro";
+import Card from "@/components/ui/card.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import {
+  formatBytes,
+  formatDateTime,
+  formatDuration,
+  jsonTreeHtml,
+} from "@/lib/admin-format";
+import { getApiResponse } from "@/server/queries/admin";
+
+export const prerender = false;
+
+const row = await getApiResponse(Astro.params.id ?? "");
+if (!row) {
+  return new Response(null, { status: 404 });
+}
+if (Astro.url.searchParams.has("raw")) {
+  return new Response(row.body, {
+    headers: {
+      // als Text, damit der Browser nichts aus der Antwort ausführt
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+Astro.response.headers.set("Cache-Control", "no-store");
+
+let tree: string | null = null;
+try {
+  tree = jsonTreeHtml(JSON.parse(row.body));
+} catch {
+  // kein JSON (z. B. HTML-Fehlerseite): als Text anzeigen
+}
+const facts = [
+  ["Status", String(row.status)],
+  ["Dauer", formatDuration(row.durationMs)],
+  ["Größe", formatBytes(new TextEncoder().encode(row.body).length)],
+  ["Abgerufen", formatDateTime(row.createdAt)],
+];
+---
+
+<AdminLayout title="API-Antwort">
+  <div class="flex flex-wrap gap-2" slot="actions">
+    {
+      tree && (
+        <>
+          <Button data-jt-action="open" size="sm" variant="outline">Alle aufklappen</Button>
+          <Button data-jt-action="close" size="sm" variant="outline">Alle zuklappen</Button>
+        </>
+      )
+    }
+    <Button data-jt-action="copy" size="sm" variant="outline">Kopieren</Button>
+    <Button href="?raw" size="sm" target="_blank" variant="ghost">Roh</Button>
+  </div>
+
+  <Card class="mb-6">
+    <p class="mb-4 break-all font-mono text-sm">{row.url}</p>
+    <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-5">
+      {
+        facts.map(([label, value]) => (
+          <div>
+            <dt class="text-muted-foreground">{label}</dt>
+            <dd class={label === "Status" && row.status >= 400 ? "font-semibold text-rose" : "font-semibold"}>
+              {value}
+            </dd>
+          </div>
+        ))
+      }
+      <div>
+        <dt class="text-muted-foreground">Sync-Lauf</dt>
+        <dd class="font-semibold">
+          {
+            row.syncRunId ? (
+              <a class="text-primary underline-offset-4 hover:underline" href={`/admin/sync/${row.syncRunId}`}>
+                öffnen
+              </a>
+            ) : (
+              "–"
+            )
+          }
+        </dd>
+      </div>
+    </dl>
+  </Card>
+
+  <Card class="overflow-x-auto font-mono text-xs leading-relaxed">
+    {
+      tree ? (
+        <div data-jt set:html={tree} />
+      ) : (
+        <pre class="whitespace-pre-wrap break-all">{row.body}</pre>
+      )
+    }
+  </Card>
+  {tree && <p class="mt-3 text-muted-foreground text-xs">Tipp: Alt-Klick auf eine Zeile klappt den ganzen Teilbaum.</p>}
+  <textarea class="hidden" data-jt-body readonly>{row.body}</textarea>
+</AdminLayout>
+
+<style is:global>
+  [data-jt] .jt-row {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  [data-jt] summary {
+    cursor: pointer;
+    list-style: none;
+    border-radius: 0.375rem;
+  }
+  [data-jt] summary::-webkit-details-marker {
+    display: none;
+  }
+  [data-jt] summary::before {
+    content: "▸";
+    display: inline-block;
+    width: 1.1em;
+    margin-left: -1.1em;
+    color: var(--muted-foreground);
+    transition: rotate 0.15s;
+  }
+  [data-jt] details[open] > summary::before {
+    rotate: 90deg;
+  }
+  [data-jt] summary:hover {
+    background: var(--muted);
+  }
+  [data-jt] details[open] > summary .jt-hint,
+  [data-jt] details[open] > summary .jt-count {
+    display: none;
+  }
+  [data-jt] {
+    padding-left: 1.1em;
+  }
+  [data-jt] .jt-children {
+    margin-left: 0.35em;
+    padding-left: 1.4em;
+    border-left: 1px solid var(--border);
+  }
+  [data-jt] .jt-count {
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+  }
+  [data-jt] .jt-key {
+    color: var(--primary);
+  }
+  [data-jt] .jt-string {
+    color: var(--mint);
+  }
+  [data-jt] .jt-number {
+    color: var(--sky);
+  }
+  [data-jt] .jt-boolean {
+    color: var(--peach);
+  }
+  [data-jt] .jt-null {
+    color: var(--muted-foreground);
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-jt]");
+  const setAll = (open: boolean, scope: ParentNode | null = root) => {
+    for (const details of scope?.querySelectorAll("details") ?? []) {
+      details.open = open;
+    }
+  };
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-jt-action]")) {
+    button.addEventListener("click", async () => {
+      const action = button.dataset.jtAction;
+      if (action !== "copy") {
+        setAll(action === "open");
+        return;
+      }
+      const body = document.querySelector<HTMLTextAreaElement>("[data-jt-body]")?.value ?? "";
+      let text = body;
+      try {
+        text = JSON.stringify(JSON.parse(body), null, 2);
+      } catch {
+        // kein JSON: unverändert kopieren
+      }
+      await navigator.clipboard.writeText(text);
+      const label = button.textContent;
+      button.textContent = "Kopiert";
+      setTimeout(() => {
+        button.textContent = label;
+      }, 1500);
+    });
+  }
+
+  // Alt-Klick: ganzen Teilbaum mit auf- bzw. zuklappen
+  root?.addEventListener("click", (event) => {
+    const summary = (event.target as HTMLElement).closest("summary");
+    if (!(summary && event.altKey)) {
+      return;
+    }
+    event.preventDefault();
+    const details = summary.parentElement as HTMLDetailsElement;
+    const open = !details.open;
+    details.open = open;
+    setAll(open, details);
+  });
+</script>

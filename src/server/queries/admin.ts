@@ -128,7 +128,7 @@ export async function getSyncRun(id: string) {
   return { run, changes, removals, errors, responses };
 }
 
-/** Eine rohe API-Antwort samt Body (src/pages/admin/api-response/[id].ts) */
+/** Eine rohe API-Antwort samt Body (src/pages/admin/api-response/[id].astro) */
 export async function getApiResponse(id: string) {
   const [row] = await db
     .select()
