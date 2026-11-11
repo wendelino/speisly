@@ -52,7 +52,7 @@ if (!meal) {
 Astro.cache.set(mealPolicy(meal.id));
 
 const euro = (cents: number) => `${formatEuro(cents)} €`;
-// Beschreibung (auch og:description): Preise, Bewertung nur wenn vorhanden
+// Beschreibung (auch og:description): Beilage, Preise, Bewertung nur wenn vorhanden
 const ratingCountText =
   ratingStats.ratingCount === 1
     ? "1 Bewertung"
@@ -61,7 +61,12 @@ const ratingText = ratingStats.avgRating.value
   ? ` Bewertung: ${formatDecimal(ratingStats.avgRating.value)} von 5 Sternen (${ratingCountText}).`
   : "";
 const priceText = `Preise: Student*in ${euro(meal.priceStud)}, Mitarbeiter*in ${euro(meal.priceWork)}, Gast ${euro(meal.priceGuest)}.`;
-const description = `${priceText}${ratingText}`;
+// Beilage aus dem Untertitel („mit Pommes“ → „Mit Pommes.“)
+const subtitle = meal.subtitle.trim();
+const sideText = subtitle
+  ? `${subtitle.charAt(0).toUpperCase()}${subtitle.slice(1)}${/[.!?]$/.test(subtitle) ? "" : "."} `
+  : "";
+const description = `${sideText}${priceText}${ratingText}`;
 // Dynamisches OG-Bild mit Foto und aktueller Bewertung (src/server/og)
 const images = [
   {
