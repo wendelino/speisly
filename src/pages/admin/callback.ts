@@ -18,7 +18,7 @@ export const GET: APIRoute = async (context) => {
   const result = await adminAuth.finishLogin({
     params: context.url.searchParams,
     flowCookie: context.cookies.get(FLOW_COOKIE)?.value,
-    redirectUri: adminUrl("/admin/callback", context),
+    redirectUri: adminUrl("/admin/callback"),
   });
   context.cookies.delete(FLOW_COOKIE, { path: "/" });
   if (!result.ok) {

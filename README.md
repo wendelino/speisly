@@ -177,6 +177,7 @@ Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`
 
 | Variable | Pflicht | Bedeutung |
 |---|---|---|
+| `SITE_URL` | ja, **auch beim Build** | Öffentliche Basis-URL, z. B. `https://speisly.de` oder die des Previews. Daraus entstehen absolute URLs (OpenGraph), OIDC-Redirects (`<SITE_URL>/admin/callback`, Post-Logout `<SITE_URL>/`), die Origin-Prüfung und der einheitliche Host für den Seiten-Cache. Fehlt sie, brechen Build, Dev-Server und Start mit Exit-Code 1 ab |
 | `DATABASE_URL` | ja | PostgreSQL |
 | `API_BEARER_TOKEN` | ja | Schutz für `/api/sync`; ohne Token startet kein Cron |
 | `MEINE_MENSA_API_URL` | ja | Basis-URL der Speiseplan-API (meine-mensa.de), privat; ohne sie schlägt der Sync fehl |
@@ -184,11 +185,9 @@ Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`
 | `IMAGE_DIR` | empfohlen | Bildvarianten, persistentes Volume |
 | `ASTRO_KEY` | empfohlen, **beim Build** | Schlüssel für Server-Island-Props (`bunx astro create-key`). Ohne ihn erzeugt jeder Build einen neuen; offene Tabs können nach einem Deploy die Angebotshistorie dann nicht nachladen |
 | `HOST`, `PORT` | nein | Default `0.0.0.0:4321` (Next lief auf 3000: `PORT=3000` setzen, dann bleibt der Proxy gleich) |
-| `SITE_HOST` | nein | Default `speisly.de`: einheitlicher Host für den Seiten-Cache, damit Pre-Warm und Besucher dieselben Einträge treffen |
 | `PUBLIC_COOKIE_CONSENT_NAME` | nein | **muss** dem bisherigen `NEXT_PUBLIC_COOKIE_CONSENT_NAME` entsprechen, sonst ist der Cookie-Consent aller Nutzer weg |
 | `PUBLIC_PRIVACY_POLICY_PATH`, `PUBLIC_UMAMI_WEBSITE_ID` | nein | |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ADMIN_GROUP` | nein | Login für `/admin`; ohne Client-ID/Secret ist der Admin-Bereich aus |
-| `SITE_URL` | nein | Basis-URL der OIDC-Redirects (`<SITE_URL>/admin/callback`, Post-Logout `<SITE_URL>/`). Default: `site` (`https://speisly.de`), im Dev-Server die Request-URL |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | nein | Fehler- und Kontaktnachrichten per Telegram |
 | `CRON_DISABLED` | nein | `1` = kein Cron, kein Pre-Warm |
 

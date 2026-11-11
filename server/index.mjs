@@ -9,13 +9,17 @@
  * - registriert die Cron-Jobs für den Daten-Sync (./cron.mjs)
  *
  * Umgebung: PORT (Default 4321), HOST (Default 0.0.0.0), API_BEARER_TOKEN,
- * SITE_HOST (Default speisly.de, einheitlicher Host für den Cache-Schlüssel),
+ * SITE_URL (Pflicht, öffentliche Basis-URL; ihr Host ist der einheitliche Host
+ * für den Cache-Schlüssel, ohne sie Exit-Code 1),
  * CRON_DISABLED=1 schaltet Cron und den Start-Sync ab (z. B. für eine zweite
  * Instanz oder lokale Tests).
  */
 import http from "node:http";
 import { createCompression } from "./compress.mjs";
 import { startCron, triggerSync } from "./cron.mjs";
+
+// Pflicht, siehe siteHost(); vor allem anderen prüfen
+const canonicalHost = siteHost(process.env.SITE_URL);
 
 // Der Standalone-Server des Adapters soll nicht selbst starten, wir nutzen
 // seinen Handler (statische Dateien + SSR) in unserem Server
@@ -31,10 +35,28 @@ process.env.PORT = String(port);
 
 // Astros Route Cache verwendet den Host als Teil des Schlüssels. Ohne
 // Vereinheitlichung landen Pre-Warm und Cron (127.0.0.1) und Besucher (über den
-// Reverse Proxy, je nach Proxy mit `speisly.de` oder der Upstream-Adresse) in
-// verschiedenen Einträgen, und das Vorwärmen wäre wirkungslos. Die App nutzt
-// den Host sonst nirgends (absolute URLs kommen aus `site` in astro.config).
-const canonicalHost = process.env.SITE_HOST || "speisly.de";
+// Reverse Proxy, je nach Proxy mit dem öffentlichen Host oder der
+// Upstream-Adresse) in verschiedenen Einträgen, und das Vorwärmen wäre
+// wirkungslos. Der Host kommt aus SITE_URL (absolute URLs ebenso), geprüft
+// ganz oben vor dem Laden des Builds.
+
+/** Host aus SITE_URL; ohne gültige URL startet der Server nicht */
+function siteHost(/** @type {string | undefined} */ raw) {
+  try {
+    if (raw) {
+      const url = new URL(raw);
+      if (url.protocol === "https:" || url.protocol === "http:") {
+        return url.host;
+      }
+    }
+  } catch {
+    // unten
+  }
+  console.error(
+    `[server] SITE_URL fehlt oder ist keine gültige http(s)-URL: ${raw ?? "(leer)"}`
+  );
+  process.exit(1);
+}
 
 // Dateien aus public/ haben keinen Hash im Namen; der Adapter liefert sie mit
 // `max-age=0` aus, was der Browser bei jedem Seitenaufruf neu prüft. Icons

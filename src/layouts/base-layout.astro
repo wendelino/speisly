@@ -1,6 +1,7 @@
 ---
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
+import { SITE_URL } from "astro:env/server";
 import IconSprite from "@/components/icons/icon-sprite.astro";
 import type { SpriteIconName } from "@/components/icons/sprite-icons";
 import InstallHint from "@/components/install/install-hint.astro";
@@ -49,7 +50,7 @@ const ogTitle = og.title ?? "Speisly";
 const ogDescription = og.description ?? DEFAULT_DESCRIPTION;
 const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
   ...img,
-  url: new URL(img.url, Astro.site).href,
+  url: new URL(img.url, SITE_URL).href,
 }));
 // Breite Vorschaubilder (z. B. 1200×630) groß anzeigen, das Logo klein
 const twitterCard = ogImages.some((img) => (img.width ?? 0) > (img.height ?? 0))

@@ -24,15 +24,11 @@ export const adminAuth: AdminAuth | null =
     : null;
 
 /**
- * Absolute URL für die OIDC-Redirects. Basis ist `SITE_URL`, sonst in
- * Produktion `site` (der Server setzt den Host fest auf speisly.de und kennt
- * das Protokoll hinter dem Proxy nicht), im Dev-Server der Request.
+ * Absolute URL für die OIDC-Redirects, immer auf Basis von `SITE_URL` (die
+ * Request-URL kennt hinter dem Proxy weder Protokoll noch öffentlichen Host).
  */
-export function adminUrl(path: string, context: { url: URL; site?: URL }) {
-  const base =
-    SITE_URL ??
-    (import.meta.env.DEV || !context.site ? context.url : context.site);
-  return new URL(path, base).toString();
+export function adminUrl(path: string) {
+  return new URL(path, SITE_URL).toString();
 }
 
 export function adminCookie(maxAge: number): AstroCookieSetOptions {

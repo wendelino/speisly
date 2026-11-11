@@ -13,7 +13,7 @@ export const GET: APIRoute = async (context) => {
   }
   try {
     const { url, flowCookie } = await adminAuth.startLogin({
-      redirectUri: adminUrl("/admin/callback", context),
+      redirectUri: adminUrl("/admin/callback"),
       next: context.url.searchParams.get("next"),
     });
     context.cookies.set(FLOW_COOKIE, flowCookie, adminCookie(FLOW_TTL_SECONDS));
