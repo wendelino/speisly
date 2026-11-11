@@ -9,8 +9,7 @@
  * - registriert die Cron-Jobs für den Daten-Sync (./cron.mjs)
  *
  * Umgebung: PORT (Default 4321), HOST (Default 0.0.0.0), API_BEARER_TOKEN,
- * SITE_URL (Pflicht, öffentliche Basis-URL; ihr Host ist der einheitliche Host
- * für den Cache-Schlüssel, ohne sie Exit-Code 1),
+ * SITE_URL (Pflicht, öffentliche Basis-URL; ohne sie Exit-Code 1),
  * CRON_DISABLED=1 schaltet Cron und den Start-Sync ab (z. B. für eine zweite
  * Instanz oder lokale Tests).
  */
@@ -18,8 +17,8 @@ import http from "node:http";
 import { createCompression } from "./compress.mjs";
 import { startCron, triggerSync } from "./cron.mjs";
 
-// Pflicht, siehe siteHost(); vor allem anderen prüfen
-const canonicalHost = siteHost(process.env.SITE_URL);
+// Pflicht, siehe requireSiteUrl(); vor allem anderen prüfen
+requireSiteUrl(process.env.SITE_URL);
 
 // Der Standalone-Server des Adapters soll nicht selbst starten, wir nutzen
 // seinen Handler (statische Dateien + SSR) in unserem Server
@@ -33,20 +32,21 @@ const baseUrl = `http://${localHost.includes(":") ? `[${localHost}]` : localHost
 // der Sync-Endpoint wärmt über PORT vor (src/server/sync-endpoint.ts)
 process.env.PORT = String(port);
 
-// Astros Route Cache verwendet den Host als Teil des Schlüssels. Ohne
-// Vereinheitlichung landen Pre-Warm und Cron (127.0.0.1) und Besucher (über den
-// Reverse Proxy, je nach Proxy mit dem öffentlichen Host oder der
-// Upstream-Adresse) in verschiedenen Einträgen, und das Vorwärmen wäre
-// wirkungslos. Der Host kommt aus SITE_URL (absolute URLs ebenso), geprüft
-// ganz oben vor dem Laden des Builds.
+// Astros Route Cache verwendet den Origin der Request-URL als Teil des
+// Schlüssels. Ohne `security.allowedDomains` ignoriert Astro Host und
+// X-Forwarded-* und baut die URL immer als http://localhost:<port>: Pre-Warm,
+// Cron und Besucher landen so im selben Eintrag, und kein Client kann über
+// einen gefälschten Host eigene Einträge anlegen. Wer allowedDomains setzt,
+// muss den Host hier wieder vereinheitlichen (`req.headers.host = …`).
+// Absolute URLs kommen aus SITE_URL, nie aus der Request-URL.
 
-/** Host aus SITE_URL; ohne gültige URL startet der Server nicht */
-function siteHost(/** @type {string | undefined} */ raw) {
+/** Ohne gültige http(s)-URL in SITE_URL startet der Server nicht */
+function requireSiteUrl(/** @type {string | undefined} */ raw) {
   try {
     if (raw) {
       const url = new URL(raw);
       if (url.protocol === "https:" || url.protocol === "http:") {
-        return url.host;
+        return;
       }
     }
   } catch {
@@ -69,7 +69,6 @@ const PUBLIC_CACHE_CONTROL =
 
 const compression = createCompression();
 const server = http.createServer((req, res) => {
-  req.headers.host = canonicalHost;
   if (PUBLIC_FILES.test(req.url ?? "")) {
     res.setHeader("Cache-Control", PUBLIC_CACHE_CONTROL);
   }

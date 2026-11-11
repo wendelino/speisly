@@ -53,8 +53,18 @@ export function mealPolicy(mealId: string): CachePolicy {
   return {
     maxAge: DAY,
     swr: 7 * DAY,
-    tags: [TAG.meal(mealId), TAG.ratings(mealId)],
+    tags: [TAG.meal(mealId), TAG.ratings(mealId), TAG.comments(mealId)],
   };
+}
+
+/**
+ * OG-Bild `/og/meal/[id].jpg?v=`: Inhalt je Version fest, daher lange frisch
+ * und ohne stale-while-revalidate (das würde nach `maxAge` bei jedem Abruf
+ * teuer neu rendern, ohne dass sich etwas ändert). Die Tags räumen den
+ * Eintrag ab, sobald eine neue Version entsteht (Sync, Bewertung).
+ */
+export function ogPolicy(mealId: string): CachePolicy {
+  return { maxAge: 30 * DAY, tags: [TAG.meal(mealId), TAG.ratings(mealId)] };
 }
 
 /** Server Island „Angebotshistorie“: ändert sich nur durch den Sync */

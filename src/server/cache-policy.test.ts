@@ -3,6 +3,7 @@ import {
   dayPolicy,
   homePolicy,
   mealPolicy,
+  ogPolicy,
   tagsForSync,
   untilMidnight,
 } from "./cache-policy";
@@ -61,7 +62,18 @@ describe("page policies", () => {
   });
 
   test("meal page is tagged for sync and ratings", () => {
-    expect(mealPolicy("m1").tags).toEqual(["meal:m1", "ratings:m1"]);
+    expect(mealPolicy("m1").tags).toEqual([
+      "meal:m1",
+      "ratings:m1",
+      "comments:m1",
+    ]);
+  });
+
+  test("OG image: long-lived, no SWR, not tagged with comments", () => {
+    expect(ogPolicy("m1")).toEqual({
+      maxAge: 30 * 24 * 3600,
+      tags: ["meal:m1", "ratings:m1"],
+    });
   });
 
   test("tags for a sync result", () => {

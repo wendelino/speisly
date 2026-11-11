@@ -49,9 +49,17 @@ export default defineConfig({
   // Server-Prozesses (Cache-HIT = kein Render, keine DB). TTLs und Tags setzen
   // die Seiten selbst (src/server/cache-policy.ts); invalidiert wird gezielt
   // nach dem Sync (src/pages/api/sync.ts) und bei Bewertungen.
-  // Query-Parameter zählen zum Key (z. B. ?mmid=), Tracking-Parameter nicht.
+  // Nur diese Query-Parameter zählen zum Key, alle anderen werden ignoriert.
+  // Sonst erzeugt jeder ausgedachte Parameter (`/?x=1`, `/?x=2` …) einen
+  // eigenen Eintrag samt Render: verdrängt vorgewärmte Seiten und lässt sich
+  // für teure Renders (OG-Bild) missbrauchen. Neue Parameter hier eintragen.
+  // mmid: Ausgabe auf /meal/[id], v: Version von /og/meal/[id].jpg,
+  // e/p/s: Export, Props und Slots der Server Islands (Astro-intern)
   cache: {
-    provider: memoryCache({ max: 2000 }),
+    provider: memoryCache({
+      max: 2000,
+      query: { include: ["mmid", "v", "e", "p", "s"] },
+    }),
   },
   vite: {
     plugins: [tailwindcss()],

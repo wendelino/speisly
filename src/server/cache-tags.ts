@@ -13,6 +13,8 @@ export const TAG = {
   meal: (mealId: string) => `meal:${mealId}`,
   /** Server Island „Angebotshistorie“ */
   mealStats: (mealId: string) => `meal-stats:${mealId}`,
-  /** Server Island „Bewertungsübersicht“ */
+  /** Bewertungen eines Gerichts (Statistik, Kommentare, OG-Bild) */
   ratings: (mealId: string) => `ratings:${mealId}`,
+  /** Freigegebene Kommentare auf `/meal/[id]` (Moderation, nicht im OG-Bild) */
+  comments: (mealId: string) => `comments:${mealId}`,
 } as const;

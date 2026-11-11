@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { mealPolicy } from "@/server/cache-policy";
+import { ogPolicy } from "@/server/cache-policy";
 import { logError } from "@/server/log";
 import {
   mealOgData,
@@ -11,9 +11,9 @@ import { findMeal } from "@/server/queries/meal";
 import { getMealRatingStats } from "@/server/queries/ratings";
 
 /**
- * OpenGraph-Bild der Detailseite (src/server/og). Liegt im Route Cache mit
- * denselben Tags wie die Seite, wird also bei neuer Bewertung bzw. nach dem
- * Sync neu gerendert.
+ * OpenGraph-Bild der Detailseite (src/server/og). Liegt im Route Cache
+ * (ogPolicy) mit den Tags von Gericht und Bewertungen, wird also bei neuer
+ * Bewertung bzw. nach dem Sync neu gerendert.
  *
  * `?v=` ist die Version des Bildinhalts (mealOgVersion). Nur die aktuelle
  * Version wird gerendert und gecacht; jede andere (veraltet, fehlend oder
@@ -57,8 +57,18 @@ export const GET: APIRoute = async ({ params, url, cache }) => {
     return new Response(null, { status: 500 });
   }
 
-  cache.set(mealPolicy(meal.id));
-  return new Response(new Uint8Array(jpeg), {
+  cache.set(ogPolicy(meal.id));
+  // Body als ReadableStream, nicht als Uint8Array/Blob/ArrayBuffer: unter
+  // Bun (1.4.2) kommt der Body sonst beim Cache-MISS leer an (der Memory
+  // Cache klont die Response, der Client-Zweig liefert dann sofort `done`).
+  // Erst der zweite Abruf (HIT) hätte das Bild, Crawler holen meist nur einmal.
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(jpeg));
+      controller.close();
+    },
+  });
+  return new Response(body, {
     headers: {
       "Content-Type": "image/jpeg",
       "Content-Length": String(jpeg.byteLength),

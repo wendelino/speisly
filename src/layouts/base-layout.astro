@@ -18,6 +18,7 @@ type Props = {
   description?: string;
   /** OpenGraph/Twitter; Default: die globalen Speisly-Werte */
   og?: {
+    /** wird wie `title` zu "<title> | Speisly" */
     title?: string;
     description?: string;
     images?: { url: string; width?: number; height?: number; alt?: string }[];
@@ -46,7 +47,7 @@ const fullTitle = title ? `${title} | Speisly` : "Speisly";
 const viewTransitionScript = `(${viewTransitionBoot.toString()})();`;
 const mealImageScript = `(${mealImageBoot.toString()})();`;
 const installPromptScript = `(${installPromptBoot.toString()})();`;
-const ogTitle = og.title ?? "Speisly";
+const ogTitle = og.title ? `${og.title} | Speisly` : "Speisly";
 const ogDescription = og.description ?? DEFAULT_DESCRIPTION;
 const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
   ...img,

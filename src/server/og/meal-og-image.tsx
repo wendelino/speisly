@@ -93,22 +93,22 @@ function loadFonts() {
  * Gerichtsfoto als JPEG-Data-URI in Bildgröße. Nur die beim Sync erzeugte
  * große Variante (lokal, WebP – das Satori nicht kann, daher sharp);
  * ohne Variante kein Foto statt eines Downloads im Request.
+ *
+ * Fehler beim Lesen werden geworfen, nicht zu „kein Foto“: die Version
+ * (mealOgVersion) sagt „mit Foto“, ein Bild ohne Foto würde sonst unter
+ * dieser Version gecacht und bliebe bis zur nächsten Invalidierung falsch.
  */
 async function loadPhoto(imgPath: string | null): Promise<string | null> {
   const large = imgPath ? images.variants(imgPath)?.large : undefined;
   if (!large) {
     return null;
   }
-  try {
-    const input = await readFile(join(images.dir, basename(large)));
-    const jpeg = await sharp(input)
-      .resize(OG_WIDTH, OG_HEIGHT, { fit: "cover" })
-      .jpeg({ quality: 82 })
-      .toBuffer();
-    return `data:image/jpeg;base64,${jpeg.toString("base64")}`;
-  } catch {
-    return null;
-  }
+  const input = await readFile(join(images.dir, basename(large)));
+  const jpeg = await sharp(input)
+    .resize(OG_WIDTH, OG_HEIGHT, { fit: "cover" })
+    .jpeg({ quality: 82 })
+    .toBuffer();
+  return `data:image/jpeg;base64,${jpeg.toString("base64")}`;
 }
 
 function Star({ fill, size }: { fill: number; size: number }) {
@@ -267,7 +267,24 @@ function MealCard({ data, photo }: { data: MealOgData; photo: string | null }) {
   );
 }
 
-export async function renderMealOgImage(data: MealOgData): Promise<Buffer> {
+/**
+ * Laufende Renders je Version. Der Route Cache fasst gleichzeitige Misses
+ * nicht zusammen: wird ein Link geteilt, holen viele Vorschau-Crawler das
+ * Bild fast gleichzeitig, und jeder würde sonst selbst rendern.
+ */
+const inflight = new Map<string, Promise<Buffer>>();
+
+export function renderMealOgImage(data: MealOgData): Promise<Buffer> {
+  const version = mealOgVersion(data);
+  let render = inflight.get(version);
+  if (!render) {
+    render = renderUncached(data).finally(() => inflight.delete(version));
+    inflight.set(version, render);
+  }
+  return render;
+}
+
+async function renderUncached(data: MealOgData): Promise<Buffer> {
   const [fonts, photo] = await Promise.all([
     loadFonts(),
     loadPhoto(data.imgPath),

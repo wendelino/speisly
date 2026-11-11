@@ -205,9 +205,9 @@ export const server = {
       handler: async ({ id: ratingId, status }, context) => {
         requireAdmin(context.locals);
         const mealId = await setCommentStatus(ratingId, status);
-        // Detailseite zeigt freigegebene Kommentare
+        // Detailseite zeigt freigegebene Kommentare (das OG-Bild nicht)
         if (mealId) {
-          await invalidateTags(context.cache, [TAG.ratings(mealId)]);
+          await invalidateTags(context.cache, [TAG.comments(mealId)]);
         }
         return { updated: mealId !== null };
       },
