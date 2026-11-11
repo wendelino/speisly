@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
@@ -37,8 +38,23 @@ export type MealOgData = {
   ratingCount: number;
 };
 
-// Fontsource exportiert nur CSS; der Ordner wird über LICENSE gefunden
-let fontsPromise: Promise<{ weight: 500 | 800; data: Buffer }[]> | undefined;
+// Fontsource exportiert nur CSS; der Ordner wird über LICENSE gefunden.
+// Je Schnitt latin und latin-ext (č, ğ, ł …). Satori sucht fehlende Zeichen
+// nicht in weiteren Dateien desselben Namens, nur über die Liste in
+// `fontFamily`: latin-ext bekommt deshalb einen eigenen Namen als Fallback.
+const FONT_WEIGHTS = [500, 800] as const;
+const FONT_SUBSETS = {
+  latin: FONT_NAME,
+  "latin-ext": `${FONT_NAME} Ext`,
+} as const;
+const FONT_FAMILY = Object.values(FONT_SUBSETS)
+  .map((name) => `"${name}"`)
+  .join(", ");
+type FontSubset = keyof typeof FONT_SUBSETS;
+type FontWeight = (typeof FONT_WEIGHTS)[number];
+let fontsPromise:
+  | Promise<{ name: string; weight: FontWeight; data: Buffer }[]>
+  | undefined;
 function loadFonts() {
   fontsPromise ??= (() => {
     const require = createRequire(import.meta.url);
@@ -46,13 +62,18 @@ function loadFonts() {
       dirname(require.resolve("@fontsource/bricolage-grotesque/LICENSE")),
       "files"
     );
-    const load = async (weight: 500 | 800) => ({
+    const load = async (subset: FontSubset, weight: FontWeight) => ({
+      name: FONT_SUBSETS[subset],
       weight,
       data: await readFile(
-        join(dir, `bricolage-grotesque-latin-${weight}-normal.woff`)
+        join(dir, `bricolage-grotesque-${subset}-${weight}-normal.woff`)
       ),
     });
-    return Promise.all([load(500), load(800)]);
+    return Promise.all(
+      (Object.keys(FONT_SUBSETS) as FontSubset[]).flatMap((subset) =>
+        FONT_WEIGHTS.map((weight) => load(subset, weight))
+      )
+    );
   })();
   fontsPromise.catch(() => {
     fontsPromise = undefined;
@@ -140,7 +161,7 @@ function MealCard({ data, photo }: { data: MealOgData; photo: string | null }) {
         position: "relative",
         width: OG_WIDTH,
         height: OG_HEIGHT,
-        fontFamily: FONT_NAME,
+        fontFamily: FONT_FAMILY,
         color: "#fff",
         backgroundImage: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_DARK})`,
       }}
@@ -245,8 +266,8 @@ export async function renderMealOgImage(data: MealOgData): Promise<Buffer> {
   const svg = await satori(<MealCard data={data} photo={photo} />, {
     width: OG_WIDTH,
     height: OG_HEIGHT,
-    fonts: fonts.map(({ weight, data: font }) => ({
-      name: FONT_NAME,
+    fonts: fonts.map(({ name, weight, data: font }) => ({
+      name,
       data: font,
       weight,
       style: "normal" as const,
@@ -259,14 +280,44 @@ export async function renderMealOgImage(data: MealOgData): Promise<Buffer> {
 }
 
 /**
- * Versionsparameter fürs og:image: ändert sich mit der Bewertung, damit
- * Plattformen, die die Seite neu abrufen, nicht ein altes Bild aus ihrem
- * Bild-Cache nehmen.
+ * Version des Bildes: Hash über alles, was es zeigt, inkl. ob das Foto als
+ * Variante vorliegt (die entsteht evtl. erst nach dem Sync, bei gleichem
+ * `imgPath`). Ändert sich etwas, ändert sich die URL, und Plattformen, die
+ * die Seite neu abrufen, nehmen kein altes Bild aus ihrem Cache.
  */
-export function mealOgImageUrl(
-  mealId: string,
-  stats: { ratingCount: number; avgRating: number | null }
-): string {
-  const v = `${stats.ratingCount}-${stats.avgRating ?? 0}`;
-  return `/og/meal/${encodeURIComponent(mealId)}.jpg?v=${v}`;
+export function mealOgVersion(data: MealOgData): string {
+  const hasPhoto = data.imgPath
+    ? images.variants(data.imgPath) !== null
+    : false;
+  return createHash("sha256")
+    .update(
+      JSON.stringify([
+        data.name,
+        data.priceStud,
+        data.avgRating,
+        data.ratingCount,
+        data.imgPath,
+        hasPhoto,
+      ])
+    )
+    .digest("hex")
+    .slice(0, 12);
+}
+
+export function mealOgImageUrl(mealId: string, data: MealOgData): string {
+  return `/og/meal/${encodeURIComponent(mealId)}.jpg?v=${mealOgVersion(data)}`;
+}
+
+/** Daten fürs Bild aus Gericht und Bewertungsstatistik */
+export function mealOgData(
+  meal: Pick<Meal, "name" | "imgPath" | "priceStud">,
+  stats: MealRatingStats
+): MealOgData {
+  return {
+    name: meal.name,
+    imgPath: meal.imgPath,
+    priceStud: meal.priceStud,
+    avgRating: stats.avgRating.value,
+    ratingCount: stats.ratingCount,
+  };
 }
