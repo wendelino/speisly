@@ -51,6 +51,10 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
   ...img,
   url: new URL(img.url, Astro.site).href,
 }));
+// Breite Vorschaubilder (z. B. 1200×630) groß anzeigen, das Logo klein
+const twitterCard = ogImages.some((img) => (img.width ?? 0) > (img.height ?? 0))
+  ? "summary_large_image"
+  : "summary";
 ---
 
 <!doctype html>
@@ -92,7 +96,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
       ))
     }
     <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content={twitterCard}>
     <meta name="twitter:title" content={ogTitle}>
     <meta name="twitter:description" content={ogDescription}>
     {ogImages.map((img) => <meta name="twitter:image" content={img.url} />)}

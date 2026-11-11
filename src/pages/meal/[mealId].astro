@@ -24,6 +24,11 @@ import BackLayout from "@/layouts/back-layout.astro";
 import { formatDay, formatDecimal, formatEuro } from "@/lib/format";
 import { visibleIngredientTypes } from "@/lib/ingredients";
 import { mealPolicy } from "@/server/cache-policy";
+import {
+  mealOgImageUrl,
+  OG_HEIGHT,
+  OG_WIDTH,
+} from "@/server/og/meal-og-image";
 import { findMeal } from "@/server/queries/meal";
 import {
   getApprovedComments,
@@ -55,9 +60,18 @@ const ingredientsText =
     : "";
 const priceText = `Preise: Student ${euro(meal.priceStud)}, Mitarbeiter ${euro(meal.priceWork)}, Gast ${euro(meal.priceGuest)}.`;
 const description = `${meal.name} in der Mensa. ${ingredientsText}${priceText}${ratingText}`;
-const images = meal.imgPath
-  ? [{ url: meal.imgPath, width: 1200, height: 630 }]
-  : [];
+// Dynamisches OG-Bild mit Foto und aktueller Bewertung (src/server/og)
+const images = [
+  {
+    url: mealOgImageUrl(meal.id, {
+      ratingCount: ratingStats.ratingCount,
+      avgRating: ratingStats.avgRating.value,
+    }),
+    width: OG_WIDTH,
+    height: OG_HEIGHT,
+    alt: meal.name,
+  },
+];
 // Sprite nur mit den Icons, die diese Seite zeigt (Badges, Platzhalter,
 // Sterne der Bewertung, Ladeanzeige des Bewerten-Buttons)
 const badgeTypes = visibleIngredientTypes(meal.flags);
