@@ -38,9 +38,9 @@ export type DoneFilter = "open" | "done" | "all";
 
 const PAGE = 100;
 
-/** Offene Fehler und offenes Feedback (Übersicht und Navigation) */
+/** Offene Fehler, offenes Feedback und ungeprüfte Kommentare (Übersicht und Navigation) */
 export async function openCounts() {
-  const [[errors], [openFeedback]] = await Promise.all([
+  const [[errors], [openFeedback], [pendingComments]] = await Promise.all([
     db
       .select({ count: count() })
       .from(errorLog)
@@ -49,8 +49,16 @@ export async function openCounts() {
       .select({ count: count() })
       .from(feedback)
       .where(eq(feedback.status, "open")),
+    db
+      .select({ count: count() })
+      .from(mealRating)
+      .where(eq(mealRating.commentStatus, "pending")),
   ]);
-  return { openErrors: errors.count, openFeedback: openFeedback.count };
+  return {
+    openErrors: errors.count,
+    openFeedback: openFeedback.count,
+    pendingComments: pendingComments.count,
+  };
 }
 
 export async function adminOverview() {
@@ -383,6 +391,58 @@ export function listFeedback(filter: DoneFilter = "open", limit = PAGE) {
     .where(filter === "all" ? undefined : eq(feedback.status, filter))
     .orderBy(desc(feedback.createdAt))
     .limit(limit);
+}
+
+export type CommentStatus = "pending" | "approved" | "rejected";
+export type CommentFilter = CommentStatus | "all";
+
+/** Bewertungskommentare zur Moderation, älteste ungeprüfte zuerst */
+export function listComments(filter: CommentFilter = "pending", limit = PAGE) {
+  return db
+    .select({
+      id: mealRating.id,
+      mealId: mealRating.mealId,
+      mealName: meal.name,
+      imgPath: meal.imgPath,
+      mensaName: mensa.name,
+      date: mensaMeal.date,
+      value: mealRating.value,
+      comment: mealRating.comment,
+      status: mealRating.commentStatus,
+      moderatedAt: mealRating.commentModeratedAt,
+      updatedAt: mealRating.updatedAt,
+    })
+    .from(mealRating)
+    .innerJoin(meal, eq(meal.id, mealRating.mealId))
+    .innerJoin(mensaMeal, eq(mensaMeal.id, mealRating.mensaMealId))
+    .innerJoin(mensa, eq(mensa.id, mensaMeal.mensaId))
+    .where(
+      filter === "all"
+        ? isNotNull(mealRating.commentStatus)
+        : eq(mealRating.commentStatus, filter)
+    )
+    .orderBy(
+      filter === "pending" ? mealRating.updatedAt : desc(mealRating.updatedAt)
+    )
+    .limit(limit);
+}
+
+/**
+ * Kommentar freigeben, ablehnen oder zurück in die Prüfung. Gibt das
+ * Gericht zurück (für die Cache-Invalidierung), `null` ohne Treffer.
+ */
+export async function setCommentStatus(id: string, status: CommentStatus) {
+  const rows = await db
+    .update(mealRating)
+    .set({
+      commentStatus: status,
+      commentModeratedAt: status === "pending" ? null : sql`now()`,
+      // updatedAt soll den Zeitpunkt der Bewertung behalten
+      updatedAt: sql`${mealRating.updatedAt}`,
+    })
+    .where(and(eq(mealRating.id, id), isNotNull(mealRating.commentStatus)))
+    .returning({ mealId: mealRating.mealId });
+  return rows[0]?.mealId ?? null;
 }
 
 /** Fehler erledigt bzw. wieder offen */

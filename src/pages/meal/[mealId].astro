@@ -25,16 +25,20 @@ import { formatDay, formatDecimal, formatEuro } from "@/lib/format";
 import { visibleIngredientTypes } from "@/lib/ingredients";
 import { mealPolicy } from "@/server/cache-policy";
 import { findMeal } from "@/server/queries/meal";
-import { getMealRatingStats } from "@/server/queries/ratings";
+import {
+  getApprovedComments,
+  getMealRatingStats,
+} from "@/server/queries/ratings";
 
 export const prerender = false;
 
 const mealId = Astro.params.mealId as string;
 const mmid = Astro.url.searchParams.get("mmid") || undefined;
 
-const [meal, ratingStats] = await Promise.all([
+const [meal, ratingStats, comments] = await Promise.all([
   findMeal(mealId, mmid),
   getMealRatingStats(mealId),
+  getApprovedComments(mealId),
 ]);
 if (!meal) {
   return new Response(null, { status: 404 });
@@ -146,7 +150,12 @@ const TABS = [
   <Tabs class="mt-8 md:mt-10" label="Details zum Gericht" tabs={TABS}>
     <Card padding="md">
       <TabPanel active id="bewertungen">
-        <RatingSummary mealId={meal.id} mensaMealId={mmid} stats={ratingStats} />
+        <RatingSummary
+          comments={comments}
+          mealId={meal.id}
+          mensaMealId={mmid}
+          stats={ratingStats}
+        />
       </TabPanel>
       <TabPanel id="inhaltsstoffe">
         <IngredientsList ingredients={meal.ingredients} />

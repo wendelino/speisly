@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { ID_LENGTH, timeStampUtils, uuid } from "../utils";
 import { dataSource } from "./data-source";
-import { mealChangeField } from "./enums";
+import { commentStatus, mealChangeField } from "./enums";
 import { syncRun } from "./sync-run";
 
 export const user = pgTable(
@@ -194,9 +194,15 @@ export const mealRating = pgTable(
     value_quantity: integer("value_quantity"),
     value_taste: integer("value_taste"),
     comment: text("comment"),
+    /** Kommentare erscheinen erst nach Freigabe im Admin (/admin/comments) */
+    commentStatus: commentStatus("comment_status"),
+    commentModeratedAt: timestamp("comment_moderated_at", {
+      withTimezone: true,
+    }),
     ...timeStampUtils,
   },
   (table) => [
     uniqueIndex("meal_rating_meal_user_idx").on(table.mealId, table.userId),
+    index("meal_rating_comment_status_idx").on(table.commentStatus),
   ]
 );

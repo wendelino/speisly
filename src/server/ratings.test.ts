@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { AstroCookies } from "astro";
 import { eq, sql } from "drizzle-orm";
-import { user } from "@/lib/db/schema/schema";
+import { mealRating, user } from "@/lib/db/schema/schema";
 import { hasConsent } from "./consent";
 import { db } from "./db";
 import { deleteUserRating, getUserRating, upsertRating } from "./ratings";
@@ -67,7 +67,46 @@ describe.skipIf(!process.env.DATABASE_URL)("ratings (integration)", () => {
     ).toBe("updated");
 
     const mine = await getUserRating(userId, mealId);
-    expect(mine).toMatchObject({ value: 5, value_taste: 4, comment: "gut" });
+    expect(mine).toMatchObject({
+      value: 5,
+      value_taste: 4,
+      comment: "gut",
+      commentStatus: "pending",
+    });
+
+    // gleicher Kommentar behält die Freigabe, ein neuer muss wieder geprüft werden
+    await db
+      .update(mealRating)
+      .set({ commentStatus: "approved" })
+      .where(eq(mealRating.userId, userId));
+    await upsertRating(userId, {
+      mealId,
+      mensaMealId,
+      value: 4,
+      comment: "gut",
+    });
+    expect(await getUserRating(userId, mealId)).toMatchObject({
+      commentStatus: "approved",
+    });
+    await upsertRating(userId, {
+      mealId,
+      mensaMealId,
+      value: 4,
+      comment: "neu",
+    });
+    expect(await getUserRating(userId, mealId)).toMatchObject({
+      commentStatus: "pending",
+    });
+    await upsertRating(userId, {
+      mealId,
+      mensaMealId,
+      value: 4,
+      comment: "  ",
+    });
+    expect(await getUserRating(userId, mealId)).toMatchObject({
+      comment: null,
+      commentStatus: null,
+    });
 
     expect(await deleteUserRating(userId, mealId)).toBe(true);
     expect(await getUserRating(userId, mealId)).toBeNull();

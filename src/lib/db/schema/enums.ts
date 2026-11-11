@@ -26,3 +26,9 @@ export const mealChangeField = pgEnum("meal_change_field", [
 export const logLevel = pgEnum("log_level", ["error", "warn"]);
 export const feedbackType = pgEnum("feedback_type", ["contact", "feedback"]);
 export const feedbackStatus = pgEnum("feedback_status", ["open", "done"]);
+/** Moderation von Bewertungskommentaren (null: Bewertung ohne Kommentar) */
+export const commentStatus = pgEnum("comment_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);

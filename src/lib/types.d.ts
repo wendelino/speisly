@@ -41,6 +41,14 @@ declare type MealRatingStats = {
   };
 };
 
+/** Freigegebener Kommentar zu einer Bewertung (anonym) */
+declare type MealComment = {
+  id: string;
+  value: number;
+  comment: string;
+  updatedAt: Date;
+};
+
 // biome-ignore lint/style/noNamespace: so erweitert Astro die Locals
 declare namespace App {
   // biome-ignore lint/style/useConsistentTypeDefinitions: Declaration Merging braucht ein Interface

@@ -1,5 +1,5 @@
 ---
-// Admin: letzter Lauf je Scope, offene Fehler und offenes Feedback
+// Admin: letzter Lauf je Scope, offene Fehler, offenes Feedback und ungeprüfte Kommentare
 import RunTable from "@/components/admin/run-table.astro";
 import Card from "@/components/ui/card.astro";
 import AdminLayout from "@/layouts/admin-layout.astro";
@@ -7,12 +7,12 @@ import { adminOverview } from "@/server/queries/admin";
 
 export const prerender = false;
 
-const { openErrors, openFeedback, latestRuns } = await adminOverview();
+const { openErrors, openFeedback, pendingComments, latestRuns } = await adminOverview();
 const TILE = "block transition-transform hover:-translate-y-0.5";
 ---
 
 <AdminLayout title="Übersicht">
-  <div class="mb-8 grid gap-4 sm:grid-cols-2">
+  <div class="mb-8 grid gap-4 sm:grid-cols-3">
     <a class={TILE} href="/admin/errors">
       <Card>
         <p class="text-muted-foreground text-sm">Offene Fehler</p>
@@ -25,6 +25,12 @@ const TILE = "block transition-transform hover:-translate-y-0.5";
       <Card>
         <p class="text-muted-foreground text-sm">Offenes Feedback</p>
         <p class="font-bold font-display text-3xl">{openFeedback}</p>
+      </Card>
+    </a>
+    <a class={TILE} href="/admin/comments">
+      <Card>
+        <p class="text-muted-foreground text-sm">Ungeprüfte Kommentare</p>
+        <p class="font-bold font-display text-3xl">{pendingComments}</p>
       </Card>
     </a>
   </div>

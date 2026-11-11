@@ -9,7 +9,11 @@ import { hasConsent } from "@/server/consent";
 import { db } from "@/server/db";
 import { saveFeedback } from "@/server/feedback";
 import { logError } from "@/server/log";
-import { setErrorResolved, setFeedbackDone } from "@/server/queries/admin";
+import {
+  setCommentStatus,
+  setErrorResolved,
+  setFeedbackDone,
+} from "@/server/queries/admin";
 import {
   deleteUserRating,
   getUserRating,
@@ -190,6 +194,22 @@ export const server = {
       handler: async ({ id: feedbackId, done }, context) => {
         requireAdmin(context.locals);
         return { updated: await setFeedbackDone(feedbackId, done) };
+      },
+    }),
+    setCommentStatus: defineAction({
+      accept: "form",
+      input: z.object({
+        id,
+        status: z.enum(["pending", "approved", "rejected"]),
+      }),
+      handler: async ({ id: ratingId, status }, context) => {
+        requireAdmin(context.locals);
+        const mealId = await setCommentStatus(ratingId, status);
+        // Detailseite zeigt freigegebene Kommentare
+        if (mealId) {
+          await invalidateTags(context.cache, [TAG.ratings(mealId)]);
+        }
+        return { updated: mealId !== null };
       },
     }),
   },

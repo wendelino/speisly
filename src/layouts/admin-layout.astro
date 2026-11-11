@@ -7,6 +7,7 @@ import {
   History,
   LayoutDashboard,
   MessageSquare,
+  MessageSquareQuote,
   Search,
   TriangleAlert,
 } from "@lucide/astro";
@@ -19,19 +20,21 @@ type Props = { title: string };
 const { title } = Astro.props;
 const admin = Astro.locals.admin;
 const path = Astro.url.pathname;
-const { openErrors, openFeedback } = await openCounts();
+const { openErrors, openFeedback, pendingComments } = await openCounts();
 
 const NAV = [
   { href: "/admin", label: "Übersicht", icon: LayoutDashboard },
   { href: "/admin/sync", label: "Sync-Läufe", icon: Activity },
-  { href: "/admin/errors", label: "Fehler", icon: TriangleAlert, count: openErrors },
   { href: "/admin/changes", label: "Änderungen", icon: History, match: "/admin/meal" },
+  { href: "/admin/errors", label: "Fehler", icon: TriangleAlert, count: openErrors },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, count: openFeedback },
+  { href: "/admin/comments", label: "Kommentare", icon: MessageSquareQuote, count: pendingComments },
 ];
 const isActive = (item: (typeof NAV)[number]) =>
   item.href === "/admin"
     ? path === "/admin"
     : path.startsWith(item.href) || (item.match !== undefined && path.startsWith(item.match));
+const query = path === "/admin/search" ? (Astro.url.searchParams.get("q") ?? "") : "";
 ---
 
 <!doctype html>
@@ -46,78 +49,57 @@ const isActive = (item: (typeof NAV)[number]) =>
   </head>
   <body class="min-h-screen antialiased">
     <header class="sticky top-0 z-10 border-border/70 border-b bg-card/90 backdrop-blur">
-      <div class="container-page flex items-center gap-4 py-3">
-        <a class="shrink-0 font-bold font-display text-lg" href="/admin">
+      <div class="container-page flex h-14 items-center gap-3">
+        <a class="mr-auto shrink-0 font-bold font-display text-lg" href="/admin">
           Speisly <span class="text-primary">Admin</span>
         </a>
-        <nav aria-label="Admin" class="hidden flex-1 gap-1 text-sm md:flex">
-          {
-            NAV.map((item) => (
-              <a
-                aria-current={isActive(item) ? "page" : undefined}
-                class={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                  isActive(item) && "bg-secondary text-primary hover:bg-secondary hover:text-primary"
-                )}
-                href={item.href}
-              >
-                <item.icon aria-hidden="true" class="size-4" />
-                {item.label}
-                {item.count ? (
-                  <span class="min-w-5 rounded-full bg-rose px-1.5 text-center text-white text-xs leading-5">
-                    {item.count}
-                  </span>
-                ) : null}
-              </a>
-            ))
-          }
-        </nav>
-        <form action="/admin/search" class="ml-auto hidden md:block" method="get" role="search">
+        <form action="/admin/search" class="hidden sm:block" method="get" role="search">
           <label class="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm focus-within:ring-2 focus-within:ring-primary">
             <Search aria-hidden="true" class="size-4 text-muted-foreground" />
             <input
               aria-label="ID suchen"
-              class="w-36 bg-transparent font-mono text-xs focus:outline-none lg:w-56"
+              class="w-40 bg-transparent font-mono text-xs focus:outline-none lg:w-64"
               name="q"
               placeholder="ID suchen"
-              value={path === "/admin/search" ? (Astro.url.searchParams.get("q") ?? "") : ""}
+              value={query}
             >
           </label>
         </form>
-        <div class="ml-auto md:ml-0">{admin && <AccountMenu admin={admin} />}</div>
-      </div>
-      <nav aria-label="Admin" class="container-page -mt-1 flex gap-1 overflow-x-auto pb-2 text-sm md:hidden">
-        {
-          NAV.map((item) => (
-            <a
-              aria-current={isActive(item) ? "page" : undefined}
-              class={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground",
-                isActive(item) && "bg-secondary text-primary"
-              )}
-              href={item.href}
-            >
-              <item.icon aria-hidden="true" class="size-4" />
-              {item.label}
-              {item.count ? (
-                <span class="min-w-5 rounded-full bg-rose px-1.5 text-center text-white text-xs leading-5">
-                  {item.count}
-                </span>
-              ) : null}
-            </a>
-          ))
-        }
         <a
           aria-current={path === "/admin/search" ? "page" : undefined}
-          class={cn(
-            "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold text-muted-foreground",
-            path === "/admin/search" && "bg-secondary text-primary"
-          )}
+          aria-label="Suche"
+          class="grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-secondary aria-[current=page]:text-primary sm:hidden"
           href="/admin/search"
         >
-          <Search aria-hidden="true" class="size-4" />
-          Suche
+          <Search aria-hidden="true" class="size-5" />
         </a>
+        {admin && <AccountMenu admin={admin} />}
+      </div>
+      <nav aria-label="Admin" class="container-page">
+        <ul class="-mb-px flex gap-1 overflow-x-auto text-sm [scrollbar-width:none]">
+          {
+            NAV.map((item) => (
+              <li class="shrink-0">
+                <a
+                  aria-current={isActive(item) ? "page" : undefined}
+                  class={cn(
+                    "flex items-center gap-1.5 border-transparent border-b-2 px-3 pt-1 pb-2.5 font-semibold text-muted-foreground transition-colors hover:border-border hover:text-foreground",
+                    isActive(item) && "border-primary text-primary hover:border-primary hover:text-primary"
+                  )}
+                  href={item.href}
+                >
+                  <item.icon aria-hidden="true" class="size-4" />
+                  {item.label}
+                  {item.count ? (
+                    <span class="min-w-5 rounded-full bg-rose px-1.5 text-center text-white text-xs leading-5">
+                      {item.count}
+                    </span>
+                  ) : null}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
       </nav>
     </header>
     <main class="container-page py-8">

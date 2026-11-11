@@ -1,4 +1,4 @@
-import { avg, count, eq } from "drizzle-orm";
+import { and, avg, count, desc, eq, isNotNull } from "drizzle-orm";
 import { mealRating } from "@/lib/db/schema/schema";
 import { db } from "../db";
 
@@ -29,4 +29,31 @@ export async function getMealRatingStats(
       value_taste: round1(row?.value_taste ?? null),
     },
   };
+}
+
+/**
+ * Freigegebene Kommentare eines Gerichts, neueste zuerst (öffentlich,
+ * cachebar über TAG.ratings). Nie ungeprüfte Kommentare ausliefern.
+ */
+export function getApprovedComments(
+  mealId: string,
+  limit = 20
+): Promise<MealComment[]> {
+  return db
+    .select({
+      id: mealRating.id,
+      value: mealRating.value,
+      comment: mealRating.comment,
+      updatedAt: mealRating.updatedAt,
+    })
+    .from(mealRating)
+    .where(
+      and(
+        eq(mealRating.mealId, mealId),
+        eq(mealRating.commentStatus, "approved"),
+        isNotNull(mealRating.comment)
+      )
+    )
+    .orderBy(desc(mealRating.updatedAt))
+    .limit(limit) as Promise<MealComment[]>;
 }

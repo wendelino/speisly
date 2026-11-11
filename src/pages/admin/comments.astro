@@ -1,0 +1,109 @@
+---
+// Admin: Kommentare zu Bewertungen freigeben oder ablehnen. Nur freigegebene
+// Kommentare dürfen öffentlich erscheinen (neue/geänderte sind "pending").
+import { actions } from "astro:actions";
+import { Star } from "@lucide/astro";
+import FilterLinks from "@/components/admin/filter-links.astro";
+import MealThumb from "@/components/admin/meal-thumb.astro";
+import Badge from "@/components/ui/badge.astro";
+import Button from "@/components/ui/button.astro";
+import AdminLayout from "@/layouts/admin-layout.astro";
+import { formatDateTime } from "@/lib/admin-format";
+import {
+  type CommentFilter,
+  type CommentStatus,
+  listComments,
+} from "@/server/queries/admin";
+
+export const prerender = false;
+
+const FILTERS = ["pending", "approved", "rejected", "all"] as const;
+const param = Astro.url.searchParams.get("status");
+const filter: CommentFilter = FILTERS.find((f) => f === param) ?? "pending";
+const entries = await listComments(filter);
+
+const STATUS: Record<CommentStatus, { label: string; tone: "sun" | "mint" | "rose" }> = {
+  pending: { label: "ungeprüft", tone: "sun" },
+  approved: { label: "freigegeben", tone: "mint" },
+  rejected: { label: "abgelehnt", tone: "rose" },
+};
+const LINK = "font-semibold underline-offset-4 hover:underline";
+---
+
+<AdminLayout title="Kommentare">
+  <FilterLinks
+    current={filter}
+    options={[
+      { value: "pending", label: "Ungeprüft" },
+      { value: "approved", label: "Freigegeben" },
+      { value: "rejected", label: "Abgelehnt" },
+      { value: "all", label: "Alle" },
+    ]}
+    param="status"
+  />
+  {
+    entries.length === 0 ? (
+      <p class="text-muted-foreground">
+        {filter === "pending" ? "Keine Kommentare zu prüfen." : "Keine Kommentare."}
+      </p>
+    ) : (
+      <ul class="space-y-3">
+        {entries.map((entry) => {
+          const status = entry.status ?? "pending";
+          const actionsFor = (
+            status === "pending"
+              ? ["approved", "rejected"]
+              : status === "approved"
+                ? ["rejected", "pending"]
+                : ["approved", "pending"]
+          ) as CommentStatus[];
+          return (
+            <li class="flex gap-4 rounded-2xl bg-card p-4 shadow-soft ring-1 ring-border/70">
+              <MealThumb class="hidden sm:block" src={entry.imgPath} />
+              <div class="min-w-0 flex-1">
+                <div class="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <a class={LINK} href={`/admin/meal/${entry.mealId}`}>
+                    {entry.mealName}
+                  </a>
+                  <Badge tone={STATUS[status].tone}>{STATUS[status].label}</Badge>
+                  <span class="inline-flex items-center gap-0.5 text-sm">
+                    <Star aria-hidden="true" class="size-3.5 fill-gold text-gold" />
+                    {entry.value}
+                    <span class="sr-only">von 5 Sternen</span>
+                  </span>
+                </div>
+                <p class="whitespace-pre-line break-words text-sm leading-relaxed">
+                  {entry.comment}
+                </p>
+                <p class="mt-2 text-muted-foreground text-xs">
+                  {entry.mensaName} · {formatDateTime(entry.updatedAt)}
+                  {entry.moderatedAt && <> · geprüft {formatDateTime(entry.moderatedAt)}</>}
+                  {" · "}
+                  <a class="underline-offset-4 hover:underline" href={`/admin/search?q=${entry.id}`}>
+                    Details
+                  </a>
+                </p>
+              </div>
+              <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-start">
+                {actionsFor.map((next) => (
+                  <form action={actions.admin.setCommentStatus} method="POST">
+                    <input name="id" type="hidden" value={entry.id}>
+                    <input name="status" type="hidden" value={next}>
+                    <Button
+                      class="w-full"
+                      size="sm"
+                      type="submit"
+                      variant={next === "approved" ? "default" : next === "rejected" ? "outline" : "ghost"}
+                    >
+                      {next === "approved" ? "Freigeben" : next === "rejected" ? "Ablehnen" : "Zurücksetzen"}
+                    </Button>
+                  </form>
+                ))}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    )
+  }
+</AdminLayout>

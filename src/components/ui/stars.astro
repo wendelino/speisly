@@ -5,12 +5,13 @@ import Icon from "@/components/icons/icon.astro";
 import { formatDecimal } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type Props = { value: number; class?: string };
-const { value, class: className } = Astro.props;
+type Props = { value: number; size?: "sm" | "md"; class?: string };
+const { value, size = "md", class: className } = Astro.props;
+const SIZE = size === "sm" ? "size-4" : "size-5";
 const full = Math.floor(value);
 const half = value % 1 >= 0.5 && value < 5;
-const ON = "size-5 fill-gold text-gold";
-const OFF = "size-5 fill-muted text-border";
+const ON = `${SIZE} fill-gold text-gold`;
+const OFF = `${SIZE} fill-muted text-border`;
 ---
 
 <span
@@ -23,7 +24,7 @@ const OFF = "size-5 fill-muted text-border";
       star <= full ? (
         <Icon class={ON} name="star" />
       ) : star === full + 1 && half ? (
-        <span class="relative size-5">
+        <span class={cn("relative", SIZE)}>
           <Icon class={cn(OFF, "absolute")} name="star" />
           <span class="absolute inset-y-0 left-0 w-1/2 overflow-hidden">
             <Icon class={ON} name="star" />

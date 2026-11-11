@@ -8,7 +8,7 @@ import { db } from "../db";
 import { findMeal } from "./meal";
 import { getMealsForDate } from "./meals";
 import { getVisibleMensen, listMensen } from "./mensen";
-import { getMealRatingStats } from "./ratings";
+import { getApprovedComments, getMealRatingStats } from "./ratings";
 import { getMealServingStats } from "./serving-stats";
 
 const hasDb = Boolean(process.env.DATABASE_URL);
@@ -154,6 +154,27 @@ describe.skipIf(!hasDb)("queries (integration)", () => {
           value_taste: null,
         },
       });
+    });
+  });
+
+  describe("getApprovedComments", () => {
+    test("returns only approved comments", async () => {
+      const rows = (
+        await db.execute(
+          sql`select meal_id from meal_rating where comment_status <> 'approved' limit 1`
+        )
+      ).rows as { meal_id: string }[];
+      for (const { meal_id } of rows) {
+        const comments = await getApprovedComments(meal_id);
+        const approved = (
+          await db.execute(
+            sql`select count(*)::int as n from meal_rating
+                where meal_id = ${meal_id} and comment_status = 'approved'`
+          )
+        ).rows[0] as { n: number };
+        expect(comments.length).toBe(Math.min(approved.n, 20));
+      }
+      expect(await getApprovedComments("does-not-exist")).toEqual([]);
     });
   });
 

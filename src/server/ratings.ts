@@ -25,6 +25,7 @@ export async function getUserRating(userId: string, mealId: string) {
       value_quantity: mealRating.value_quantity,
       value_taste: mealRating.value_taste,
       comment: mealRating.comment,
+      commentStatus: mealRating.commentStatus,
       updatedAt: mealRating.updatedAt,
     })
     .from(mealRating)
@@ -47,6 +48,12 @@ export async function upsertRating(
     value_quantity: input.valueQuantity ?? null,
     value_taste: input.valueTaste ?? null,
   };
+  // Leere Kommentare zählen als kein Kommentar; neue oder geänderte
+  // Kommentare müssen im Admin (/admin/comments) freigegeben werden
+  const comment =
+    input.comment === undefined ? undefined : input.comment.trim() || null;
+  const commentStatus = comment ? ("pending" as const) : null;
+  const unchanged = sql`${mealRating.comment} is not distinct from ${comment ?? null}`;
   const [row] = await db
     .insert(mealRating)
     .values({
@@ -55,12 +62,22 @@ export async function upsertRating(
       mensaMealId: input.mensaMealId,
       userId,
       ...values,
-      comment: input.comment ?? null,
+      comment: comment ?? null,
+      commentStatus,
     })
     .onConflictDoUpdate({
       target: [mealRating.mealId, mealRating.userId],
       // ohne Kommentar im Input bleibt der alte stehen (undefined wird ignoriert)
-      set: { ...values, comment: input.comment },
+      set:
+        comment === undefined
+          ? values
+          : {
+              ...values,
+              comment,
+              // unveränderter Kommentar behält seine Freigabe
+              commentStatus: sql`case when ${unchanged} then ${mealRating.commentStatus} else ${commentStatus}::comment_status end`,
+              commentModeratedAt: sql`case when ${unchanged} then ${mealRating.commentModeratedAt} else null end`,
+            },
     })
     // xmax = 0 nur bei frisch eingefügten Zeilen
     .returning({ created: sql<boolean>`xmax = 0` });
