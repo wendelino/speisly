@@ -17,7 +17,7 @@ const { mensen } = Astro.props;
             <Chip
               class="data-active:bg-primary data-active:text-primary-foreground data-active:ring-primary"
               data-mensa-chip={mensa.id}
-              href={`#mensa-${mensa.slug}`}
+              href={`#${mensa.slug}`}
             >
               {mensa.name}
             </Chip>

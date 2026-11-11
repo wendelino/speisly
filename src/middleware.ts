@@ -30,10 +30,7 @@ const dayRoute = defineMiddleware((context, next) => {
 const originCheck = defineMiddleware((context, next) => {
   if (
     !context.isPrerendered &&
-    isForbiddenCrossSite(
-      context.request,
-      originsOf(context.url, context.site, SITE_URL)
-    )
+    isForbiddenCrossSite(context.request, originsOf(context.url, SITE_URL))
   ) {
     return new Response(
       `Cross-site ${context.request.method} form submissions are forbidden`,

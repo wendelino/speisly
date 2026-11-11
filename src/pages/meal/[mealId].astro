@@ -24,6 +24,12 @@ import BackLayout from "@/layouts/back-layout.astro";
 import { formatDay, formatDecimal, formatEuro } from "@/lib/format";
 import { visibleIngredientTypes } from "@/lib/ingredients";
 import { mealPolicy } from "@/server/cache-policy";
+import {
+  mealOgData,
+  mealOgImageUrl,
+  OG_HEIGHT,
+  OG_WIDTH,
+} from "@/server/og/meal-og-image";
 import { findMeal } from "@/server/queries/meal";
 import {
   getApprovedComments,
@@ -46,18 +52,30 @@ if (!meal) {
 Astro.cache.set(mealPolicy(meal.id));
 
 const euro = (cents: number) => `${formatEuro(cents)} €`;
+// Beschreibung (auch og:description): Beilage, Preise, Bewertung nur wenn vorhanden
+const ratingCountText =
+  ratingStats.ratingCount === 1
+    ? "1 Bewertung"
+    : `${ratingStats.ratingCount} Bewertungen`;
 const ratingText = ratingStats.avgRating.value
-  ? ` Bewertung: ${formatDecimal(ratingStats.avgRating.value)} von 5 Sternen (${ratingStats.ratingCount}).`
+  ? ` Bewertung: ${formatDecimal(ratingStats.avgRating.value)} von 5 Sternen (${ratingCountText}).`
   : "";
-const ingredientsText =
-  meal.ingredients.length > 0
-    ? `Zutaten: ${meal.ingredients.slice(0, 3).join(", ")}. `
-    : "";
-const priceText = `Preise: Student ${euro(meal.priceStud)}, Mitarbeiter ${euro(meal.priceWork)}, Gast ${euro(meal.priceGuest)}.`;
-const description = `${meal.name} in der Mensa. ${ingredientsText}${priceText}${ratingText}`;
-const images = meal.imgPath
-  ? [{ url: meal.imgPath, width: 1200, height: 630 }]
-  : [];
+const priceText = `Preise: Student*in ${euro(meal.priceStud)}, Mitarbeiter*in ${euro(meal.priceWork)}, Gast ${euro(meal.priceGuest)}.`;
+// Beilage aus dem Untertitel („mit Pommes“ → „Mit Pommes.“)
+const subtitle = meal.subtitle.trim();
+const sideText = subtitle
+  ? `${subtitle.charAt(0).toUpperCase()}${subtitle.slice(1)}${/[.!?]$/.test(subtitle) ? "" : "."} `
+  : "";
+const description = `${sideText}${priceText}${ratingText}`;
+// Dynamisches OG-Bild mit Foto und aktueller Bewertung (src/server/og)
+const images = [
+  {
+    url: mealOgImageUrl(meal.id, mealOgData(meal, ratingStats)),
+    width: OG_WIDTH,
+    height: OG_HEIGHT,
+    alt: meal.name,
+  },
+];
 // Sprite nur mit den Icons, die diese Seite zeigt (Badges, Platzhalter,
 // Sterne der Bewertung, Ladeanzeige des Bewerten-Buttons)
 const badgeTypes = visibleIngredientTypes(meal.flags);

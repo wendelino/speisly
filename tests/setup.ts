@@ -28,6 +28,7 @@ plugin({
         OIDC_CLIENT_ID: "speisly-test",
         OIDC_CLIENT_SECRET: "test-client-secret",
         ADMIN_GROUP: "speisly-admin",
+        SITE_URL: env.SITE_URL ?? "https://speisly.de",
       },
     }));
     build.module("astro:env/client", () => ({

@@ -13,7 +13,8 @@ export type LogSource =
   | "ratings"
   | "feedback"
   | "queries"
-  | "cache";
+  | "cache"
+  | "og";
 
 type LogErrorProps = {
   /**

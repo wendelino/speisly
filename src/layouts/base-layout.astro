@@ -1,6 +1,7 @@
 ---
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
+import { SITE_URL } from "astro:env/server";
 import IconSprite from "@/components/icons/icon-sprite.astro";
 import type { SpriteIconName } from "@/components/icons/sprite-icons";
 import InstallHint from "@/components/install/install-hint.astro";
@@ -17,6 +18,7 @@ type Props = {
   description?: string;
   /** OpenGraph/Twitter; Default: die globalen Speisly-Werte */
   og?: {
+    /** wird wie `title` zu "<title> | Speisly" */
     title?: string;
     description?: string;
     images?: { url: string; width?: number; height?: number; alt?: string }[];
@@ -45,12 +47,16 @@ const fullTitle = title ? `${title} | Speisly` : "Speisly";
 const viewTransitionScript = `(${viewTransitionBoot.toString()})();`;
 const mealImageScript = `(${mealImageBoot.toString()})();`;
 const installPromptScript = `(${installPromptBoot.toString()})();`;
-const ogTitle = og.title ?? "Speisly";
+const ogTitle = og.title ? `${og.title} | Speisly` : "Speisly";
 const ogDescription = og.description ?? DEFAULT_DESCRIPTION;
 const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
   ...img,
-  url: new URL(img.url, Astro.site).href,
+  url: new URL(img.url, SITE_URL).href,
 }));
+// Breite Vorschaubilder (z. B. 1200×630) groß anzeigen, das Logo klein
+const twitterCard = ogImages.some((img) => (img.width ?? 0) > (img.height ?? 0))
+  ? "summary_large_image"
+  : "summary";
 ---
 
 <!doctype html>
@@ -75,6 +81,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
     <meta name="apple-mobile-web-app-title" content="Speisly">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#fcf9f4">
+    <meta property="og:site_name" content="Speisly">
     <meta property="og:title" content={ogTitle}>
     <meta property="og:description" content={ogDescription}>
     {
@@ -92,7 +99,7 @@ const ogImages = (og.images ?? DEFAULT_OG_IMAGES).map((img) => ({
       ))
     }
     <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content={twitterCard}>
     <meta name="twitter:title" content={ogTitle}>
     <meta name="twitter:description" content={ogDescription}>
     {ogImages.map((img) => <meta name="twitter:image" content={img.url} />)}

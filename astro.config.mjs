@@ -8,15 +8,40 @@ import {
   fontProviders,
   memoryCache,
 } from "astro/config";
+import { loadEnv } from "vite";
+
+/**
+ * Öffentliche Basis-URL (z. B. https://speisly.de oder die eines Previews).
+ * Pflicht: daraus entstehen alle absoluten URLs (OpenGraph, OIDC-Redirects,
+ * Origin-Prüfung, Host für den Seiten-Cache). Fehlt sie, bricht der Start
+ * mit Exit-Code 1 ab statt still auf eine falsche Domain zu zeigen.
+ */
+function requireSiteUrl() {
+  const mode = process.env.NODE_ENV ?? "production";
+  const raw = process.env.SITE_URL || loadEnv(mode, process.cwd(), "").SITE_URL;
+  let url;
+  try {
+    url = raw ? new URL(raw) : undefined;
+  } catch {
+    url = undefined;
+  }
+  if (!(url && (url.protocol === "https:" || url.protocol === "http:"))) {
+    console.error(
+      `[config] SITE_URL fehlt oder ist keine gültige http(s)-URL: ${raw ?? "(leer)"}`
+    );
+    process.exit(1);
+  }
+  return url.origin;
+}
 
 // Migrationsplan: docs/astro-migration-plan.md
 export default defineConfig({
-  site: "https://speisly.de",
+  site: requireSiteUrl(),
   // Default `output: "static"`: alles wird prerendered, außer Seiten mit
   // `export const prerender = false` (die laufen über den Node-Adapter).
   adapter: node({ mode: "standalone" }),
   // Eigener CSRF-Schutz in src/middleware.ts: Astros Origin-Prüfung vergleicht
-  // mit der Request-URL, die hinter dem Proxy http:// und SITE_HOST ist, und
+  // mit der Request-URL, die hinter dem Proxy http:// und der Host aus SITE_URL ist, und
   // lehnt deshalb jedes Formular ab (src/server/origin-check.ts)
   security: { checkOrigin: false },
   integrations: [react()],
@@ -24,9 +49,17 @@ export default defineConfig({
   // Server-Prozesses (Cache-HIT = kein Render, keine DB). TTLs und Tags setzen
   // die Seiten selbst (src/server/cache-policy.ts); invalidiert wird gezielt
   // nach dem Sync (src/pages/api/sync.ts) und bei Bewertungen.
-  // Query-Parameter zählen zum Key (z. B. ?mmid=), Tracking-Parameter nicht.
+  // Nur diese Query-Parameter zählen zum Key, alle anderen werden ignoriert.
+  // Sonst erzeugt jeder ausgedachte Parameter (`/?x=1`, `/?x=2` …) einen
+  // eigenen Eintrag samt Render: verdrängt vorgewärmte Seiten und lässt sich
+  // für teure Renders (OG-Bild) missbrauchen. Neue Parameter hier eintragen.
+  // mmid: Ausgabe auf /meal/[id], v: Version von /og/meal/[id].jpg,
+  // e/p/s: Export, Props und Slots der Server Islands (Astro-intern)
   cache: {
-    provider: memoryCache({ max: 2000 }),
+    provider: memoryCache({
+      max: 2000,
+      query: { include: ["mmid", "v", "e", "p", "s"] },
+    }),
   },
   vite: {
     plugins: [tailwindcss()],
@@ -115,12 +148,11 @@ export default defineConfig({
         access: "secret",
         default: "speisly-admin",
       }),
-      // Öffentliche Basis-URL für die OIDC-Redirects (/admin/callback und
-      // Post-Logout). Ohne: `site` in Produktion, Request-URL im Dev-Server.
+      // Öffentliche Basis-URL (Pflicht, siehe requireSiteUrl): absolute
+      // URLs, OIDC-Redirects, Origin-Prüfung, Host für den Seiten-Cache
       SITE_URL: envField.string({
         context: "server",
         access: "secret",
-        optional: true,
         url: true,
       }),
       PUBLIC_COOKIE_CONSENT_NAME: envField.string({

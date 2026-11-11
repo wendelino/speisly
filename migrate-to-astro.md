@@ -70,7 +70,7 @@ Bearbeite dieselbe Datei wie bisher. Diese Dateien werden automatisch geladen:
 | `IMAGE_DIR` | **empfohlen** | absoluter Pfad auf dem dauerhaften Verzeichnis aus Schritt 1, z. B. `/var/lib/speisly/img` | Bildvarianten. Default `./data/img` im Projektordner, das überlebt aber kein frisches Deploy |
 | `ASTRO_KEY` | empfohlen | einmal erzeugen mit `bunx astro create-key`, dann **fest** in der `.env` lassen | Schlüssel für die Server Island (Angebotshistorie). Wird **beim Build** gelesen. Ohne festen Schlüssel erzeugt jeder Build einen neuen, und Tabs, die vor einem Deploy geöffnet wurden, können die Angebotshistorie nicht mehr nachladen |
 | `HOST` | nein | Default `0.0.0.0` | Adresse, auf der der Server lauscht. Mit `127.0.0.1` ist er nur noch für den Proxy auf derselben Maschine erreichbar |
-| `SITE_HOST` | nein | Default `speisly.de` | einheitlicher Host für den Seiten-Cache, nur bei einer anderen Domain ändern (z. B. Staging) |
+| `SITE_URL` | **ja** | `https://speisly.de` (Staging/Preview: deren URL) | öffentliche Basis-URL, **auch beim Build** gelesen: absolute URLs, OIDC-Redirects, einheitlicher Host für den Seiten-Cache. Fehlt sie, bricht der Start mit Exit-Code 1 ab |
 | `CRON_DISABLED` | nein | `1` | schaltet Cron und Vorwärmen ab, nur für eine zweite Instanz oder Staging ohne Sync |
 | `PUBLIC_UMAMI_WEBSITE_ID` | nein | Default = die bisher fest eingebaute ID `d6c44311-0001-4b07-a1c0-75bee4883fb1` | Umami-Statistik |
 
@@ -207,7 +207,7 @@ Fehlt die `[cron]`-Zeile und steht dort `API_BEARER_TOKEN fehlt`, ist die `.env`
 
 - **Port:** auf `PORT` zeigen lassen. Mit `PORT=3000` bleibt die Proxy-Konfiguration wie sie ist.
 - **`X-Forwarded-For`** muss weiter durchgereicht werden (wie bisher). Daraus wird der IP-Hash für Bewertungen gebildet. nginx: `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`, Caddy macht das automatisch.
-- **Host-Header:** egal, der Server vereinheitlicht ihn selbst (`SITE_HOST`).
+- **Host-Header:** egal, der Server vereinheitlicht ihn selbst (Host aus `SITE_URL`).
 - **Komprimierung:** Der Server liefert schon Brotli/gzip aus. Falls der Proxy selbst komprimiert, schadet das nicht, verschwendet aber CPU (nginx: `gzip off;` für diesen Upstream, Caddy: `encode` weglassen).
 - **Caching im Proxy:** nicht nötig. HTML kommt mit `max-age=0, must-revalidate`, damit neue Bewertungen sofort sichtbar sind. `/_astro/*` und `/img/*` kommen mit `immutable`.
 - **Optional:** Der Proxy kann `/img/` direkt aus `IMAGE_DIR` ausliefern (z. B. nginx `location /img/ { alias /var/lib/speisly/img/; expires 1y; }`). Nötig ist das nicht.

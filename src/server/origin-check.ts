@@ -2,14 +2,13 @@
  * Schutz gegen Cross-Site-Formulare, ersetzt Astros `security.checkOrigin`.
  *
  * Astro vergleicht den `Origin`-Header mit der Request-URL. Hinter dem Proxy
- * stimmt die nie: server/index.mjs setzt den Host fest auf SITE_HOST, der
- * Adapter kennt nur `http`, der Browser schickt `Origin: https://speisly.de`.
+ * stimmt die nie: server/index.mjs setzt den Host fest auf den aus SITE_URL,
+ * der Adapter kennt nur `http`, der Browser schickt `Origin: <SITE_URL>`.
  * Jedes Formular (z. B. im Admin-Bereich) bekam deshalb 403.
  *
  * Hier gilt eine Anfrage als same-origin, wenn der Browser es per
  * `Sec-Fetch-Site` sagt (nicht fälschbar, alle aktuellen Browser) oder der
- * `Origin` zu einer der erlaubten Adressen passt (Request, `site`,
- * `SITE_URL`). Wie bei Astro werden nur Formular-Content-Types und Anfragen
+ * `Origin` zu einer der erlaubten Adressen passt (Request, `SITE_URL`). Wie bei Astro werden nur Formular-Content-Types und Anfragen
  * ohne Content-Type geprüft; JSON verlangt ohnehin einen CORS-Preflight.
  */
 

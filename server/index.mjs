@@ -9,13 +9,16 @@
  * - registriert die Cron-Jobs für den Daten-Sync (./cron.mjs)
  *
  * Umgebung: PORT (Default 4321), HOST (Default 0.0.0.0), API_BEARER_TOKEN,
- * SITE_HOST (Default speisly.de, einheitlicher Host für den Cache-Schlüssel),
+ * SITE_URL (Pflicht, öffentliche Basis-URL; ohne sie Exit-Code 1),
  * CRON_DISABLED=1 schaltet Cron und den Start-Sync ab (z. B. für eine zweite
  * Instanz oder lokale Tests).
  */
 import http from "node:http";
 import { createCompression } from "./compress.mjs";
 import { startCron, triggerSync } from "./cron.mjs";
+
+// Pflicht, siehe requireSiteUrl(); vor allem anderen prüfen
+requireSiteUrl(process.env.SITE_URL);
 
 // Der Standalone-Server des Adapters soll nicht selbst starten, wir nutzen
 // seinen Handler (statische Dateien + SSR) in unserem Server
@@ -29,12 +32,31 @@ const baseUrl = `http://${localHost.includes(":") ? `[${localHost}]` : localHost
 // der Sync-Endpoint wärmt über PORT vor (src/server/sync-endpoint.ts)
 process.env.PORT = String(port);
 
-// Astros Route Cache verwendet den Host als Teil des Schlüssels. Ohne
-// Vereinheitlichung landen Pre-Warm und Cron (127.0.0.1) und Besucher (über den
-// Reverse Proxy, je nach Proxy mit `speisly.de` oder der Upstream-Adresse) in
-// verschiedenen Einträgen, und das Vorwärmen wäre wirkungslos. Die App nutzt
-// den Host sonst nirgends (absolute URLs kommen aus `site` in astro.config).
-const canonicalHost = process.env.SITE_HOST || "speisly.de";
+// Astros Route Cache verwendet den Origin der Request-URL als Teil des
+// Schlüssels. Ohne `security.allowedDomains` ignoriert Astro Host und
+// X-Forwarded-* und baut die URL immer als http://localhost:<port>: Pre-Warm,
+// Cron und Besucher landen so im selben Eintrag, und kein Client kann über
+// einen gefälschten Host eigene Einträge anlegen. Wer allowedDomains setzt,
+// muss den Host hier wieder vereinheitlichen (`req.headers.host = …`).
+// Absolute URLs kommen aus SITE_URL, nie aus der Request-URL.
+
+/** Ohne gültige http(s)-URL in SITE_URL startet der Server nicht */
+function requireSiteUrl(/** @type {string | undefined} */ raw) {
+  try {
+    if (raw) {
+      const url = new URL(raw);
+      if (url.protocol === "https:" || url.protocol === "http:") {
+        return;
+      }
+    }
+  } catch {
+    // unten
+  }
+  console.error(
+    `[server] SITE_URL fehlt oder ist keine gültige http(s)-URL: ${raw ?? "(leer)"}`
+  );
+  process.exit(1);
+}
 
 // Dateien aus public/ haben keinen Hash im Namen; der Adapter liefert sie mit
 // `max-age=0` aus, was der Browser bei jedem Seitenaufruf neu prüft. Icons
@@ -47,7 +69,6 @@ const PUBLIC_CACHE_CONTROL =
 
 const compression = createCompression();
 const server = http.createServer((req, res) => {
-  req.headers.host = canonicalHost;
   if (PUBLIC_FILES.test(req.url ?? "")) {
     res.setHeader("Cache-Control", PUBLIC_CACHE_CONTROL);
   }

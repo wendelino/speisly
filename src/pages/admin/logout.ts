@@ -7,7 +7,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async (context) => {
   context.cookies.delete(SESSION_COOKIE, { path: "/" });
-  const home = adminUrl("/", context);
+  const home = adminUrl("/");
   const providerLogout = await adminAuth?.logoutUrl(home);
   return context.redirect(providerLogout ?? home, 302);
 };
