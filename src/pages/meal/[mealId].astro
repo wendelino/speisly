@@ -60,7 +60,7 @@ const ratingCountText =
 const ratingText = ratingStats.avgRating.value
   ? ` Bewertung: ${formatDecimal(ratingStats.avgRating.value)} von 5 Sternen (${ratingCountText}).`
   : "";
-const priceText = `Preise: Student ${euro(meal.priceStud)}, Mitarbeiter ${euro(meal.priceWork)}, Gast ${euro(meal.priceGuest)}.`;
+const priceText = `Preise: Student*in ${euro(meal.priceStud)}, Mitarbeiter*in ${euro(meal.priceWork)}, Gast ${euro(meal.priceGuest)}.`;
 const description = `${priceText}${ratingText}`;
 // Dynamisches OG-Bild mit Foto und aktueller Bewertung (src/server/og)
 const images = [

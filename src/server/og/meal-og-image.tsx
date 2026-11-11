@@ -7,6 +7,8 @@ import satori from "satori";
 import sharp from "sharp";
 import { formatDecimal, formatEuro } from "@/lib/format";
 import { images } from "@/server/images";
+// 180 px, ~2 KB (reicht für 2× der Anzeigegröße), beim Build inline
+import logoDataUrl from "../../../public/apple-touch-icon.png?inline";
 
 /**
  * OpenGraph-Bild eines Gerichts (1200×630 JPEG): Foto im Vollbild mit
@@ -28,6 +30,14 @@ const STAR_EMPTY = "rgba(255,255,255,0.35)";
 const STAR_PATH =
   "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z";
 const FONT_NAME = "Bricolage Grotesque";
+const LOGO_SIZE = 88;
+/** Call-to-Action oben rechts (ohne Domain, die steht unter dem Bild) */
+const CTA_TEXT = "Jetzt ansehen & bewerten";
+/**
+ * Hochzählen, wenn sich das Layout ändert: geht in die Version (`?v=`) ein,
+ * damit Plattformen auch dann das neue Bild holen
+ */
+const LAYOUT_VERSION = 2;
 
 export type MealOgData = {
   name: string;
@@ -194,16 +204,37 @@ function MealCard({ data, photo }: { data: MealOgData; photo: string | null }) {
           position: "absolute",
           top: 40,
           left: 56,
-          padding: "8px 24px 12px",
-          borderRadius: 999,
-          background: PRIMARY,
-          fontSize: 36,
-          fontWeight: 800,
-          letterSpacing: -0.5,
-          border: photo ? "none" : "2px solid rgba(255,255,255,0.35)",
+          borderRadius: 20,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
         }}
       >
-        Speisly
+        <img
+          alt="Speisly"
+          height={LOGO_SIZE}
+          src={logoDataUrl}
+          style={{ borderRadius: 20 }}
+          width={LOGO_SIZE}
+        />
+      </div>
+      <div
+        style={{
+          display: "flex",
+          position: "absolute",
+          top: 40 + (LOGO_SIZE - 64) / 2,
+          right: 56,
+          height: 64,
+          alignItems: "center",
+          padding: "0 30px 4px",
+          borderRadius: 999,
+          background: "#fff",
+          color: PRIMARY,
+          fontSize: 30,
+          fontWeight: 800,
+          letterSpacing: -0.3,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+        }}
+      >
+        {CTA_TEXT}
       </div>
       <div
         style={{
@@ -292,6 +323,7 @@ export function mealOgVersion(data: MealOgData): string {
   return createHash("sha256")
     .update(
       JSON.stringify([
+        LAYOUT_VERSION,
         data.name,
         data.priceStud,
         data.avgRating,
