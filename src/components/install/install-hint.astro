@@ -12,6 +12,7 @@
     shouldShowInstallHint,
   } from "@/lib/install-hint";
   import { detectInstallPlatform, isStandalone } from "@/lib/install-platform";
+  import { loadReactModule } from "@/lib/react-dev-preamble";
 
   /** Erst den Speiseplan zeigen, dann den Hinweis */
   const DELAY_MS = 8000;
@@ -35,7 +36,9 @@
     if (!(platform && shouldShowInstallHint(readInstallHint(), new Date()))) {
       return;
     }
-    const { openInstallHint } = await import("./install-hint.mount");
+    const { openInstallHint } = await loadReactModule(
+      () => import("./install-hint.mount")
+    );
     markInstallHintShown();
     openInstallHint(platform);
   };

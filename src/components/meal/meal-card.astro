@@ -1,8 +1,9 @@
 ---
 // Gerichtskarte im Speiseplan – statisches HTML, kein JS.
-// data-meal/-veggie/-vegan steuern den CSS-Filter (lib/filters/boot.ts).
+// data-meal/-veggie/-vegan/-allergens steuern den CSS-Filter (lib/filters/boot.ts).
 // Klassen m-*: src/styles/meal.css. data-vt: Rolle für die View Transition,
 // der Name entsteht erst beim Klick (lib/view-transitions.ts).
+import { allergenGroups } from "@/lib/allergens";
 import { visibleIngredientTypes } from "@/lib/ingredients";
 import DietBadge from "./diet-badge.astro";
 import MealImage from "./meal-image.astro";
@@ -14,10 +15,12 @@ type Props = {
 };
 
 const { meal, priority = false } = Astro.props;
+const allergens = allergenGroups(meal.ingredients);
 ---
 
 <a
   class="m-card group"
+  data-allergens={allergens.length > 0 ? allergens.join(" ") : undefined}
   data-astro-prefetch
   data-meal
   data-vegan={meal.flags.isVegan ? "" : undefined}

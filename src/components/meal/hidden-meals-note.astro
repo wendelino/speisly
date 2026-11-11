@@ -1,0 +1,39 @@
+---
+/**
+ * Hinweis je Mensa: wie viele Gerichte die Filter dort ausblenden
+ * („3 Gerichte ausgeblendet“), mit „Anzeigen“ nur für diese Mensa – die
+ * Filter selbst bleiben gesetzt.
+ *
+ * Das HTML ist für alle gleich und zunächst versteckt. Zahlen, Text und
+ * Sichtbarkeit setzt lib/filters/boot.ts (`hints`), weil nur der Browser die
+ * Filterauswahl kennt; meal-list.astro stößt das direkt nach der Liste per
+ * Inline-Script an, also vor dem ersten Paint. Erscheint nur, wenn in der
+ * Mensa wirklich etwas ausgeblendet ist.
+ */
+import Note from "@/components/ui/note.astro";
+---
+
+<Note class="flex-wrap gap-y-1" data-hidden-note hidden>
+  <span data-hidden-text></span>
+  <button
+    class="ml-auto rounded-md font-semibold text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
+    data-hidden-toggle
+    type="button"
+  ></button>
+</Note>
+
+<script>
+  // „Anzeigen“ / „Wieder ausblenden“: gilt nur für diese Mensa und
+  // nur bis zum Neuladen oder bis sich ein Filter ändert
+  document.addEventListener("click", (event) => {
+    const toggle = (event.target as HTMLElement).closest("[data-hidden-toggle]");
+    const group = toggle?.closest("[data-mensa-group]");
+    if (!group) {
+      return;
+    }
+    group.toggleAttribute("data-show-all");
+    (
+      window as Window & { speislyFilters?: { refresh: () => void } }
+    ).speislyFilters?.refresh();
+  });
+</script>

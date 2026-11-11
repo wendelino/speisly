@@ -4,16 +4,21 @@
  * Besucher (cachebar); die Filter wirken rein per CSS (lib/filters/boot.ts):
  *  - Mensa-Auswahl: generiertes CSS auf [data-mensa-id]
  *  - vegetarisch/vegan: html[data-diet] blendet [data-meal] ohne Flag aus.
- * Alles, was vom Ernährungsfilter abhängt (Hinweise „X Gerichte ausgeblendet“,
- * Zähler, leere Bereiche), wird hier für jede Variante vorberechnet und über
- * data-only-diet / data-hide-diet umgeschaltet (styles/components.css) – ohne
- * JS und ohne Flackern.
+ *  - Allergene: generiertes CSS auf [data-allergens] der Karten; die Zähler
+ *    verschwinden dann (sie kennen die Auswahl nicht).
+ * Zähler und leere Bereiche je Ernährungsform werden hier für jede Variante
+ * vorberechnet und über data-only-diet / data-hide-diet umgeschaltet
+ * (styles/components.css) – ohne JS und ohne Flackern.
+ * Der Hinweis „X Gerichte ausgeblendet“ je Mensa (hidden-meals-note.astro)
+ * hängt auch von der Allergen-Auswahl ab: Den füllt lib/filters/boot.ts,
+ * angestoßen vom Inline-Script direkt nach der Liste (vor dem ersten Paint).
+ * Dabei werden auch Bereiche ohne sichtbares Gericht ausgeblendet
+ * (data-meal-block). data-show-all an einer Mensa hebt die Filter dort auf.
  */
 import Icon from "@/components/icons/icon.astro";
-import Note from "@/components/ui/note.astro";
-import { cn } from "@/lib/utils";
-import NoMeals from "./no-meals.astro";
+import HiddenMealsNote from "./hidden-meals-note.astro";
 import MealCard from "./meal-card.astro";
+import NoMeals from "./no-meals.astro";
 
 type Props = {
   groups: MensaMealGroup[];
@@ -30,8 +35,6 @@ const keeps = (meal: Meal, diet: Diet) =>
 
 const { groups, date, today } = Astro.props;
 
-const hiddenText = (n: number) =>
-  `${n === 1 ? "1 Gericht wurde" : `${n} Gerichte wurden`} durch den Filter ausgeblendet.`;
 const dietList = (pred: (d: Diet) => boolean) =>
   DIETS.filter(pred).join(" ") || undefined;
 
@@ -47,7 +50,6 @@ const prepared = groups.map((group) => {
         diet,
         {
           kept,
-          hidden: group.meals.length - kept,
           regular: regular.filter((m) => keeps(m, diet)).length,
           portion: portion.filter((m) => keeps(m, diet)).length,
         },
@@ -55,7 +57,7 @@ const prepared = groups.map((group) => {
     })
   ) as Record<
     Diet,
-    { kept: number; hidden: number; regular: number; portion: number }
+    { kept: number; regular: number; portion: number }
   >;
   return { group, regular, portion, stats };
 });
@@ -88,12 +90,11 @@ const prepared = groups.map((group) => {
               </span>
             </div>
             <div class="flex flex-col gap-4">
-              {DIETS.filter((d) => stats[d].hidden > 0).map((d) => (
-                <Note data-only-diet={d}>{hiddenText(stats[d].hidden)}</Note>
-              ))}
+              <HiddenMealsNote />
               {regular.length > 0 && (
                 <div
                   class="m-grid"
+                  data-meal-block
                   data-hide-diet={dietList((d) => stats[d].regular === 0)}
                 >
                   {regular.map((meal, index) => (
@@ -104,6 +105,7 @@ const prepared = groups.map((group) => {
               {portion.length > 0 && (
                 <details
                   class="m-more"
+                  data-meal-block
                   data-hide-diet={dietList((d) => stats[d].portion === 0)}
                 >
                   <summary>
@@ -133,6 +135,8 @@ const prepared = groups.map((group) => {
           </section>
         ))}
       </div>
+      {/* Hinweise je Mensa füllen, bevor die Liste gezeichnet wird (lib/filters/boot.ts) */}
+      <script is:inline>window.speislyFilters?.refresh();</script>
       <div data-filter-empty>
         <NoMeals type="filter" />
       </div>

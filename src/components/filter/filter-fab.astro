@@ -4,7 +4,7 @@
 // setzt lib/filters/boot.ts vor dem ersten Paint; bei aktivem Filter ist der
 // Button gefüllt), der Dialog wird erst bei
 // Bedarf geladen (filter-dialog.mount.tsx).
-import { SlidersHorizontal } from "@lucide/astro";
+import { ShieldBan, SlidersHorizontal } from "@lucide/astro";
 import Icon from "@/components/icons/icon.astro";
 import { INGREDIENT_ICONS } from "@/components/icons/sprite-icons";
 import { INGREDIENT_LABELS } from "@/lib/ingredients";
@@ -27,6 +27,12 @@ const CHIP =
     data-chip="mensen"
     type="button"
   ><span data-chip-label></span><Icon class="size-3.5 opacity-60" name="x" /></button>
+  <button
+    aria-label="Allergen-Filter entfernen"
+    class={`${CHIP} pointer-events-auto bg-rose-soft text-rose`}
+    data-chip="allergens"
+    type="button"
+  ><ShieldBan class="size-3.5" />Ohne <span data-chip-label></span><Icon class="size-3.5 opacity-60" name="x" /></button>
   {
     (["vegan", "veggie"] as const).map((type) => (
       <button
@@ -56,6 +62,7 @@ const CHIP =
 <script>
   import { loadOnIntent } from "@/lib/load-on-intent";
   import {
+    setHiddenAllergens,
     setSelectedMensen,
     setShowVegan,
     setShowVeggie,
@@ -77,6 +84,7 @@ const CHIP =
 
   const chipActions: Record<string, () => void> = {
     mensen: () => setSelectedMensen([]),
+    allergens: () => setHiddenAllergens([]),
     vegan: () => setShowVegan(false),
     veggie: () => setShowVeggie(false),
   };

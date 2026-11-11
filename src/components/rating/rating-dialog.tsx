@@ -16,8 +16,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
 import { LoadingButton } from "@/components/ui/loading-button";
+import { Textarea } from "@/components/ui/textarea";
 import { labelClass } from "@/components/ui/variants";
 import { $ratingDialogOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
@@ -192,13 +192,18 @@ export function RatingDialog({
               <label className={labelClass} htmlFor="comment">
                 Kommentar (optional)
               </label>
-              <Input
+              <Textarea
+                aria-describedby="comment-hint"
                 id="comment"
                 maxLength={500}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Hat super geschmeckt, aber..."
+                rows={3}
                 value={comment}
               />
+              <p className="text-muted-foreground text-xs" id="comment-hint">
+                Kommentare werden von uns geprüft, bevor sie erscheinen.
+              </p>
             </div>
           </DrawerBody>
 

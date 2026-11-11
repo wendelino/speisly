@@ -1,22 +1,26 @@
 import { atom } from "nanostores";
+import type { AllergenCode } from "@/lib/allergens";
 import { writeCookie } from "@/lib/cookies";
 
 export type FilterState = {
   selectedMensen: string[];
   showVeggie: boolean;
   showVegan: boolean;
+  /** Allergen-Gruppen (Buchstabencodes), deren Gerichte ausgeblendet sind */
+  hiddenAllergens: AllergenCode[];
 };
 
 type FilterRuntime = {
   initial: FilterState;
   apply: (state: FilterState) => void;
-  cookies: { mensen: string; veggie: string; vegan: string };
+  cookies: { mensen: string; veggie: string; vegan: string; allergens: string };
 };
 
 const EMPTY_FILTERS: FilterState = {
   selectedMensen: [],
   showVeggie: false,
   showVegan: false,
+  hiddenAllergens: [],
 };
 
 /** Vom Inline-Script in layouts/plan-layout.astro bereitgestellt (nur im Browser) */
@@ -42,6 +46,7 @@ function update(patch: Partial<FilterState>) {
   writeCookie(rt.cookies.mensen, JSON.stringify(next.selectedMensen));
   writeCookie(rt.cookies.veggie, next.showVeggie ? "true" : "false");
   writeCookie(rt.cookies.vegan, next.showVegan ? "true" : "false");
+  writeCookie(rt.cookies.allergens, JSON.stringify(next.hiddenAllergens));
   rt.apply(next);
 }
 
@@ -49,3 +54,5 @@ export const setSelectedMensen = (selectedMensen: string[]) =>
   update({ selectedMensen });
 export const setShowVeggie = (showVeggie: boolean) => update({ showVeggie });
 export const setShowVegan = (showVegan: boolean) => update({ showVegan });
+export const setHiddenAllergens = (hiddenAllergens: AllergenCode[]) =>
+  update({ hiddenAllergens: [...new Set(hiddenAllergens)].sort() });

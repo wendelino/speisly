@@ -1,5 +1,6 @@
 ---
-// Inhaltsstoffe und Allergene als Kennzeichnung (Code) + Bezeichnung
+// Inhaltsstoffe und Allergene als Kennzeichnung (Code) + Bezeichnung, mit
+// Hinweis „ohne Gewähr“ (auch in footer.astro und im Filter-Dialog)
 import { ArrowUpRight } from "@lucide/astro";
 
 type Props = { ingredients: string[] | null | undefined };
@@ -29,8 +30,12 @@ const INFO_URL =
     </p>
   )
 }
+<p class="mt-4 text-muted-foreground text-xs leading-relaxed">
+  Angaben ohne Gewähr. Verbindlich sind die Aushänge in der Mensa – frag bei
+  Allergien oder Unverträglichkeiten im Zweifel vor Ort nach.
+</p>
 <a
-  class="mt-4 inline-flex items-center gap-1 font-semibold text-primary text-sm underline-offset-4 hover:underline"
+  class="mt-2 inline-flex items-center gap-1 font-semibold text-primary text-sm underline-offset-4 hover:underline"
   href={INFO_URL}
   rel="noopener noreferrer"
   target="_blank"

@@ -44,10 +44,13 @@
  */
 
 /* Ernährungsfilter (meal-list.astro, lib/filters/boot.ts setzt html[data-diet]) */
-html[data-diet="veggie"] [data-meal]:not([data-veggie]),
-html[data-diet="vegan"] [data-meal]:not([data-vegan]),
-html[data-diet="veggie"] [data-hide-diet~="veggie"],
-html[data-diet="vegan"] [data-hide-diet~="vegan"] {
+/* [data-show-all] an einer Mensa („Anzeigen“, hidden-meals-note.astro)
+   hebt Ernährungs- und Allergen-Filter dort auf */
+html[data-diet="veggie"] [data-meal]:not([data-veggie], [data-show-all] *),
+html[data-diet="vegan"] [data-meal]:not([data-vegan], [data-show-all] *),
+html[data-diet="veggie"] [data-hide-diet~="veggie"]:not([data-show-all] *),
+html[data-diet="vegan"] [data-hide-diet~="vegan"]:not([data-show-all] *),
+[data-meal-block][data-all-hidden]:not([data-show-all] *) {
   display: none !important;
 }
 [data-only-diet],
@@ -55,9 +58,15 @@ html[data-diet="vegan"] [data-hide-diet~="vegan"] {
   display: none;
 }
 /* revert-layer: zurück auf die Utility-Klassen des Elements (z. B. flex) */
-html[data-diet="veggie"] [data-only-diet="veggie"],
-html[data-diet="vegan"] [data-only-diet="vegan"] {
+html[data-diet="veggie"] [data-only-diet="veggie"]:not([data-show-all] *),
+html[data-diet="vegan"] [data-only-diet="vegan"]:not([data-show-all] *) {
   display: revert-layer;
+}
+
+/* Allergen-Filter (lib/filters/boot.ts setzt html[data-filter-allergens]):
+   Zähler ausblenden, sie kennen die Auswahl nicht (meal-list.astro) */
+html[data-filter-allergens] .m-count:not([data-show-all] *) {
+  display: none;
 }
 
 /* Filter-Chips und gefüllter Filter-Button bei aktivem Filter (filter-fab.astro) */

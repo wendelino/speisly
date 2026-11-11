@@ -49,3 +49,6 @@ declare namespace App {
     admin?: import("@/server/admin-auth").AdminSession;
   }
 }
+
+/** Von @astrojs/react injizierte Fast-Refresh-Preamble (lib/react-dev-preamble.ts) */
+declare module "astro:scripts/before-hydration.js";
