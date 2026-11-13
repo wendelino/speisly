@@ -22,7 +22,7 @@ type Props = {
 
 const { date, today, groups, mensen } = Astro.props;
 const dayLabel = formatLongDay(date);
-const filterScript = `(${filterBoot.toString()})();`;
+const filterScript = `(${filterBoot.toString()})(${mensen.length});`;
 const favoritesScript = `(${favoritesBoot.toString()})();`;
 // nach einem Wisch (day-swipe.astro) vor dem ersten Paint die Richtung der
 // Enter-Animation setzen

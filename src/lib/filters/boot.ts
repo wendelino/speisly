@@ -15,8 +15,11 @@
  * stellt es `window.speislyFilters` bereit, über das der Store
  * (stores/filters.ts) Änderungen anwendet. Die Funktion muss in sich geschlossen sein, weil sie
  * per `toString()` inline eingebettet wird.
+ *
+ * `totalMensen`: Zahl der angezeigten Mensen; sind alle ausgewählt, gibt es
+ * keinen Chip „N Mensen“.
  */
-export function filterBoot() {
+export function filterBoot(totalMensen: number) {
   const COOKIES = {
     mensen: "speisly_mensa_preferences",
     veggie: "speisly_veggie_filter",
@@ -156,7 +159,7 @@ export function filterBoot() {
     // Chip „N Mensen“ (nicht bei „alle Mensen“ ausgewählt) und Punkt am
     // Filter-Button
     const count = next.selectedMensen.length;
-    const mensaChip = count > 0 && count !== 7;
+    const mensaChip = count > 0 && count !== totalMensen;
     if (mensaChip) {
       css += `[data-chip="mensen"]{display:inline-flex!important}[data-chip="mensen"] [data-chip-label]::before{content:"${count} ${count === 1 ? "Mensa" : "Mensen"}"}`;
     }

@@ -138,16 +138,18 @@ curl -X POST -H "Authorization: Bearer $API_BEARER_TOKEN" \
 
 `Content-Type: application/json` ist Pflicht, sonst blockt Astros CSRF-Schutz den POST (403).
 
-**Schutz vor Datenverlust:** Gerichte, die die API nicht mehr liefert, entfernt der Sync nur an Tagen, für die die API überhaupt Einträge hat, und nie, wenn sie bewertet wurden. Würde ein Sync mehr als die Hälfte der Ausgaben im Zeitraum entfernen, entfernt er nichts und meldet sich per Telegram. Nach Prüfung lässt sich die Löschung mit `&force=1` erzwingen.
+**Schutz vor Datenverlust:** Gerichte, die die API nicht mehr liefert, entfernt der Sync nur an Tagen, für die die API überhaupt Einträge hat. Bewertungen bleiben dabei erhalten: Mensa und Tag stehen in der Bewertung selbst. Würde ein Sync mehr als die Hälfte der Ausgaben im Zeitraum entfernen, entfernt er nichts und meldet sich per Telegram. Nach Prüfung lässt sich die Löschung mit `&force=1` erzwingen.
 
 ## Build & Betrieb
 
 ### Production Build und Start
 
 ```bash
-bun run build
+bun run build        # führt zuerst die DB-Migrationen aus (DATABASE_URL!), dann astro build
 bun run start        # Bun (empfohlen); bun run start:node für Node ≥ 22
 ```
+
+**Migrationen beim Build:** `bun run build` ruft vor `astro build` `bun run db:migrate` auf, gegen die Datenbank aus `DATABASE_URL`. Schlägt eine Migration fehl (oder ist die Datenbank nicht erreichbar), bricht der Build ab und die laufende Version bleibt online. Der Build braucht deshalb Zugriff auf die Datenbank. Nur bauen, ohne zu migrieren (z. B. lokal gegen eine fremde `.env`): `bun run build:astro`.
 
 `bun run start` startet `server/index.mjs`:
 
@@ -234,7 +236,8 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 ## Scripts
 
 - `bun dev` – Startet den Development Server
-- `bun run build` – Erstellt einen Production Build
+- `bun run build` – Migriert die Datenbank und erstellt einen Production Build (bricht ab, wenn die Migration fehlschlägt)
+- `bun run build:astro` – Nur der Production Build, ohne Migration
 - `bun run start` – Startet den Production Server (Bun; `start:node` für Node)
 - `bun run check` – Typecheck (`astro check`)
 - `bun run test` – Tests (Integrationstests brauchen `DATABASE_URL` + Seed-Daten)

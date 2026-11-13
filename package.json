@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "bun run db:migrate && astro build",
+    "build:astro": "astro build",
     "preview": "astro preview",
     "start": "bun ./server/index.mjs",
     "start:node": "node --env-file-if-exists=.env ./server/index.mjs",
