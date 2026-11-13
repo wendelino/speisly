@@ -145,11 +145,23 @@ curl -X POST -H "Authorization: Bearer $API_BEARER_TOKEN" \
 ### Production Build und Start
 
 ```bash
-bun run build        # führt zuerst die DB-Migrationen aus (DATABASE_URL!), dann astro build
-bun run start        # Bun (empfohlen); bun run start:node für Node ≥ 22
+bun run build
+bun run start        # migriert die DB, dann Server (Bun); bun run start:node für Node ≥ 22
 ```
 
-**Migrationen beim Build:** `bun run build` ruft vor `astro build` `bun run db:migrate` auf, gegen die Datenbank aus `DATABASE_URL`. Schlägt eine Migration fehl (oder ist die Datenbank nicht erreichbar), bricht der Build ab und die laufende Version bleibt online. Der Build braucht deshalb Zugriff auf die Datenbank. Nur bauen, ohne zu migrieren (z. B. lokal gegen eine fremde `.env`): `bun run build:astro`.
+**Migrationen beim Start:** `bun run start` (und `start:node`) ruft vor dem Server `bun run db:migrate` auf, gegen die Datenbank aus `DATABASE_URL`. Bereits eingespielte Migrationen werden übersprungen. Schlägt eine Migration fehl oder ist die Datenbank nicht erreichbar, beendet sich der Container mit Fehler; mit Dokploys Swarm-Update (`start-first`, `FailureAction: rollback`) bleibt dann die alte Version online. Der Build braucht keine Datenbank: In Dokploy läuft er außerhalb von `dokploy-network`, wo `prod-db` nicht auflösbar ist.
+
+Empfohlen: in Dokploy einen Healthcheck auf `/api/health` eintragen (Advanced → Swarm Settings → Health Check), damit eine neue Version erst als gesund gilt, wenn der Server nach der Migration antwortet, und nicht schon nach 5 Sekunden Laufzeit:
+
+```json
+{
+  "Test": ["CMD-SHELL", "bun -e \"fetch('http://127.0.0.1:'+(process.env.PORT||4321)+'/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))\""],
+  "Interval": 10000000000,
+  "Timeout": 5000000000,
+  "StartPeriod": 60000000000,
+  "Retries": 3
+}
+```
 
 `bun run start` startet `server/index.mjs`:
 
@@ -236,9 +248,8 @@ Wir freuen uns über Beiträge! Speisly ist ein Open-Source-Projekt für die Stu
 ## Scripts
 
 - `bun dev` – Startet den Development Server
-- `bun run build` – Migriert die Datenbank und erstellt einen Production Build (bricht ab, wenn die Migration fehlschlägt)
-- `bun run build:astro` – Nur der Production Build, ohne Migration
-- `bun run start` – Startet den Production Server (Bun; `start:node` für Node)
+- `bun run build` – Erstellt einen Production Build
+- `bun run start` – Migriert die Datenbank und startet den Production Server (Bun; `start:node` für Node); bricht ab, wenn die Migration fehlschlägt
 - `bun run check` – Typecheck (`astro check`)
 - `bun run test` – Tests (Integrationstests brauchen `DATABASE_URL` + Seed-Daten)
 - `bun scripts/e2e/smoke.ts` – End-to-End-Smoke-Test gegen einen laufenden Server
