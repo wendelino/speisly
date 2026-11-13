@@ -10,9 +10,11 @@ import {
 } from "@/components/icons/sprite-icons";
 import DietBadge from "@/components/meal/diet-badge.astro";
 import IngredientsList from "@/components/meal/ingredients-list.astro";
+import MealActions from "@/components/meal/meal-actions.astro";
 import MealImage from "@/components/meal/meal-image.astro";
 import PriceTiles from "@/components/meal/price-tiles.astro";
 import ServingStatsSkeleton from "@/components/meal/serving-stats-skeleton.astro";
+import CommentLikesScript from "@/components/rating/comment-likes-script.astro";
 import RatingButtonScript from "@/components/rating/rating-button-script.astro";
 import RatingSummary from "@/components/rating/rating-summary.astro";
 import ServingStats from "@/components/server-islands/serving-stats.astro";
@@ -34,6 +36,7 @@ import { findMeal } from "@/server/queries/meal";
 import {
   getApprovedComments,
   getMealRatingStats,
+  getRatingBreakdown,
 } from "@/server/queries/ratings";
 
 export const prerender = false;
@@ -41,10 +44,11 @@ export const prerender = false;
 const mealId = Astro.params.mealId as string;
 const mmid = Astro.url.searchParams.get("mmid") || undefined;
 
-const [meal, ratingStats, comments] = await Promise.all([
+const [meal, ratingStats, comments, breakdown] = await Promise.all([
   findMeal(mealId, mmid),
   getMealRatingStats(mealId),
   getApprovedComments(mealId),
+  getRatingBreakdown(mealId),
 ]);
 if (!meal) {
   return new Response(null, { status: 404 });
@@ -83,6 +87,7 @@ const spriteIcons: SpriteIconName[] = [
   ...new Set(badgeTypes.map((type) => INGREDIENT_ICONS[type])),
   ...(meal.imgPath ? [] : (["chef-hat"] as const)),
   "star",
+  "heart",
   ...(mmid ? (["loader-circle"] as const) : []),
 ];
 // View Transition nur, wenn die Seite von einer Karte (mit ?mmid=) kommt
@@ -109,6 +114,7 @@ const TABS = [
   width="wide"
 >
   {mmid && <RatingButtonScript slot="head" />}
+  <CommentLikesScript />
   <article
     class="grid items-start gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-10"
   >
@@ -150,6 +156,11 @@ const TABS = [
         )
       }
       <PriceTiles meal={meal} vt={vt} />
+      <MealActions
+        mealId={meal.id}
+        text={`${meal.name} ${meal.subtitle}`.trim()}
+        title={`${meal.name} | Speisly`}
+      />
       {
         meal.extras.length > 0 && (
           <div>
@@ -169,6 +180,7 @@ const TABS = [
     <Card padding="md">
       <TabPanel active id="bewertungen">
         <RatingSummary
+          breakdown={breakdown}
           comments={comments}
           mealId={meal.id}
           mensaMealId={mmid}

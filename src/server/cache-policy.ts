@@ -82,3 +82,16 @@ export function tagsForSync(result: {
     ...result.changedMealIds.flatMap((id) => [TAG.meal(id), TAG.mealStats(id)]),
   ];
 }
+
+/**
+ * Speisepläne zeigen die Durchschnittsbewertung je Gericht (Anzeige und
+ * Sortierung): neue Bewertungen invalidieren deshalb auch die Tage, an denen
+ * das Gericht steht.
+ */
+export function withRatingTags(
+  policy: CachePolicy,
+  groups: { meals: { id: string }[] }[]
+): CachePolicy {
+  const ids = new Set(groups.flatMap((group) => group.meals.map((m) => m.id)));
+  return { ...policy, tags: [...policy.tags, ...[...ids].map(TAG.ratings)] };
+}

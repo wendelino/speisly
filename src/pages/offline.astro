@@ -1,0 +1,81 @@
+---
+// Offline-Seite (prerendered): Der Service Worker (src/service-worker/sw.js)
+// zeigt sie, wenn ohne Netz eine Seite aufgerufen wird, die nicht im Cache
+// liegt. Das Script listet die Speisepläne, die offline verfügbar sind.
+import { House, WifiOff } from "@lucide/astro";
+import Button from "@/components/ui/button.astro";
+import EmptyState from "@/components/ui/empty-state.astro";
+import BaseLayout from "@/layouts/base-layout.astro";
+---
+
+<BaseLayout title="Offline">
+  <main class="container-page flex min-h-[60vh] flex-col items-center justify-center">
+    <EmptyState
+      class="pt-0"
+      description="Diese Seite war noch nicht gespeichert. Sobald du wieder Netz hast, geht’s weiter."
+      headingLevel="h1"
+      title="Gerade kein Netz"
+      tone="sky"
+    >
+      <WifiOff slot="icon" />
+      <div class="flex flex-col items-center gap-4">
+        <Button href="/" size="lg">
+          <House class="size-4" />
+          Zum Speiseplan
+        </Button>
+        <div data-offline-plans hidden>
+          <p class="mb-2 text-muted-foreground text-sm">Offline verfügbar:</p>
+          <ul class="flex flex-wrap justify-center gap-2" data-offline-list></ul>
+        </div>
+      </div>
+    </EmptyState>
+  </main>
+</BaseLayout>
+
+<script>
+  const DAY = /^\/day\/(\d{4}-\d{2}-\d{2})$/;
+  const label = (iso: string) =>
+    new Date(`${iso}T12:00:00Z`).toLocaleDateString("de-DE", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    });
+
+  async function listPlans() {
+    if (!("caches" in window)) {
+      return;
+    }
+    const names = (await caches.keys()).filter((n) =>
+      n.startsWith("speisly-pages-")
+    );
+    const paths = new Set<string>();
+    for (const name of names) {
+      for (const request of await (await caches.open(name)).keys()) {
+        const { pathname } = new URL(request.url);
+        if (pathname === "/" || DAY.test(pathname)) {
+          paths.add(pathname);
+        }
+      }
+    }
+    const list = document.querySelector("[data-offline-list]");
+    const box = document.querySelector<HTMLElement>("[data-offline-plans]");
+    if (!(list && box) || paths.size === 0) {
+      return;
+    }
+    const sorted = [...paths].sort();
+    for (const path of sorted) {
+      const day = DAY.exec(path)?.[1];
+      const link = document.createElement("a");
+      link.href = path;
+      link.className =
+        "inline-flex rounded-full bg-muted px-3 py-1.5 font-semibold text-sm transition-colors hover:bg-secondary";
+      link.textContent = day ? label(day) : "Heute (zuletzt geladen)";
+      const item = document.createElement("li");
+      item.append(link);
+      list.append(item);
+    }
+    box.hidden = false;
+  }
+  listPlans();
+</script>

@@ -47,6 +47,17 @@
   .m-price {
     @apply inline-flex items-baseline gap-0.5 font-bold font-display text-[1.25rem] text-primary tabular-nums leading-none tracking-tight;
   }
+  /* Durchschnittsbewertung neben dem Preis */
+  .m-rate {
+    @apply mr-auto inline-flex items-center gap-0.5 self-center rounded-full bg-sun-soft px-1.5 py-0.5 font-bold text-[0.7rem] text-foreground/80 tabular-nums leading-4;
+  }
+  /* Herz an Favoriten (sichtbar per CSS aus lib/favorites.ts) */
+  .m-fav {
+    @apply absolute -top-2 right-3 hidden size-6 place-items-center rounded-full bg-rose-soft text-rose shadow-soft ring-1 ring-card;
+  }
+  .m-fav svg {
+    fill: currentColor;
+  }
   .m-go {
     @apply grid size-7 shrink-0 place-items-center rounded-full bg-secondary font-bold text-primary text-sm leading-none transition-[translate,background-color,color] duration-300 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground;
   }
@@ -106,5 +117,17 @@
   }
   .ib-notVeggie {
     @apply bg-stone-soft text-stone;
+  }
+
+  /* Sortierung (Filter-Dialog, html[data-sort] aus lib/filters/boot.ts):
+     Positionen je Karte als CSS-Variablen (meal-list.astro) */
+  html[data-sort="price-asc"] .m-card {
+    order: var(--o-pa);
+  }
+  html[data-sort="price-desc"] .m-card {
+    order: var(--o-pd);
+  }
+  html[data-sort="rating"] .m-card {
+    order: var(--o-r);
   }
 }

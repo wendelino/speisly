@@ -60,7 +60,8 @@ function mergeResults(a: SyncResult, b: SyncResult): SyncResult {
   };
 }
 
-function authorized(request: Request, expectedToken: string): boolean {
+/** Bearer-Token prüfen (zeitkonstant); auch für /api/notify */
+export function authorized(request: Request, expectedToken: string): boolean {
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   const expected = Buffer.from(expectedToken);

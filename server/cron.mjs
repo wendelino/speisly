@@ -3,7 +3,8 @@ import { CronJob } from "cron";
 /**
  * Zeitpläne für den Daten-Sync (Europe/Berlin).
  * Alle Jobs rufen den Sync-Endpoint im selben Prozess auf: Dort lebt der
- * Route Cache, der nach dem Sync gezielt invalidiert wird.
+ * Route Cache, der nach dem Sync gezielt invalidiert wird. Scope „notify“
+ * ruft stattdessen /api/notify (Push für Favoriten).
  */
 export const SCHEDULES = [
   // Speiseplan von heute aktualisieren (werktags, morgens/mittags/abends)
@@ -12,6 +13,8 @@ export const SCHEDULES = [
   { cron: "17 2 * * 0-4", scope: "week" },
   // nach Mitternacht: Startseite neu, Seiten vorwärmen
   { cron: "1 0 * * *", scope: "midnight" },
+  // abends vor Werktagen: Push „Favorit morgen auf dem Plan“ (/api/notify)
+  { cron: "0 18 * * 0-4", scope: "notify" },
 ];
 
 const TIME_ZONE = "Europe/Berlin";
@@ -28,7 +31,9 @@ export async function triggerSync({
 }) {
   const started = Date.now();
   try {
-    const res = await fetchImpl(`${baseUrl}/api/sync?scope=${scope}`, {
+    const path =
+      scope === "notify" ? "/api/notify" : `/api/sync?scope=${scope}`;
+    const res = await fetchImpl(`${baseUrl}${path}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -42,6 +47,12 @@ export async function triggerSync({
     if (!res.ok) {
       console.error(`[cron] ${scope}: HTTP ${res.status} (${ms} ms)`, body);
       return false;
+    }
+    if (scope === "notify") {
+      console.log(
+        `[cron] notify ${body?.day ?? ""}: ${body?.sent ?? 0} gesendet, ${body?.failed ?? 0} fehlgeschlagen, ${body?.removed ?? 0} abgelaufen (${ms} ms)`
+      );
+      return true;
     }
     console.log(
       `[cron] ${scope}: ${body?.changedDates?.length ?? 0} Tage, ${body?.changedMealIds?.length ?? 0} Gerichte geändert, ${body?.images?.created ?? 0} neue Bilder (${ms} ms)`

@@ -296,7 +296,7 @@ await check(
   "Bewerten: Consent, speichern, Übersicht aktualisiert, löschen",
   async () => {
     const summary = async () =>
-      (await page.locator("[data-rating-summary]").innerText()).replace(
+      (await page.locator("[data-rating-summary=stats]").innerText()).replace(
         /\s+/g,
         " "
       );
@@ -353,7 +353,9 @@ await check(
     await page.waitForFunction(
       (prev) =>
         (
-          document.querySelector("[data-rating-summary]") as HTMLElement | null
+          document.querySelector(
+            "[data-rating-summary=stats]"
+          ) as HTMLElement | null
         )?.innerText.replace(/\s+/g, " ") !== prev,
       before
     );

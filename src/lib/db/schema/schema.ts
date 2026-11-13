@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -206,3 +207,50 @@ export const mealRating = pgTable(
     index("meal_rating_comment_status_idx").on(table.commentStatus),
   ]
 );
+
+/**
+ * „Gefällt mir“ an freigegebenen Kommentaren (eine Bewertung mit Kommentar).
+ * Ein Like je Nutzer und Kommentar; eigene Kommentare kann man nicht liken.
+ */
+export const commentLike = pgTable(
+  "comment_like",
+  {
+    ratingId: varchar("rating_id", { length: ID_LENGTH })
+      .notNull()
+      .references(() => mealRating.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: ID_LENGTH })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.ratingId, table.userId] }),
+    index("comment_like_user_id_idx").on(table.userId),
+  ]
+);
+
+/**
+ * Web-Push-Abos für „Favorit morgen auf dem Plan“ (src/server/push.ts).
+ * Unabhängig vom Nutzer-Cookie: das Abo selbst ist die Einwilligung. Die
+ * Favoriten (Gericht-IDs) und die gewählten Mensen (leer = alle) schickt
+ * der Browser bei jeder Änderung mit.
+ */
+export const pushSubscription = pgTable("push_subscription", {
+  ...uuid,
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: varchar("p256dh", { length: 255 }).notNull(),
+  auth: varchar("auth", { length: 255 }).notNull(),
+  favorites: varchar("favorites", { length: ID_LENGTH })
+    .array()
+    .notNull()
+    .default([]),
+  mensaIds: varchar("mensa_ids", { length: ID_LENGTH })
+    .array()
+    .notNull()
+    .default([]),
+  /** Tag (`YYYY-MM-DD`), für den zuletzt benachrichtigt wurde (keine Doppelten) */
+  lastNotifiedFor: date("last_notified_for"),
+  ...timeStampUtils,
+});

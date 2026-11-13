@@ -155,6 +155,25 @@ export default defineConfig({
         access: "secret",
         url: true,
       }),
+      // Web-Push (Favorit morgen auf dem Plan, src/server/push.ts). Schlüssel
+      // erzeugen: `bunx web-push generate-vapid-keys`. Ohne Schlüssel sind
+      // Benachrichtigungen abgeschaltet (Favoriten funktionieren trotzdem).
+      VAPID_PRIVATE_KEY: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      // Kontakt für Push-Dienste (mailto: oder https:), Default SITE_URL
+      VAPID_SUBJECT: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      PUBLIC_VAPID_PUBLIC_KEY: envField.string({
+        context: "client",
+        access: "public",
+        optional: true,
+      }),
       PUBLIC_COOKIE_CONSENT_NAME: envField.string({
         context: "client",
         access: "public",

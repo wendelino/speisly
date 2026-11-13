@@ -13,9 +13,14 @@ Speisly wurde entwickelt, um Studierenden der MLU Halle einen einfachen und schn
 - **Responsive Design** – Optimiert für Desktop, Tablet und Smartphone
 - **Moderne UI** – Intuitive Benutzeroberfläche mit Tailwind CSS
 - **Detaillierte Informationen** – Vollständige Angaben zu Gerichten, Zutaten und Preisen
-- **Bewertungen** – Möglichkeit, Gerichte zu bewerten
+- **Bewertungen** – Gerichte bewerten, aufgeschlüsselt nach Mensa und Ausgabe; freigegebene Kommentare lassen sich liken
+- **Sortierung** – Gerichte je Mensa nach Preis oder Bewertung (im Filter-Dialog)
+- **Favoriten** – Gerichte merken, auf dem Speiseplan markiert, mit nächstem Termin unter `/favoriten`
+- **Benachrichtigungen** – Web-Push am Vorabend, wenn ein Favorit auf dem Plan steht (optional, VAPID-Schlüssel nötig)
+- **Teilen** – Gerichte über das Teilen-Menü des Geräts oder als Link
+- **Offline** – Service Worker hält die Speisepläne der nächsten Tage vor
 - **Persistente Einstellungen** – Speicherung von Filterpräferenzen im Browser
-- **PWA** – Installierbar als Progressive Web App
+- **PWA** – Installierbar als Progressive Web App, funktioniert auch offline
 
 ## Tech Stack
 
@@ -148,7 +153,7 @@ bun run start        # Bun (empfohlen); bun run start:node für Node ≥ 22
 - **HTTP-Server** mit dem Handler von `@astrojs/node` (statische Dateien + SSR) auf `HOST`:`PORT` (Default `0.0.0.0:4321`).
 - **Komprimierung** (Brotli/gzip) für HTML, JS, CSS, JSON. Komprimierte Fassungen gecachter Seiten werden wiederverwendet. Ein Reverse Proxy davor muss nicht zusätzlich komprimieren.
 - **Pre-Warm** direkt nach dem Start: `/` und `/day/<heute…+7>` werden gerendert, damit der erste Besucher nicht wartet.
-- **Cron** (Europe/Berlin, wie bisher): `today` um 7:17, 10:17 und 17:17 (Mo–Fr), `week` um 2:17 (So–Do), `midnight` um 0:01.
+- **Cron** (Europe/Berlin, wie bisher): `today` um 7:17, 10:17 und 17:17 (Mo–Fr), `week` um 2:17 (So–Do), `midnight` um 0:01, `notify` um 18:00 (So–Do, `POST /api/notify`: Push für Favoriten des nächsten Tages).
 - `CRON_DISABLED=1` schaltet Cron und Pre-Warm ab, z. B. für eine zweite Instanz.
 - Beendet sich sauber bei `SIGTERM`/`SIGINT`.
 
@@ -189,6 +194,7 @@ Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`
 | `PUBLIC_PRIVACY_POLICY_PATH`, `PUBLIC_UMAMI_WEBSITE_ID` | nein | |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ADMIN_GROUP` | nein | Login für `/admin`; ohne Client-ID/Secret ist der Admin-Bereich aus |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | nein | Fehler- und Kontaktnachrichten per Telegram |
+| `PUBLIC_VAPID_PUBLIC_KEY` (**beim Build**), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | nein | Web-Push für Favoriten (`bunx web-push generate-vapid-keys`); ohne Schlüssel ist der Bereich „Benachrichtigungen“ ausgeblendet. `VAPID_SUBJECT`: `mailto:` oder `https:`, Default `SITE_URL` |
 | `CRON_DISABLED` | nein | `1` = kein Cron, kein Pre-Warm |
 
 ### Deployment (Umstieg von der Next-Version)

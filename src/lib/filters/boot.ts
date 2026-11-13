@@ -4,8 +4,8 @@
  *
  * `filterBoot` wird als Inline-Script im <head> ausgeführt (siehe
  * layouts/plan-layout.astro), also vor dem ersten Paint – kein Flackern. Es
- * setzt `data-diet`, `data-filter-veggie/-vegan`, `data-filter-allergens` und
- * `data-filter-active` auf <html> und erzeugt CSS für die Mensa-Auswahl
+ * setzt `data-diet`, `data-filter-veggie/-vegan`, `data-filter-allergens`,
+ * `data-filter-active` und `data-sort` (Sortierung, styles/meal.css) auf <html> und erzeugt CSS für die Mensa-Auswahl
  * (Gruppen und Sprungmarken), die Allergene (Karten mit `data-allergens`,
  * meal-card.astro) und die Chips „N Mensen“ / „Ohne N Allergene“ (statische
  * Regeln: styles/components.css). `hints` füllt je Mensa den Hinweis
@@ -22,7 +22,9 @@ export function filterBoot() {
     veggie: "speisly_veggie_filter",
     vegan: "speisly_vegan_filter",
     allergens: "speisly_allergen_filter",
+    sort: "speisly_sort",
   };
+  const SORTS = ["default", "price-asc", "price-desc", "rating"];
   // biome-ignore lint/performance/useTopLevelRegex: Funktion muss in sich geschlossen sein (toString)
   const SAFE_ID = /^[A-Za-z0-9_-]+$/;
   // Allergen-Gruppen A–N (lib/allergens.ts)
@@ -58,6 +60,9 @@ export function filterBoot() {
     hiddenAllergens: parseList(readCookie(COOKIES.allergens))
       .filter((code) => ALLERGEN.test(code))
       .sort(),
+    sort: SORTS.includes(readCookie(COOKIES.sort) ?? "")
+      ? (readCookie(COOKIES.sort) as string)
+      : "default",
   };
 
   let current = state;
@@ -127,6 +132,12 @@ export function filterBoot() {
       root.dataset.diet = diet;
     } else {
       delete root.dataset.diet;
+    }
+    // Sortierung (meal.css); keine Filterwirkung, daher kein Chip
+    if (next.sort === "default") {
+      delete root.dataset.sort;
+    } else {
+      root.dataset.sort = next.sort;
     }
     // Chips am Filter-Button (filter-fab.astro)
     root.toggleAttribute("data-filter-veggie", next.showVeggie);

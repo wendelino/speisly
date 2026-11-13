@@ -14,7 +14,8 @@ export type LogSource =
   | "feedback"
   | "queries"
   | "cache"
-  | "og";
+  | "og"
+  | "push";
 
 type LogErrorProps = {
   /**

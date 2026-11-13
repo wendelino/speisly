@@ -1,9 +1,13 @@
 import {
+  ArrowDownWideNarrow,
+  ArrowUpDown,
+  ArrowUpNarrowWide,
   Check,
   ChevronDown,
   EggFried,
   Leaf,
   ShieldBan,
+  Star,
   Utensils,
 } from "lucide-react";
 import { type ComponentType, useState } from "react";
@@ -21,10 +25,12 @@ import { ALLERGENS, type AllergenCode } from "@/lib/allergens";
 import { cn } from "@/lib/utils";
 import {
   $filters,
+  type SortMode,
   setHiddenAllergens,
   setSelectedMensen,
   setShowVegan,
   setShowVeggie,
+  setSort,
 } from "@/stores/filters";
 import { $filterDialogOpen } from "@/stores/ui";
 import { useAtom } from "@/stores/use-atom";
@@ -56,6 +62,49 @@ const DIETS: {
     active: "bg-mint-soft text-mint ring-mint/40",
   },
 ];
+
+const SORTS: {
+  value: SortMode;
+  label: string;
+  Icon: ComponentType<{ className?: string }>;
+}[] = [
+  { value: "default", label: "Standard", Icon: ArrowUpDown },
+  { value: "price-asc", label: "Günstigste zuerst", Icon: ArrowUpNarrowWide },
+  { value: "price-desc", label: "Teuerste zuerst", Icon: ArrowDownWideNarrow },
+  { value: "rating", label: "Beste Bewertung", Icon: Star },
+];
+
+/** Sortierung der Gerichte je Mensa (wirkt per CSS, lib/filters/boot.ts) */
+function SortSection({ sort }: { sort: SortMode }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="font-display font-semibold text-sm">Sortierung</h3>
+      <fieldset className="grid grid-cols-2 gap-2">
+        <legend className="sr-only">Sortierung</legend>
+        {SORTS.map(({ value, label, Icon }) => {
+          const checked = sort === value;
+          return (
+            <button
+              aria-pressed={checked}
+              className={cn(
+                "flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left font-semibold text-xs outline-none ring-1 transition-all duration-200 focus-visible:ring-[3px] focus-visible:ring-ring active:scale-95",
+                checked
+                  ? "bg-primary text-primary-foreground shadow-soft ring-transparent"
+                  : "bg-muted/60 text-muted-foreground ring-transparent hover:bg-muted"
+              )}
+              key={value}
+              onClick={() => setSort(value)}
+              type="button"
+            >
+              <Icon className="size-4 shrink-0" />
+              {label}
+            </button>
+          );
+        })}
+      </fieldset>
+    </section>
+  );
+}
 
 /**
  * Allergene als aufklappbarer Unterbereich: zu, solange nichts gewählt ist;
@@ -179,11 +228,11 @@ function AllergenSection({ hidden }: { hidden: AllergenCode[] }) {
 }
 
 /**
- * Filter-Dialog (Ernährungsform, Allergene und Mensen). Wird erst geladen,
+ * Filter-Dialog (Ernährungsform, Allergene, Sortierung und Mensen). Wird erst geladen,
  * wenn jemand den Filter-Button benutzt (filter-fab.astro).
  */
 export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
-  const { selectedMensen, showVeggie, showVegan, hiddenAllergens } =
+  const { selectedMensen, showVeggie, showVegan, hiddenAllergens, sort } =
     useAtom($filters);
   const open = useAtom($filterDialogOpen);
   const diet: Diet = showVegan ? "vegan" : showVeggie ? "veggie" : "all";
@@ -207,7 +256,7 @@ export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
         <DrawerHeader>
           <DrawerTitle>Filter</DrawerTitle>
           <DrawerDescription>
-            Wähle Ernährungsform, Allergene und Lieblingsmensen.
+            Wähle Ernährungsform, Allergene, Sortierung und Lieblingsmensen.
           </DrawerDescription>
         </DrawerHeader>
         <DrawerBody className="space-y-6">
@@ -242,6 +291,8 @@ export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
           </section>
 
           <AllergenSection hidden={hiddenAllergens} />
+
+          <SortSection sort={sort ?? "default"} />
 
           <section className="space-y-3">
             <div className="flex items-baseline justify-between gap-2">

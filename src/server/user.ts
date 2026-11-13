@@ -37,7 +37,8 @@ async function getUserIdFromCookie(
   return typeof payload?.userId === "string" ? payload.userId : null;
 }
 
-function ipHash(ctx: RequestContext): string {
+/** SHA-256 der Client-IP (Nutzererkennung, Rate-Limit) */
+export function ipHash(ctx: RequestContext): string {
   const headers = ctx.request.headers;
   const ip =
     headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||

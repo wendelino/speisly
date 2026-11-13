@@ -1,5 +1,11 @@
-import { and, avg, count, desc, eq, isNotNull } from "drizzle-orm";
-import { mealRating } from "@/lib/db/schema/schema";
+import { and, avg, count, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { toIsoDay } from "@/lib/dates";
+import {
+  commentLike,
+  mealRating,
+  mensa,
+  mensaMeal,
+} from "@/lib/db/schema/schema";
 import { db } from "../db";
 
 const round1 = (value: string | null) =>
@@ -45,6 +51,7 @@ export function getApprovedComments(
       value: mealRating.value,
       comment: mealRating.comment,
       updatedAt: mealRating.updatedAt,
+      likes: sql<number>`(select count(*) from ${commentLike} where ${commentLike.ratingId} = ${mealRating.id})::int`,
     })
     .from(mealRating)
     .where(
@@ -56,4 +63,79 @@ export function getApprovedComments(
     )
     .orderBy(desc(mealRating.updatedAt))
     .limit(limit) as Promise<MealComment[]>;
+}
+
+/**
+ * Bewertungen eines Gerichts nach Mensa und nach Ausgabe (Mensa + Tag), für
+ * die Aufschlüsselung auf der Detailseite. Öffentlich, cachebar über
+ * TAG.ratings. Ausgaben neueste zuerst, höchstens `servingLimit`.
+ */
+export async function getRatingBreakdown(
+  mealId: string,
+  servingLimit = 6
+): Promise<MealRatingBreakdown> {
+  const rows = await db
+    .select({
+      mensaId: mensa.id,
+      mensaName: mensa.name,
+      date: mensaMeal.date,
+      count: count(mealRating.id),
+      sum: sql<number>`sum(${mealRating.value})::int`,
+    })
+    .from(mealRating)
+    .innerJoin(mensaMeal, eq(mealRating.mensaMealId, mensaMeal.id))
+    .innerJoin(mensa, eq(mensaMeal.mensaId, mensa.id))
+    .where(eq(mealRating.mealId, mealId))
+    .groupBy(mensa.id, mensa.name, mensaMeal.id, mensaMeal.date)
+    .orderBy(desc(mensaMeal.date), mensa.name);
+  return summarizeBreakdown(rows, servingLimit);
+}
+
+type BreakdownRow = {
+  mensaId: string;
+  mensaName: string;
+  date: Date;
+  count: number;
+  sum: number;
+};
+
+const avgOf = (sum: number, n: number) => Math.round((sum / n) * 10) / 10;
+
+/** Fasst Ausgaben zu Mensen zusammen (Zeilen: neueste Ausgabe zuerst) */
+export function summarizeBreakdown(
+  rows: BreakdownRow[],
+  servingLimit: number
+): MealRatingBreakdown {
+  const mensen = new Map<
+    string,
+    { name: string; count: number; sum: number }
+  >();
+  for (const row of rows) {
+    const entry = mensen.get(row.mensaId) ?? {
+      name: row.mensaName,
+      count: 0,
+      sum: 0,
+    };
+    entry.count += row.count;
+    entry.sum += row.sum;
+    mensen.set(row.mensaId, entry);
+  }
+  return {
+    byMensa: [...mensen.values()]
+      .map(({ name, count: n, sum }) => ({
+        mensaName: name,
+        count: n,
+        value: avgOf(sum, n),
+      }))
+      .sort(
+        (a, b) => b.count - a.count || a.mensaName.localeCompare(b.mensaName)
+      ),
+    byServing: rows.slice(0, servingLimit).map((row) => ({
+      mensaName: row.mensaName,
+      date: toIsoDay(row.date),
+      count: row.count,
+      value: avgOf(row.sum, row.count),
+    })),
+    servingCount: rows.length,
+  };
 }
