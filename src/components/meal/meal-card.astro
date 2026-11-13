@@ -51,7 +51,7 @@ const allergens = allergenGroups(meal.ingredients);
     <h3 class="m-title" data-vt="title">
       {`${meal.name} ${meal.subtitle}`}
     </h3><div class="m-foot">
-      <PriceTag cents={meal.priceStud} vt />{
+      <span class="m-price-row"><PriceTag cents={meal.priceStud} vt />{
         meal.rating && (
           <span class="m-rate">
             <Icon class="size-3.5 fill-gold text-gold" name="star" />
@@ -59,7 +59,7 @@ const allergens = allergenGroups(meal.ingredients);
             <span class="sr-only">{` von 5 Sternen (${meal.rating.count} ${meal.rating.count === 1 ? "Bewertung" : "Bewertungen"})`}</span>
           </span>
         )
-      }<span
+      }</span><span
         aria-hidden="true"
         class="m-go">→</span>
     </div>

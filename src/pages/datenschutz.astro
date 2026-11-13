@@ -302,8 +302,8 @@ import BackLayout from "@/layouts/back-layout.astro";
               Datenbank gespeichert, nicht die ursprüngliche IP-Adresse
             </li>
             <li>
-              <strong>Zweck:</strong> Identifikation von Nutzern für das
-              Bewertungssystem (in Kombination mit Cookie-Hash) und
+              <strong>Zweck:</strong> Schutz vor Missbrauch des
+              Bewertungssystems (Rate-Limit, Missbrauchserkennung) und
               Sicherstellung der Funktionsfähigkeit der Website
             </li>
             <li>
@@ -327,9 +327,12 @@ import BackLayout from "@/layouts/back-layout.astro";
       <section>
         <h2>5. Bewertungssystem</h2>
         <p>
-          Wenn Sie Gerichte bewerten möchten, verwenden wir eine Kombination
-          aus gehashten IP-Adressen und Cookie-Hashes, um sicherzustellen,
-          dass jeder Nutzer nur einmal pro Gericht bewerten kann.
+          Wenn Sie Gerichte bewerten möchten, erkennen wir Sie an einem
+          Cookie mit einer pseudonymen Nutzerkennung, damit jede Bewertung
+          nur einmal pro Gericht zählt und Sie sie später ändern können.
+          Zusätzlich speichern wir beim ersten Bewerten die gehashte
+          IP-Adresse zur Missbrauchserkennung; zur Wiedererkennung nutzen
+          wir sie nicht.
         </p>
           <h4>Verarbeitete Daten:</h4>
           <ul>
@@ -384,9 +387,11 @@ import BackLayout from "@/layouts/back-layout.astro";
           <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO
           (Einwilligung durch das Aktivieren und die Erlaubnis im Browser).
           Sie können die Benachrichtigungen jederzeit auf der Seite
-          „Favoriten“ oder in den Einstellungen Ihres Browsers abschalten;
-          die gespeicherten Daten werden dann gelöscht. Abgelaufene
-          Push-Adressen löschen wir automatisch.
+          „Favoriten“ abschalten; die gespeicherten Daten werden dann sofort
+          gelöscht. Schalten Sie sie stattdessen in den Einstellungen Ihres
+          Browsers ab, erfahren wir davon erst, wenn der Push-Dienst die
+          Adresse beim nächsten Zustellversuch als ungültig meldet; dann
+          löschen wir die Daten automatisch.
         </p>
       </section>
 
@@ -492,8 +497,8 @@ import BackLayout from "@/layouts/back-layout.astro";
           </li>
           <li>
             <strong>Push-Abonnements:</strong> Bis Sie die
-            Benachrichtigungen abschalten oder der Push-Dienst die Adresse
-            als abgelaufen meldet
+            Benachrichtigungen auf der Seite „Favoriten“ abschalten oder der
+            Push-Dienst die Adresse als ungültig meldet
           </li>
         </ul>
         <p class="muted">

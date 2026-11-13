@@ -12,7 +12,11 @@ import { hasConsent } from "@/server/consent";
 import { db } from "@/server/db";
 import { saveFeedback } from "@/server/feedback";
 import { logError } from "@/server/log";
-import { deleteSubscription, upsertSubscription } from "@/server/push";
+import {
+  deleteSubscription,
+  isPushEndpoint,
+  upsertSubscription,
+} from "@/server/push";
 import {
   setCommentStatus,
   setErrorResolved,
@@ -146,7 +150,9 @@ export const server = {
           }
           const userId = await getOrCreateUser(context);
           const result = await upsertRating(userId, input);
-          await invalidateTags(context.cache, [TAG.ratings(input.mealId)]);
+          await invalidateTags(context.cache, [TAG.ratings(input.mealId)], {
+            settle: true,
+          });
           return {
             success: true,
             message:
@@ -190,7 +196,9 @@ export const server = {
               message: "Fehler beim Löschen der Bewertung",
             };
           }
-          await invalidateTags(context.cache, [TAG.ratings(mealId)]);
+          await invalidateTags(context.cache, [TAG.ratings(mealId)], {
+            settle: true,
+          });
           return { success: true, message: "Bewertung gelöscht" };
         } catch (error) {
           logError({
@@ -246,7 +254,9 @@ export const server = {
                   : "Kommentar nicht gefunden",
             };
           }
-          await invalidateTags(context.cache, [TAG.comments(result.mealId)]);
+          await invalidateTags(context.cache, [TAG.comments(result.mealId)], {
+            settle: true,
+          });
           return { success: true, likes: result.likes };
         } catch (error) {
           logError({
@@ -264,13 +274,24 @@ export const server = {
     /** Lieblingsgerichte mit nächstem Termin (/favoriten) */
     list: defineAction({
       input: z.object({ ids: z.array(id).max(MAX_FAVORITES) }),
-      handler: ({ ids }) => getFavoriteMeals(ids, todayBerlin()),
+      handler: ({ ids }, context) => {
+        if (!withinLimit("read", context)) {
+          throw new ActionError({
+            code: "TOO_MANY_REQUESTS",
+            message: RATE_LIMIT_MESSAGE,
+          });
+        }
+        return getFavoriteMeals([...new Set(ids)], todayBerlin());
+      },
     }),
   },
   push: {
     subscribe: defineAction({
       input: z.object({
-        endpoint: z.url().max(1000).startsWith("https://"),
+        endpoint: z
+          .url()
+          .max(1000)
+          .refine(isPushEndpoint, "Unbekannter Push-Dienst"),
         keys: z.object({
           p256dh: z.string().min(1).max(255),
           auth: z.string().min(1).max(255),
@@ -335,7 +356,9 @@ export const server = {
         const mealId = await setCommentStatus(ratingId, status);
         // Detailseite zeigt freigegebene Kommentare (das OG-Bild nicht)
         if (mealId) {
-          await invalidateTags(context.cache, [TAG.comments(mealId)]);
+          await invalidateTags(context.cache, [TAG.comments(mealId)], {
+            settle: true,
+          });
         }
         return { updated: mealId !== null };
       },

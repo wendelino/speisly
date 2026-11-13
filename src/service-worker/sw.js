@@ -19,12 +19,15 @@ const VERSION = "__SW_VERSION__";
 const PAGES = `speisly-pages-${VERSION}`;
 const ASSETS = `speisly-assets-${VERSION}`;
 const IMAGES = "speisly-images-v1";
-const KEEP = [PAGES, ASSETS, IMAGES];
+// eigener Cache, damit `trim` der Seiten die Offline-Seite nie verdrängt
+const OFFLINE = `speisly-offline-${VERSION}`;
+const KEEP = [PAGES, ASSETS, IMAGES, OFFLINE];
 
 const OFFLINE_URL = "/offline";
 const MAX_PAGES = 40;
 const MAX_IMAGES = 250;
 const NETWORK_TIMEOUT_MS = 4000;
+/** so viele Werktage nach heute vorhalten (am Wochenende hat keine Mensa auf) */
 const WARM_DAYS = 3;
 const WARM_INTERVAL_MS = 60 * 60 * 1000;
 const CACHED_AT = "x-speisly-cached-at";
@@ -38,7 +41,7 @@ const ASSET_IN_HTML = /(?:href|src)="(\/_astro\/[^"]+)"/g;
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      await cachePage(new Request(OFFLINE_URL));
+      await cachePage(new Request(OFFLINE_URL), OFFLINE);
       await self.skipWaiting();
     })()
   );
@@ -112,7 +115,7 @@ async function page(event) {
     } catch {
       return (
         cached ??
-        (await caches.match(OFFLINE_URL, { cacheName: PAGES })) ??
+        (await caches.match(OFFLINE_URL, { cacheName: OFFLINE })) ??
         Response.error()
       );
     }
@@ -164,11 +167,11 @@ async function cacheFirst(request, cacheName, limit) {
 }
 
 /** Seite mit Zeitstempel ablegen (für „warm“ und die Offline-Übersicht) */
-async function putPage(request, response) {
+async function putPage(request, response, cacheName = PAGES) {
   const headers = new Headers(response.headers);
   headers.set(CACHED_AT, String(Date.now()));
   const body = await response.blob();
-  const cache = await caches.open(PAGES);
+  const cache = await caches.open(cacheName);
   await cache.put(
     request,
     new Response(body, {
@@ -177,17 +180,19 @@ async function putPage(request, response) {
       headers,
     })
   );
-  await trim(cache, MAX_PAGES);
+  if (cacheName === PAGES) {
+    await trim(cache, MAX_PAGES);
+  }
   return body;
 }
 
 /** Seite laden, ablegen und ihr CSS/JS mitnehmen */
-async function cachePage(request) {
+async function cachePage(request, cacheName = PAGES) {
   const response = await fetch(request, { cache: "no-cache" });
   if (!isCacheable(response)) {
     return;
   }
-  const body = await putPage(request, response);
+  const body = await putPage(request, response, cacheName);
   const html = await body.text();
   const assets = [...html.matchAll(ASSET_IN_HTML)].map((match) => match[1]);
   const cache = await caches.open(ASSETS);
@@ -223,6 +228,19 @@ function berlinDay(offset, from = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
+/** Die nächsten `count` Werktage nach heute (Berlin), ohne Sa/So */
+function nextWeekdays(count) {
+  const days = [];
+  for (let offset = 1; days.length < count && offset < 14; offset++) {
+    const day = berlinDay(offset);
+    const weekday = new Date(`${day}T12:00:00Z`).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) {
+      days.push(day);
+    }
+  }
+  return days;
+}
+
 let warming = null;
 
 /** Speisepläne von heute und den nächsten Tagen vorhalten */
@@ -233,13 +251,7 @@ function warm() {
         return;
       }
       const cache = await caches.open(PAGES);
-      const urls = [
-        "/",
-        ...Array.from(
-          { length: WARM_DAYS },
-          (_, i) => `/day/${berlinDay(i + 1)}`
-        ),
-      ];
+      const urls = ["/", ...nextWeekdays(WARM_DAYS).map((d) => `/day/${d}`)];
       for (const url of urls) {
         const cached = await cache.match(url);
         const at = Number(cached?.headers.get(CACHED_AT) ?? 0);
@@ -278,17 +290,20 @@ self.addEventListener("notificationclick", (event) => {
     .href;
   event.waitUntil(
     (async () => {
-      const windows = await self.clients.matchAll({
-        type: "window",
-        includeUncontrolled: true,
-      });
+      // nur eigene Fenster umleiten: `navigate` geht nur bei kontrollierten
+      // Clients, sonst ein neues Fenster öffnen
+      const windows = await self.clients.matchAll({ type: "window" });
       for (const client of windows) {
-        if ("focus" in client) {
+        try {
+          // erst fokussieren (nur direkt nach dem Antippen erlaubt)
           await client.focus();
-          return client.navigate?.(url);
+          await client.navigate(url);
+          return;
+        } catch {
+          // nächstes Fenster versuchen
         }
       }
-      return self.clients.openWindow(url);
+      await self.clients.openWindow(url);
     })()
   );
 });

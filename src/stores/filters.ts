@@ -54,7 +54,8 @@ function runtime(): FilterRuntime | undefined {
 export const $filters = atom<FilterState>(runtime()?.initial ?? EMPTY_FILTERS);
 
 function update(patch: Partial<FilterState>) {
-  const next = { ...$filters.get(), ...patch };
+  const previous = $filters.get();
+  const next = { ...previous, ...patch };
   $filters.set(next);
   const rt = runtime();
   if (!rt) {
@@ -66,6 +67,13 @@ function update(patch: Partial<FilterState>) {
   writeCookie(rt.cookies.allergens, JSON.stringify(next.hiddenAllergens));
   writeCookie(rt.cookies.sort, next.sort);
   rt.apply(next);
+  // Push-Abo kennt die Mensa-Auswahl (Benachrichtigung nur für diese)
+  if (
+    patch.selectedMensen &&
+    patch.selectedMensen.join() !== previous.selectedMensen.join()
+  ) {
+    import("@/lib/push-client").then(({ syncPush }) => syncPush());
+  }
 }
 
 export const setSelectedMensen = (selectedMensen: string[]) =>

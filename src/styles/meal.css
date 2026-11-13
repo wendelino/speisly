@@ -47,9 +47,12 @@
   .m-price {
     @apply inline-flex items-baseline gap-0.5 font-bold font-display text-[1.25rem] text-primary tabular-nums leading-none tracking-tight;
   }
-  /* Durchschnittsbewertung neben dem Preis */
+  /* Preis und Durchschnittsbewertung, zueinander mittig */
+  .m-price-row {
+    @apply mr-auto inline-flex min-w-0 items-center gap-2;
+  }
   .m-rate {
-    @apply mr-auto inline-flex items-center gap-0.5 self-center rounded-full bg-sun-soft px-1.5 py-0.5 font-bold text-[0.7rem] text-foreground/80 tabular-nums leading-4;
+    @apply inline-flex items-center gap-0.5 rounded-full bg-sun-soft px-1.5 py-0.5 font-bold text-[0.7rem] text-foreground/80 tabular-nums leading-4;
   }
   /* Herz an Favoriten (sichtbar per CSS aus lib/favorites.ts) */
   .m-fav {

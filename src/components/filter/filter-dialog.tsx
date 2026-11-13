@@ -20,6 +20,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ALLERGENS, type AllergenCode } from "@/lib/allergens";
 import { cn } from "@/lib/utils";
@@ -41,25 +48,25 @@ const DIETS: {
   value: Diet;
   label: string;
   Icon: ComponentType<{ className?: string }>;
-  active: string;
+  tint: string;
 }[] = [
   {
     value: "all",
     label: "Alles",
     Icon: Utensils,
-    active: "bg-primary text-primary-foreground",
+    tint: "text-primary",
   },
   {
     value: "veggie",
     label: "Vegetarisch",
     Icon: EggFried,
-    active: "bg-sun-soft text-sun ring-sun/40",
+    tint: "text-sun",
   },
   {
     value: "vegan",
     label: "Vegan",
     Icon: Leaf,
-    active: "bg-mint-soft text-mint ring-mint/40",
+    tint: "text-mint",
   },
 ];
 
@@ -74,34 +81,66 @@ const SORTS: {
   { value: "rating", label: "Beste Bewertung", Icon: Star },
 ];
 
-/** Sortierung der Gerichte je Mensa (wirkt per CSS, lib/filters/boot.ts) */
-function SortSection({ sort }: { sort: SortMode }) {
+/**
+ * Ernährungsform und Sortierung als zwei Auswahllisten nebeneinander.
+ * Die Sortierung wirkt per CSS (lib/filters/boot.ts).
+ */
+function DietAndSort({
+  diet,
+  onDiet,
+  sort,
+}: {
+  diet: Diet;
+  onDiet: (value: Diet) => void;
+  sort: SortMode;
+}) {
   return (
-    <section className="space-y-3">
-      <h3 className="font-display font-semibold text-sm">Sortierung</h3>
-      <fieldset className="grid grid-cols-2 gap-2">
-        <legend className="sr-only">Sortierung</legend>
-        {SORTS.map(({ value, label, Icon }) => {
-          const checked = sort === value;
-          return (
-            <button
-              aria-pressed={checked}
-              className={cn(
-                "flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left font-semibold text-xs outline-none ring-1 transition-all duration-200 focus-visible:ring-[3px] focus-visible:ring-ring active:scale-95",
-                checked
-                  ? "bg-primary text-primary-foreground shadow-soft ring-transparent"
-                  : "bg-muted/60 text-muted-foreground ring-transparent hover:bg-muted"
-              )}
-              key={value}
-              onClick={() => setSort(value)}
-              type="button"
-            >
-              <Icon className="size-4 shrink-0" />
-              {label}
-            </button>
-          );
-        })}
-      </fieldset>
+    <section className="grid grid-cols-2 gap-3">
+      <div className="min-w-0 space-y-2">
+        <h3 className="font-display font-semibold text-sm" id="diet-label">
+          Ernährung
+        </h3>
+        <Select onValueChange={(value) => onDiet(value as Diet)} value={diet}>
+          <SelectTrigger
+            aria-labelledby="diet-label diet-select"
+            id="diet-select"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DIETS.map(({ value, label, Icon, tint }) => (
+              <SelectItem key={value} value={value}>
+                <Icon className={cn("size-4 shrink-0", tint)} />
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="min-w-0 space-y-2">
+        <h3 className="font-display font-semibold text-sm" id="sort-label">
+          Sortierung
+        </h3>
+        <Select
+          onValueChange={(value) => setSort(value as SortMode)}
+          value={sort}
+        >
+          <SelectTrigger
+            aria-labelledby="sort-label sort-select"
+            id="sort-select"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SORTS.map(({ value, label, Icon }) => (
+              <SelectItem key={value} value={value}>
+                <Icon className="size-4 shrink-0 text-muted-foreground" />
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </section>
   );
 }
@@ -260,39 +299,13 @@ export function FilterDialog({ mensen }: { mensen: Mensa[] }) {
           </DrawerDescription>
         </DrawerHeader>
         <DrawerBody className="space-y-6">
-          <section className="space-y-3">
-            <h3 className="font-display font-semibold text-sm">
-              Ernährungsform
-            </h3>
-            <fieldset className="grid grid-cols-3 gap-2">
-              <legend className="sr-only">Ernährungsform</legend>
-              {DIETS.map(({ value, label, Icon, active }) => {
-                const checked = diet === value;
-                return (
-                  <button
-                    aria-pressed={checked}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 font-semibold text-xs outline-none ring-1 transition-all duration-200 focus-visible:ring-[3px] focus-visible:ring-ring active:scale-95",
-                      checked
-                        ? cn(active, "shadow-soft")
-                        : "bg-muted/60 text-muted-foreground ring-transparent hover:bg-muted"
-                    )}
-                    id={value === "all" ? undefined : `${value}-filter`}
-                    key={value}
-                    onClick={() => selectDiet(value)}
-                    type="button"
-                  >
-                    <Icon className="size-5" />
-                    {label}
-                  </button>
-                );
-              })}
-            </fieldset>
-          </section>
+          <DietAndSort
+            diet={diet}
+            onDiet={selectDiet}
+            sort={sort ?? "default"}
+          />
 
           <AllergenSection hidden={hiddenAllergens} />
-
-          <SortSection sort={sort ?? "default"} />
 
           <section className="space-y-3">
             <div className="flex items-baseline justify-between gap-2">

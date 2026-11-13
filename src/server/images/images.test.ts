@@ -116,7 +116,9 @@ describe("image store", () => {
   });
 });
 
-describe("syncImages", () => {
+// Integration: braucht eine Datenbank (ändert kurz das Bild eines Gerichts
+// und setzt es danach zurück). Ohne DATABASE_URL übersprungen wie die übrigen.
+describe.skipIf(!process.env.DATABASE_URL)("syncImages", () => {
   let target: { id: string; imgPath: string | null; date: string };
 
   beforeAll(async () => {

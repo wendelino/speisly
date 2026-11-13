@@ -24,19 +24,35 @@ export const RATE_LIMITS = {
   feedback: { limit: 5, windowMs: 10 * MINUTE },
   /** Push-Abo anlegen, ändern oder löschen */
   push: { limit: 30, windowMs: 10 * MINUTE },
+  /** Lesende Actions mit DB-Zugriff (Favoritenliste) */
+  read: { limit: 300, windowMs: 10 * MINUTE },
 } as const satisfies Record<string, RateLimitRule>;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;
 
-/** Ab so vielen Schlüsseln wird beim nächsten Aufruf aufgeräumt */
-const SWEEP_THRESHOLD = 5000;
+/** Längstes Fenster aller Regeln (so lange muss ein Zeitstempel leben) */
+const MAX_WINDOW_MS = Math.max(
+  ...Object.values(RATE_LIMITS).map((rule) => rule.windowMs)
+);
+/** Höchstens so oft wird aufgeräumt */
+const SWEEP_INTERVAL_MS = MINUTE;
+/**
+ * Obergrenze für Schlüssel im Speicher. Wer massenhaft IPs vortäuscht, soll
+ * den Speicher nicht füllen können; darüber fliegen die ältesten Schlüssel.
+ */
+export const MAX_KEYS = 20_000;
 
-export function createRateLimiter(now: () => number = Date.now) {
+export function createRateLimiter(
+  now: () => number = Date.now,
+  maxKeys: number = MAX_KEYS
+) {
   const hits = new Map<string, number[]>();
+  let lastSweep = 0;
 
-  const sweep = (time: number, windowMs: number) => {
+  const sweep = (time: number) => {
+    lastSweep = time;
     for (const [key, stamps] of hits) {
-      if ((stamps.at(-1) ?? 0) <= time - windowMs) {
+      if ((stamps.at(-1) ?? 0) <= time - MAX_WINDOW_MS) {
         hits.delete(key);
       }
     }
@@ -49,8 +65,8 @@ export function createRateLimiter(now: () => number = Date.now) {
      */
     take(key: string, rule: RateLimitRule): boolean {
       const time = now();
-      if (hits.size > SWEEP_THRESHOLD) {
-        sweep(time, rule.windowMs);
+      if (time - lastSweep > SWEEP_INTERVAL_MS) {
+        sweep(time);
       }
       const recent = (hits.get(key) ?? []).filter(
         (stamp) => stamp > time - rule.windowMs
@@ -60,11 +76,23 @@ export function createRateLimiter(now: () => number = Date.now) {
         return false;
       }
       recent.push(time);
+      // ans Ende rücken (Map-Reihenfolge = zuletzt benutzt zuletzt)
+      hits.delete(key);
       hits.set(key, recent);
+      while (hits.size > maxKeys) {
+        const oldest = hits.keys().next().value;
+        if (oldest === undefined) {
+          break;
+        }
+        hits.delete(oldest);
+      }
       return true;
     },
     reset() {
       hits.clear();
+    },
+    get size() {
+      return hits.size;
     },
   };
 }

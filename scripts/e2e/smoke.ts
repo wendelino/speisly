@@ -208,7 +208,8 @@ await check(
   async () => {
     await page.click("[data-filter-fab]");
     await page.getByRole("dialog", { name: "Filter" }).waitFor();
-    await page.click("#vegan-filter");
+    await page.click("#diet-select");
+    await page.getByRole("option", { name: "Vegan" }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("dialog").waitFor({ state: "hidden" });
     let cards = await visibleCards(page);

@@ -1,6 +1,6 @@
 import { PUBLIC_VAPID_PUBLIC_KEY } from "astro:env/client";
 import { SITE_URL, VAPID_PRIVATE_KEY, VAPID_SUBJECT } from "astro:env/server";
-import { and, arrayOverlaps, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, arrayOverlaps, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import webpush from "web-push";
 import { toUtcDate } from "@/lib/dates";
 import {
@@ -31,6 +31,32 @@ if (pushEnabled) {
     VAPID_PRIVATE_KEY as string
   );
 }
+
+/**
+ * Hosts der Push-Dienste der Browser (Chrome/Edge/Samsung/Opera über FCM,
+ * Firefox, Safari, Windows). Nur an diese sendet der Server; sonst könnte
+ * ein Abo mit `https://10.0.0.5/…` den Cron interne Adressen aufrufen lassen.
+ */
+const PUSH_HOSTS =
+  /(?:^|\.)(?:googleapis\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com)$/;
+
+/** `true` für https-URLs eines bekannten Push-Dienstes (Standard-Port) */
+export function isPushEndpoint(endpoint: string): boolean {
+  if (!URL.canParse(endpoint)) {
+    return false;
+  }
+  const url = new URL(endpoint);
+  return (
+    url.protocol === "https:" &&
+    url.port === "" &&
+    url.username === "" &&
+    url.password === "" &&
+    PUSH_HOSTS.test(url.hostname)
+  );
+}
+
+/** Höchstens so lange auf einen Push-Dienst warten */
+const SEND_TIMEOUT_MS = 10_000;
 
 export type SubscriptionInput = {
   endpoint: string;
@@ -145,7 +171,7 @@ export type NotifyResult = {
 
 /**
  * Benachrichtigt alle Abos, deren Favoriten am `day` angeboten werden. Jedes
- * Abo höchstens einmal je Tag (`last_notified_for`), abgelaufene Abos
+ * Abo höchstens einmal für denselben Tag (`last_notified_for`), abgelaufene Abos
  * (404/410 vom Push-Dienst) werden gelöscht.
  */
 export async function notifyFavorites(
@@ -195,7 +221,9 @@ export async function notifyFavorites(
         arrayOverlaps(pushSubscription.favorites, mealIds),
         or(
           isNull(pushSubscription.lastNotifiedFor),
-          lt(pushSubscription.lastNotifiedFor, day)
+          // je Tag nur einmal; ein manueller Lauf für einen späteren Tag
+          // blockiert die regulären davor nicht
+          ne(pushSubscription.lastNotifiedFor, day)
         )
       )
     );
@@ -219,6 +247,11 @@ export async function notifyFavorites(
         if (!sub) {
           return;
         }
+        // Altbestand vor der Prüfung in push.subscribe: nie fremde Hosts
+        if (!isPushEndpoint(sub.endpoint)) {
+          expired.push(sub.id);
+          return;
+        }
         try {
           await webpush.sendNotification(
             {
@@ -231,7 +264,7 @@ export async function notifyFavorites(
               url: notification.url,
               tag: `favorites-${day}`,
             }),
-            { TTL: 12 * 3600, urgency: "normal" }
+            { TTL: 12 * 3600, urgency: "normal", timeout: SEND_TIMEOUT_MS }
           );
           delivered.push(sub.id);
         } catch (error) {

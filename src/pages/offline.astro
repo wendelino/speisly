@@ -34,6 +34,9 @@ import BaseLayout from "@/layouts/base-layout.astro";
 
 <script>
   const DAY = /^\/day\/(\d{4}-\d{2}-\d{2})$/;
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+  }).format(new Date());
   const label = (iso: string) =>
     new Date(`${iso}T12:00:00Z`).toLocaleDateString("de-DE", {
       weekday: "long",
@@ -53,7 +56,9 @@ import BaseLayout from "@/layouts/base-layout.astro";
     for (const name of names) {
       for (const request of await (await caches.open(name)).keys()) {
         const { pathname } = new URL(request.url);
-        if (pathname === "/" || DAY.test(pathname)) {
+        const day = DAY.exec(pathname)?.[1];
+        // vergangene Tage helfen offline nicht weiter
+        if (pathname === "/" || (day && day >= today)) {
           paths.add(pathname);
         }
       }
@@ -70,7 +75,7 @@ import BaseLayout from "@/layouts/base-layout.astro";
       link.href = path;
       link.className =
         "inline-flex rounded-full bg-muted px-3 py-1.5 font-semibold text-sm transition-colors hover:bg-secondary";
-      link.textContent = day ? label(day) : "Heute (zuletzt geladen)";
+      link.textContent = day ? label(day) : "Startseite (zuletzt geladen)";
       const item = document.createElement("li");
       item.append(link);
       list.append(item);

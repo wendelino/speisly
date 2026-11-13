@@ -66,7 +66,12 @@ export function authorized(request: Request, expectedToken: string): boolean {
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   const expected = Buffer.from(expectedToken);
   const actual = Buffer.from(token);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  // leeres Token (Variable gesetzt, aber leer) darf nie passen
+  return (
+    expected.length > 0 &&
+    actual.length === expected.length &&
+    timingSafeEqual(actual, expected)
+  );
 }
 
 /** Seiten lokal vorwärmen (nicht über die öffentliche URL) */

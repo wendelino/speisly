@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto";
 import type { AstroCookies } from "astro";
-import { eq } from "drizzle-orm";
 import { user } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
-import { hasConsent } from "./consent";
 import { db } from "./db";
 import { decodeJwt, encodeJwt } from "./jwt";
 
@@ -37,33 +35,39 @@ async function getUserIdFromCookie(
   return typeof payload?.userId === "string" ? payload.userId : null;
 }
 
-/** SHA-256 der Client-IP (Nutzererkennung, Rate-Limit) */
+/**
+ * Client-IP hinter dem Reverse Proxy (Traefik in Dokploy). Maßgeblich ist der
+ * **letzte** Eintrag in `X-Forwarded-For`: den hängt Traefik selbst an (die
+ * Adresse, die es gesehen hat). Frühere Einträge kann der Client mitschicken;
+ * Traefik verwirft sie zwar ohne `forwardedHeaders.trustedIPs`/`insecure`,
+ * darauf verlassen wir uns aber nicht. Ohne Header (lokal) die Socket-Adresse.
+ */
+export function clientIp(headers: Headers, clientAddress?: string): string {
+  const forwarded = headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return forwarded?.at(-1) || clientAddress || "unknown";
+}
+
+/** SHA-256 der Client-IP (Rate-Limit, Missbrauchserkennung) */
 export function ipHash(ctx: RequestContext): string {
-  const headers = ctx.request.headers;
-  const ip =
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    headers.get("x-real-ip") ||
-    ctx.clientAddress ||
-    "unknown";
+  const ip = clientIp(ctx.request.headers, ctx.clientAddress);
   return createHash("sha256").update(ip).digest("hex");
 }
 
-/** Erkennt den Nutzer (Cookie, sonst IP-Hash mit Consent). Legt keinen an. */
-export async function getUserId(ctx: RequestContext): Promise<string | null> {
-  const fromCookie = await getUserIdFromCookie(ctx);
-  if (fromCookie || !hasConsent(ctx.cookies)) {
-    return fromCookie;
-  }
-  const [existing] = await db
-    .select({ id: user.id })
-    .from(user)
-    .where(eq(user.ipHash, ipHash(ctx)))
-    .limit(1);
-  if (!existing) {
-    return null;
-  }
-  await setUserCookie(ctx, existing.id);
-  return existing.id;
+/**
+ * Erkennt den Nutzer am (signierten) Cookie. Legt keinen an.
+ *
+ * Bewusst kein Rückgriff auf den IP-Hash: Hinter geteilten Netzen (eduroam,
+ * Wohnheim, Mobilfunk-NAT) teilen sich viele Menschen eine IP, und
+ * `X-Forwarded-For` lässt sich fälschen. Ein Treffer über die IP würde einem
+ * Fremden das Cookie des Nutzers ausstellen (eigene Bewertungen samt nicht
+ * freigegebener Kommentare lesen, ändern, löschen).
+ */
+export function getUserId(ctx: RequestContext): Promise<string | null> {
+  return getUserIdFromCookie(ctx);
 }
 
 /** Wie getUserId, legt aber bei Bedarf einen Nutzer an (nur mit Consent aufrufen) */

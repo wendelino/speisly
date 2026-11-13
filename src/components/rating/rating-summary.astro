@@ -158,7 +158,7 @@ const breakdownHint = [
         <h3 class="mb-3 font-display font-semibold" id="rating-comments">
           Kommentare
         </h3>
-        <p aria-live="polite" class="mb-3 rounded-xl bg-rose-soft px-3 py-2 text-rose text-sm" data-like-status hidden></p>
+        <p aria-live="polite" class="mb-3 rounded-xl bg-rose-soft px-3 py-2 text-rose text-sm empty:hidden" data-like-status></p>
         <ul class="space-y-3">
           {comments.map((entry) => (
             <li class="rounded-2xl bg-muted/60 p-4">

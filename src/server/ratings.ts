@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { mealRating } from "@/lib/db/schema/schema";
+import { commentLike, mealRating } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
 import { db } from "./db";
 
@@ -80,7 +80,16 @@ export async function upsertRating(
             },
     })
     // xmax = 0 nur bei frisch eingefügten Zeilen
-    .returning({ created: sql<boolean>`xmax = 0` });
+    .returning({
+      id: mealRating.id,
+      status: mealRating.commentStatus,
+      created: sql<boolean>`xmax = 0`,
+    });
+  // Likes gelten dem freigegebenen Text: neuer (wieder ungeprüfter) oder
+  // entfernter Kommentar startet ohne
+  if (row && !row.created && row.status !== "approved") {
+    await db.delete(commentLike).where(eq(commentLike.ratingId, row.id));
+  }
   return row?.created ? "created" : "updated";
 }
 

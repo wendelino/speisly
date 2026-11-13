@@ -6,6 +6,7 @@ import {
   ogPolicy,
   tagsForSync,
   untilMidnight,
+  withRatingTags,
 } from "./cache-policy";
 
 // 2026-10-06 12:00 Berlin (CEST) = 10:00 UTC → 12 h bis Mitternacht
@@ -80,5 +81,25 @@ describe("page policies", () => {
     expect(
       tagsForSync({ changedDates: ["2026-10-07"], changedMealIds: ["m1"] })
     ).toEqual(["day:2026-10-07", "meal:m1", "meal-stats:m1"]);
+  });
+
+  test("plan pages carry the rating tag of every meal shown", () => {
+    const groups = [
+      { meals: [{ id: "m1" }, { id: "m2" }] },
+      // dasselbe Gericht in zwei Mensen: ein Tag
+      { meals: [{ id: "m1" }, { id: "m3" }] },
+    ];
+    const policy = withRatingTags(
+      homePolicy("2026-10-06", new Date("2026-10-06T08:00:00Z")),
+      groups
+    );
+    expect(policy.tags).toEqual([
+      "meals",
+      "home",
+      "day:2026-10-06",
+      "ratings:m1",
+      "ratings:m2",
+      "ratings:m3",
+    ]);
   });
 });

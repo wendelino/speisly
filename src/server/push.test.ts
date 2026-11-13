@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildNotifications } from "./push";
+import { buildNotifications, isPushEndpoint } from "./push";
 
 const servings = [
   {
@@ -63,5 +63,33 @@ describe("buildNotifications", () => {
         "Morgen"
       )
     ).toEqual([]);
+  });
+});
+
+describe("isPushEndpoint", () => {
+  test("accepts the browsers' push services", () => {
+    for (const url of [
+      "https://fcm.googleapis.com/fcm/send/abc",
+      "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      "https://web.push.apple.com/QAbc",
+      "https://wns2-par02p.notify.windows.com/w/?token=abc",
+    ]) {
+      expect(isPushEndpoint(url)).toBe(true);
+    }
+  });
+
+  test("rejects everything else (no SSRF via subscriptions)", () => {
+    for (const url of [
+      "http://fcm.googleapis.com/fcm/send/abc",
+      "https://10.0.0.5/hook",
+      "https://localhost/hook",
+      "https://fcm.googleapis.com:8443/x",
+      "https://evilgoogleapis.com/x",
+      "https://googleapis.com.evil.example/x",
+      "https://user:pw@fcm.googleapis.com/x",
+      "not a url",
+    ]) {
+      expect(isPushEndpoint(url)).toBe(false);
+    }
   });
 });

@@ -17,6 +17,8 @@
   const mealId = container()?.dataset.mealId;
 
   const liked = new Set<string>();
+  /** Kommentare, deren Like gerade gesendet wird (gegen Doppelklicks) */
+  const pending = new Set<string>();
   let own: string | null = null;
   let loaded: Promise<void> | null = null;
 
@@ -29,6 +31,8 @@
     button.dataset.likes = String(count);
     button.setAttribute("aria-pressed", String(pressed));
     button.toggleAttribute("data-own", id === own);
+    // den eigenen Kommentar kann man nicht liken
+    button.disabled = id === own || pending.has(id);
     button.setAttribute(
       "aria-label",
       id === own
@@ -72,15 +76,31 @@
     if (!status) {
       return;
     }
+    // Live-Region bleibt im DOM (leer = unsichtbar), sonst sagen
+    // Screenreader die Meldung oft nicht an
     status.textContent = text;
-    status.hidden = false;
     setTimeout(() => {
-      status.hidden = true;
+      if (status.textContent === text) {
+        status.textContent = "";
+      }
     }, 4000);
   }
 
   async function toggle(button: HTMLButtonElement) {
     const id = button.dataset.like ?? "";
+    if (pending.has(id)) {
+      return;
+    }
+    pending.add(id);
+    try {
+      await send(button, id);
+    } finally {
+      pending.delete(id);
+      render(button, Number(button.dataset.likes ?? 0));
+    }
+  }
+
+  async function send(button: HTMLButtonElement, id: string) {
     if (!(await askConsent())) {
       return;
     }
@@ -97,7 +117,6 @@
       liked.delete(id);
     }
     render(button, Math.max(0, before + (next ? 1 : -1)));
-    button.disabled = true;
     try {
       const { data, error } = await actions.comments.like({
         ratingId: id,
@@ -118,8 +137,6 @@
       showStatus(
         (error instanceof Error && error.message) || "Das hat nicht geklappt"
       );
-    } finally {
-      button.disabled = false;
     }
   }
 
@@ -128,7 +145,7 @@
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
         "[data-like]"
       );
-      if (button && !button.disabled) {
+      if (button && !pending.has(button.dataset.like ?? "")) {
         toggle(button);
       }
     });

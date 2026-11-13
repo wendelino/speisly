@@ -104,20 +104,57 @@ export async function enablePush(): Promise<EnableResult> {
   }
 }
 
-export async function disablePush(): Promise<void> {
+/**
+ * Erst auf dem Server löschen, dann im Browser abmelden: Andersherum bliebe
+ * das Abo bei einem Fehler auf dem Server liegen, ohne dass der Browser es
+ * noch kennt. `false`, wenn der Server nicht mitgespielt hat (dann bleibt
+ * alles aktiv).
+ */
+export async function disablePush(): Promise<boolean> {
   const subscription = await currentSubscription();
   if (!subscription) {
-    return;
+    return true;
   }
-  const { endpoint } = subscription;
+  const { data, error } = await actions.push
+    .unsubscribe({ endpoint: subscription.endpoint })
+    .catch(() => ({ data: undefined, error: true }));
+  if (error || !data?.success) {
+    return false;
+  }
   await subscription.unsubscribe().catch(() => false);
-  await actions.push.unsubscribe({ endpoint }).catch(() => null);
+  return true;
 }
 
-/** Favoriten/Mensen eines bestehenden Abos aktualisieren (nach Änderungen) */
-export async function syncPush(): Promise<void> {
+const SYNC_DELAY_MS = 400;
+let syncTimer: ReturnType<typeof setTimeout> | undefined;
+
+async function runSync(): Promise<void> {
+  syncTimer = undefined;
   const subscription = await currentSubscription().catch(() => null);
   if (subscription) {
     await save(subscription).catch(() => false);
   }
+}
+
+/**
+ * Favoriten/Mensen eines bestehenden Abos aktualisieren (nach Änderungen).
+ * Kurz verzögert und gebündelt: mehrere Klicks hintereinander ergeben einen
+ * Aufruf (Rate-Limit, geteilte IPs im Campus-WLAN). Verlässt jemand die
+ * Seite vorher, wird sofort gesendet.
+ */
+export function syncPush(): void {
+  if (syncTimer === undefined) {
+    window.addEventListener(
+      "pagehide",
+      () => {
+        if (syncTimer !== undefined) {
+          clearTimeout(syncTimer);
+          runSync();
+        }
+      },
+      { once: true }
+    );
+  }
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(runSync, SYNC_DELAY_MS);
 }

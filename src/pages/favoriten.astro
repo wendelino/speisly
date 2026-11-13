@@ -124,6 +124,15 @@ const toggleClass = cn(buttonVariants({ variant: "default", size: "sm" }), "shri
       empty("Favoriten konnten nicht geladen werden. Bist du online?");
       return;
     }
+    // Gerichte, die es nicht mehr gibt, aus dem Browser entfernen
+    const known = new Set(data.map((meal) => meal.id));
+    const gone = ids.filter((id) => !known.has(id));
+    if (gone.length > 0) {
+      for (const id of gone) {
+        setFavorite(id, false);
+      }
+      syncPush();
+    }
     if (data.length === 0) {
       empty("Noch keine Favoriten. Tippe auf einem Gericht auf „Merken“.");
       return;
@@ -204,7 +213,11 @@ const toggleClass = cn(buttonVariants({ variant: "default", size: "sm" }), "shri
     toggle.addEventListener("click", async () => {
       toggle.disabled = true;
       if (enabled) {
-        await disablePush();
+        if (!(await disablePush())) {
+          text.textContent = "Das hat nicht geklappt. Bitte versuch es später noch einmal.";
+          toggle.disabled = false;
+          return;
+        }
         enabled = false;
       } else {
         const result = await enablePush();
