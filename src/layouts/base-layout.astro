@@ -2,6 +2,7 @@
 import { Font } from "astro:assets";
 import { PUBLIC_UMAMI_WEBSITE_ID } from "astro:env/client";
 import { SITE_URL } from "astro:env/server";
+import { version as APP_VERSION } from "../../package.json";
 import IconSprite from "@/components/icons/icon-sprite.astro";
 import type { SpriteIconName } from "@/components/icons/sprite-icons";
 import InstallHint from "@/components/install/install-hint.astro";
@@ -111,7 +112,10 @@ const twitterCard = ogImages.some((img) => (img.width ?? 0) > (img.height ?? 0))
           is:inline
           data-website-id={PUBLIC_UMAMI_WEBSITE_ID}
           defer
+          data-domains="speisly.de"
+          data-errors="true"
           data-performance="true"
+          data-release={APP_VERSION}
           src="https://stats.speisly.de/script.js"
         />
       )
