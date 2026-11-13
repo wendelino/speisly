@@ -14,8 +14,11 @@ import { MEAL_SRC_ID_MAPPINGS } from "./types";
 import { fetchJson, normalizeDateRange, normalizeSrcId, toSlug } from "./utils";
 
 const MAX_FOOD_PLANS = 999;
-/** Standorte der API, die keine Mensen im Sinne von Speisly sind */
-const EXCLUDED_LOCATION_IDS = new Set([7, 8, 13, 16, 22]);
+/**
+ * Standorte der API, die keine Mensen im Sinne von Speisly sind. 16 (Mensa
+ * Merseburg) ist seit November 2026 dabei.
+ */
+const EXCLUDED_LOCATION_IDS = new Set([7, 8, 13, 22]);
 /** aus der Umgebung (MEINE_MENSA_API_URL), ohne „/“ am Ende */
 const API_URL = MEINE_MENSA_API_URL.replace(/\/+$/, "");
 
