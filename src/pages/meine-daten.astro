@@ -1,0 +1,370 @@
+---
+// „Meine Daten“: alles, was Speisly zu diesem Browser gespeichert hat
+// (Bewertungen samt Kommentar-Status, vergebene Likes, Favoriten), mit
+// Export und Löschen. Prerendered und für alle gleich; die persönlichen Daten
+// lädt das Script über die Action me.data (nie im Cache, src/server/my-data.ts).
+import {
+  ChevronRight,
+  CircleUserRound,
+  Download,
+  Heart,
+  Star,
+  Trash2,
+} from "@lucide/astro";
+import PageHeader from "@/components/layout/page-header.astro";
+import Card from "@/components/ui/card.astro";
+import { buttonVariants } from "@/components/ui/variants";
+import BackLayout from "@/layouts/back-layout.astro";
+import { cn } from "@/lib/utils";
+
+const outline = buttonVariants({ variant: "outline", size: "sm" });
+const destructive = buttonVariants({ variant: "destructive", size: "sm" });
+---
+
+<BackLayout
+  description="Deine Bewertungen, Kommentare, Likes und Favoriten bei Speisly – ansehen, exportieren oder löschen."
+  title="Meine Daten"
+>
+  <PageHeader
+    intro="Alles, was Speisly zu diesem Browser gespeichert hat. Ein Konto gibt es nicht: Wir erkennen dich nur an einem Cookie."
+    title="Meine Daten"
+    tone="sky"
+  >
+    <CircleUserRound slot="icon" />
+  </PageHeader>
+
+  <div class="space-y-6">
+    <a
+      class="flex items-center gap-4 rounded-3xl bg-card p-5 shadow-soft ring-1 ring-border/70 outline-none transition-[translate,box-shadow] hover:-translate-y-0.5 hover:shadow-lift focus-visible:ring-[3px] focus-visible:ring-ring sm:p-6"
+      href="/favoriten"
+    >
+      <span class="grid size-10 shrink-0 place-items-center rounded-full bg-rose-soft text-rose">
+        <Heart class="size-5" />
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block font-display font-semibold">Favoriten & Benachrichtigungen</span>
+        <span class="block text-muted-foreground text-sm" data-favorites-count>
+          Deine gemerkten Gerichte
+        </span>
+      </span>
+      <ChevronRight class="size-5 shrink-0 text-muted-foreground" />
+    </a>
+
+    <section aria-labelledby="my-ratings">
+      <h2 class="mb-3 font-display font-semibold text-lg" id="my-ratings">Bewertungen</h2>
+      <div aria-busy="true" aria-live="polite" data-ratings>
+        <p class="text-center text-muted-foreground text-sm">Lade deine Daten…</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="my-likes" data-likes-section hidden>
+      <h2 class="mb-3 font-display font-semibold text-lg" id="my-likes">„Gefällt mir“</h2>
+      <ul class="divide-y divide-border/70 rounded-2xl bg-card px-4 shadow-soft ring-1 ring-border/60" data-likes></ul>
+    </section>
+
+    <Card>
+      <h2 class="font-display font-semibold">Daten exportieren</h2>
+      <p class="mt-1 text-muted-foreground text-sm">
+        Lädt alles oben Gezeigte als JSON-Datei herunter, inklusive deiner Favoriten.
+      </p>
+      <button class={cn(outline, "mt-4")} data-export type="button">
+        <Download class="size-4" />
+        Als JSON herunterladen
+      </button>
+    </Card>
+
+    <Card class="ring-destructive/30">
+      <h2 class="font-display font-semibold">Alle meine Daten löschen</h2>
+      <p class="mt-1 text-muted-foreground text-sm">
+        Löscht deine Bewertungen und Kommentare, deine Likes, deine Favoriten
+        und die Benachrichtigungen auf diesem Gerät. Das lässt sich nicht
+        rückgängig machen.
+      </p>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <button class={outline} data-delete-all type="button">
+          <Trash2 class="size-4" />
+          Alles löschen
+        </button>
+        <button class={destructive} data-delete-confirm hidden type="button">
+          Ja, endgültig löschen
+        </button>
+        <button class={buttonVariants({ variant: "ghost", size: "sm" })} data-delete-cancel hidden type="button">
+          Abbrechen
+        </button>
+      </div>
+      <p aria-live="polite" class="mt-3 text-sm empty:hidden" data-delete-status></p>
+    </Card>
+
+    <p class="px-1 text-muted-foreground text-xs leading-relaxed" data-since>
+      Deine Daten hängen an diesem Browser. In einem anderen Browser, im
+      privaten Fenster oder nach dem Löschen der Cookies startest du ohne sie.
+    </p>
+  </div>
+
+  <template data-rating-template>
+    <li class="rounded-2xl bg-card p-4 shadow-soft ring-1 ring-border/60">
+      <div class="flex items-start justify-between gap-3">
+        <a class="min-w-0 outline-none focus-visible:underline" data-link>
+          <span class="block truncate font-display font-semibold" data-name></span>
+          <span class="block truncate text-muted-foreground text-xs" data-when></span>
+        </a>
+        <span class="inline-flex shrink-0 items-center gap-1 font-bold font-display tabular-nums">
+          <Star class="size-4 fill-gold text-gold" />
+          <span data-value></span>
+        </span>
+      </div>
+      <div class="mt-3 rounded-xl bg-muted/60 p-3" data-comment-box hidden>
+        <span class="mb-1.5 inline-flex rounded-full px-2 py-0.5 font-semibold text-[0.7rem]" data-status></span>
+        <p class="whitespace-pre-line break-words text-sm leading-relaxed" data-comment></p>
+      </div>
+      <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
+        <a class={buttonVariants({ variant: "ghost", size: "sm" })} data-edit>Bearbeiten</a>
+        <button class={buttonVariants({ variant: "ghost", size: "sm" })} data-remove type="button">
+          Löschen
+        </button>
+      </div>
+    </li>
+  </template>
+</BackLayout>
+
+<script>
+  import { actions } from "astro:actions";
+  import { clearFavorites, readFavorites } from "@/lib/favorites";
+  import { disablePush } from "@/lib/push-client";
+  import type { MyData, MyRating } from "@/server/my-data";
+
+  const STATUS: Record<string, { label: string; className: string }> = {
+    pending: { label: "Wird geprüft", className: "bg-sun-soft text-sun" },
+    approved: { label: "Veröffentlicht", className: "bg-mint-soft text-mint" },
+    rejected: {
+      label: "Nicht veröffentlicht",
+      className: "bg-rose-soft text-rose",
+    },
+  };
+
+  const ratingsBox = document.querySelector<HTMLElement>("[data-ratings]");
+  const template = document.querySelector<HTMLTemplateElement>(
+    "[data-rating-template]"
+  );
+  let current: MyData | null = null;
+
+  const dateText = (iso: string) =>
+    new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString("de-DE", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  const stars = (value: number) => value.toLocaleString("de-DE");
+
+  function message(text: string) {
+    if (!ratingsBox) {
+      return;
+    }
+    const p = document.createElement("p");
+    p.className =
+      "rounded-2xl bg-muted/60 p-5 text-center text-muted-foreground text-sm";
+    p.textContent = text;
+    ratingsBox.replaceChildren(p);
+    ratingsBox.removeAttribute("aria-busy");
+  }
+
+  function showFavorites() {
+    const label = document.querySelector("[data-favorites-count]");
+    const count = readFavorites().length;
+    if (label) {
+      label.textContent =
+        count === 0
+          ? "Noch keine Gerichte gemerkt"
+          : `${count} ${count === 1 ? "Gericht" : "Gerichte"} gemerkt`;
+    }
+  }
+
+  function ratingItem(rating: MyRating): HTMLElement | null {
+    const item = template?.content.firstElementChild?.cloneNode(
+      true
+    ) as HTMLElement | null;
+    if (!item) {
+      return null;
+    }
+    const href = `/meal/${rating.mealId}?mmid=${rating.mensaMealId}`;
+    const link = item.querySelector<HTMLAnchorElement>("[data-link]");
+    const edit = item.querySelector<HTMLAnchorElement>("[data-edit]");
+    if (link) {
+      link.href = href;
+    }
+    if (edit) {
+      edit.href = href;
+      edit.setAttribute("aria-label", `${rating.mealName}: Bewertung bearbeiten`);
+    }
+    item.querySelector("[data-name]")?.append(rating.mealName);
+    item
+      .querySelector("[data-when]")
+      ?.append(`${dateText(rating.date)} · ${rating.mensaName}`);
+    item.querySelector("[data-value]")?.append(stars(rating.value));
+
+    if (rating.comment) {
+      const box = item.querySelector<HTMLElement>("[data-comment-box]");
+      const status = item.querySelector<HTMLElement>("[data-status]");
+      const info = STATUS[rating.commentStatus ?? "pending"] ?? STATUS.pending;
+      if (box && status) {
+        box.hidden = false;
+        status.textContent =
+          rating.commentStatus === "approved" && rating.likes > 0
+            ? `${info.label} · ${rating.likes} „Gefällt mir“`
+            : info.label;
+        status.classList.add(...info.className.split(" "));
+      }
+      item.querySelector("[data-comment]")?.append(rating.comment);
+    }
+
+    const remove = item.querySelector<HTMLButtonElement>("[data-remove]");
+    remove?.setAttribute("aria-label", `${rating.mealName}: Bewertung löschen`);
+    remove?.addEventListener("click", async () => {
+      // zweiter Klick bestätigt
+      if (remove.dataset.armed !== "true") {
+        remove.dataset.armed = "true";
+        remove.textContent = "Wirklich löschen?";
+        return;
+      }
+      remove.disabled = true;
+      const { data, error } = await actions.rating.delete({
+        mealId: rating.mealId,
+      });
+      if (error || !data?.success) {
+        remove.disabled = false;
+        remove.textContent = data?.message ?? "Fehler – nochmal?";
+        return;
+      }
+      if (current) {
+        current.ratings = current.ratings.filter((r) => r.id !== rating.id);
+      }
+      item.remove();
+      if (current?.ratings.length === 0) {
+        message("Du hast noch nichts bewertet.");
+      }
+    });
+    return item;
+  }
+
+  function renderLikes(likes: MyData["likes"]) {
+    const section = document.querySelector<HTMLElement>("[data-likes-section]");
+    const list = document.querySelector("[data-likes]");
+    if (!(section && list)) {
+      return;
+    }
+    section.hidden = likes.length === 0;
+    list.replaceChildren(
+      ...likes.map((like) => {
+        const li = document.createElement("li");
+        li.className = "flex items-center justify-between gap-3 py-2.5 text-sm";
+        const a = document.createElement("a");
+        a.className = "min-w-0 truncate font-medium hover:underline";
+        a.href = `/meal/${like.mealId}`;
+        a.textContent = like.mealName;
+        const time = document.createElement("span");
+        time.className = "shrink-0 text-muted-foreground text-xs";
+        time.textContent = dateText(like.likedAt);
+        li.append(a, time);
+        return li;
+      })
+    );
+  }
+
+  async function load() {
+    showFavorites();
+    const { data, error } = await actions.me.data();
+    if (error) {
+      message(
+        error.code === "TOO_MANY_REQUESTS"
+          ? error.message
+          : "Deine Daten konnten nicht geladen werden. Bist du online?"
+      );
+      return;
+    }
+    current = data;
+    if (!data || data.ratings.length === 0) {
+      message("Du hast noch nichts bewertet.");
+    } else if (ratingsBox) {
+      const list = document.createElement("ul");
+      list.className = "space-y-3";
+      for (const rating of data.ratings) {
+        const item = ratingItem(rating);
+        if (item) {
+          list.append(item);
+        }
+      }
+      ratingsBox.replaceChildren(list);
+      ratingsBox.removeAttribute("aria-busy");
+    }
+    renderLikes(data?.likes ?? []);
+    const since = document.querySelector("[data-since]");
+    if (data && since) {
+      since.prepend(`Gespeichert seit ${dateText(data.since)}. `);
+    }
+  }
+
+  document.querySelector("[data-export]")?.addEventListener("click", () => {
+    const payload = {
+      exportiertAm: new Date().toISOString(),
+      hinweis:
+        "Daten, die Speisly zur pseudonymen Kennung dieses Browsers gespeichert hat.",
+      gespeichertSeit: current?.since ?? null,
+      bewertungen: current?.ratings ?? [],
+      gefaelltMir: current?.likes ?? [],
+      favoriten: readFavorites(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `speisly-daten-${payload.exportiertAm.slice(0, 10)}.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  const deleteAll = document.querySelector<HTMLButtonElement>("[data-delete-all]");
+  const confirmButton = document.querySelector<HTMLButtonElement>(
+    "[data-delete-confirm]"
+  );
+  const cancel = document.querySelector<HTMLButtonElement>("[data-delete-cancel]");
+  const status = document.querySelector<HTMLElement>("[data-delete-status]");
+
+  const arm = (armed: boolean) => {
+    if (deleteAll && confirmButton && cancel) {
+      deleteAll.hidden = armed;
+      confirmButton.hidden = !armed;
+      cancel.hidden = !armed;
+      (armed ? confirmButton : deleteAll).focus();
+    }
+  };
+  deleteAll?.addEventListener("click", () => arm(true));
+  cancel?.addEventListener("click", () => arm(false));
+  confirmButton?.addEventListener("click", async () => {
+    if (!(confirmButton && status)) {
+      return;
+    }
+    confirmButton.disabled = true;
+    const { data, error } = await actions.me.delete();
+    if (error || !data?.success) {
+      confirmButton.disabled = false;
+      status.textContent =
+        data?.message ?? "Das hat nicht geklappt. Bitte versuch es später noch einmal.";
+      return;
+    }
+    // Daten auf diesem Gerät
+    await disablePush().catch(() => false);
+    clearFavorites();
+    current = null;
+    message("Du hast noch nichts bewertet.");
+    renderLikes([]);
+    showFavorites();
+    arm(false);
+    confirmButton.disabled = false;
+    status.textContent = "Alles gelöscht.";
+  });
+
+  load();
+</script>

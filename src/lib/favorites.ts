@@ -47,6 +47,16 @@ export function setFavorite(id: string, favorite: boolean): boolean {
   return favorite;
 }
 
+/** Entfernt alle Favoriten (Meine Daten → „Alle meine Daten löschen“) */
+export function clearFavorites(): void {
+  try {
+    localStorage.removeItem(FAVORITES_KEY);
+  } catch {
+    // gesperrter Speicher: nichts zu löschen
+  }
+  document.dispatchEvent(new CustomEvent(FAVORITES_EVENT, { detail: [] }));
+}
+
 /**
  * Inline im <head> der Speisepläne (layouts/plan-layout.astro): zeigt das
  * Herz an Karten von Favoriten (meal-card.astro `data-meal-id`, `.m-fav`).

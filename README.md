@@ -17,6 +17,7 @@ Speisly wurde entwickelt, um Studierenden der MLU Halle einen einfachen und schn
 - **Sortierung** – Gerichte je Mensa nach Preis oder Bewertung (im Filter-Dialog)
 - **Favoriten** – Gerichte merken, auf dem Speiseplan markiert, mit nächstem Termin unter `/favoriten`
 - **Benachrichtigungen** – Web-Push am Vorabend, wenn ein Favorit auf dem Plan steht (optional, VAPID-Schlüssel nötig)
+- **Meine Daten** – `/meine-daten`: eigene Bewertungen mit Kommentar-Status, vergebene Likes, Export als JSON und „Alle meine Daten löschen“ (ohne Konto, am Cookie des Browsers)
 - **Teilen** – Gerichte über das Teilen-Menü des Geräts oder als Link
 - **Offline** – Service Worker hält die Speisepläne der nächsten Tage vor
 - **Persistente Einstellungen** – Speicherung von Filterpräferenzen im Browser

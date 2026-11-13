@@ -1,6 +1,7 @@
 ---
-// Kopfzeile aller Seiten: Logo/Wortmarke (Link zur Startseite), Favoriten und Feedback
-import { Heart, MessageCircleHeart } from "@lucide/astro";
+// Kopfzeile aller Seiten: Logo/Wortmarke (Link zur Startseite), Feedback und
+// „Meine Daten“ (dort auch die Favoriten)
+import { CircleUserRound, MessageCircleHeart } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
 import Brand from "./brand.astro";
 ---
@@ -14,13 +15,13 @@ import Brand from "./brand.astro";
     <Brand priority />
   </a>
   <nav aria-label="Weitere Seiten" class="flex items-center gap-1">
-    <Button class="text-muted-foreground" href="/favoriten" size="sm" variant="ghost">
-      <Heart class="size-4" />
-      <span class="max-sm:sr-only">Favoriten</span>
-    </Button>
     <Button class="text-muted-foreground" href="/feedback" size="sm" variant="ghost">
       <MessageCircleHeart class="size-4" />
       <span class="max-sm:sr-only">Feedback</span>
+    </Button>
+    <Button class="text-muted-foreground" href="/meine-daten" size="sm" variant="ghost">
+      <CircleUserRound class="size-4" />
+      <span class="max-sm:sr-only">Meine Daten</span>
     </Button>
   </nav>
 </header>

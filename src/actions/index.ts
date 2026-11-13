@@ -12,6 +12,7 @@ import { hasConsent } from "@/server/consent";
 import { db } from "@/server/db";
 import { saveFeedback } from "@/server/feedback";
 import { logError } from "@/server/log";
+import { deleteMyData, getMyData } from "@/server/my-data";
 import {
   deleteSubscription,
   isPushEndpoint,
@@ -33,7 +34,12 @@ import {
   getUserRating,
   upsertRating,
 } from "@/server/ratings";
-import { getOrCreateUser, getUserId, ipHash } from "@/server/user";
+import {
+  clearUserCookie,
+  getOrCreateUser,
+  getUserId,
+  ipHash,
+} from "@/server/user";
 
 /**
  * Admin-Actions: die Middleware lässt sie nur mit Session durch
@@ -325,6 +331,57 @@ export const server = {
         }
         await deleteSubscription(endpoint);
         return { success: true };
+      },
+    }),
+  },
+  me: {
+    /** Alles, was unter der Kennung dieses Browsers gespeichert ist (/meine-daten) */
+    data: defineAction({
+      handler: async (_input, context) => {
+        if (!withinLimit("read", context)) {
+          throw new ActionError({
+            code: "TOO_MANY_REQUESTS",
+            message: RATE_LIMIT_MESSAGE,
+          });
+        }
+        const userId = await getUserId(context);
+        return userId ? await getMyData(userId) : null;
+      },
+    }),
+
+    /** Löscht Nutzer, Bewertungen, Kommentare und Likes (Art. 17 DSGVO) */
+    delete: defineAction({
+      handler: async (
+        _input,
+        context
+      ): Promise<{ success: boolean; message?: string }> => {
+        if (!withinLimit("rating", context)) {
+          return { success: false, message: RATE_LIMIT_MESSAGE };
+        }
+        const userId = await getUserId(context);
+        if (!userId) {
+          return { success: true };
+        }
+        try {
+          const tags = await deleteMyData(userId);
+          clearUserCookie(context);
+          if (tags) {
+            await invalidateTags(context.cache, tags, { settle: true });
+          }
+          return { success: true };
+        } catch (error) {
+          logError({
+            message: "Error deleting user data",
+            ctx: { error },
+            source: "ratings",
+            notify: false,
+          });
+          return {
+            success: false,
+            message:
+              "Das hat nicht geklappt. Bitte versuch es später noch einmal.",
+          };
+        }
       },
     }),
   },

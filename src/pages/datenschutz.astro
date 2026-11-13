@@ -237,7 +237,9 @@ import BackLayout from "@/layouts/back-layout.astro";
                     jeder Nutzer nur einmal pro Gericht bewerten kann
                   </li>
                   <li>
-                    <strong>Speicherdauer:</strong> 365 Tage
+                    <strong>Speicherdauer:</strong> 365 Tage ab der letzten
+                    Nutzung (bei aktiver Nutzung wird es höchstens monatlich
+                    erneuert); „Alle meine Daten löschen“ entfernt es sofort
                   </li>
                   <li>
                     <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a
@@ -446,6 +448,16 @@ import BackLayout from "@/layouts/back-layout.astro";
               beschweren, wenn Sie der Ansicht sind, dass die Verarbeitung
               Ihrer personenbezogenen Daten gegen die DSGVO verstößt.
             </p>
+          <h4>Selbst ausüben: „Meine Daten“</h4>
+          <p>
+            Auf der Seite <a href="/meine-daten">„Meine Daten“</a> sehen Sie
+            alle Bewertungen, Kommentare (samt Prüfstatus) und „Gefällt mir“,
+            die zur Kennung Ihres Browsers gespeichert sind. Dort können Sie
+            sie als JSON-Datei herunterladen (Auskunft, Datenübertragbarkeit),
+            einzelne Bewertungen löschen oder alle Daten auf einmal löschen.
+            Weil wir Sie nur an einem Cookie erkennen, gilt das jeweils für
+            den Browser, mit dem Sie die Seite aufrufen.
+          </p>
           <h4>Kontakt für Auskünfte:</h4>
           <p>
             Um Ihre Rechte auszuüben, wenden Sie sich bitte an den
@@ -492,8 +504,8 @@ import BackLayout from "@/layouts/back-layout.astro";
             Funktionsfähigkeit des Bewertungssystems erforderlich sind
           </li>
           <li>
-            <strong>Bewertungsdaten:</strong> Unbegrenzt, solange keine
-            Löschung beantragt wird
+            <strong>Bewertungsdaten:</strong> Unbegrenzt, bis Sie sie auf der
+            Seite „Meine Daten“ löschen oder die Löschung beantragen
           </li>
           <li>
             <strong>Push-Abonnements:</strong> Bis Sie die
@@ -502,8 +514,8 @@ import BackLayout from "@/layouts/back-layout.astro";
           </li>
         </ul>
         <p class="muted">
-          Sie können jederzeit die Löschung Ihrer Daten verlangen (siehe
-          Abschnitt 7).
+          Sie können Ihre Daten jederzeit auf der Seite „Meine Daten“ selbst
+          löschen oder die Löschung verlangen (siehe Abschnitt 7).
         </p>
       </section>
 

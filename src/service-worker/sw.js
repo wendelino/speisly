@@ -33,7 +33,7 @@ const WARM_INTERVAL_MS = 60 * 60 * 1000;
 const CACHED_AT = "x-speisly-cached-at";
 
 const SKIP = /^\/(?:_actions|api|admin|_server-islands|og|sw\.js)(?:\/|$|\.)/;
-const PAGE = /^\/(?:$|day\/|meal\/|offline$|favoriten$)/;
+const PAGE = /^\/(?:$|day\/|meal\/|offline$|favoriten$|meine-daten$)/;
 const STATIC =
   /^\/(?:favicon\.ico|apple-touch-icon\.png|manifest\.webmanifest|icons\/)/;
 const ASSET_IN_HTML = /(?:href|src)="(\/_astro\/[^"]+)"/g;

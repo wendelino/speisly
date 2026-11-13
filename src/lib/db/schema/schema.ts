@@ -24,7 +24,8 @@ export const user = pgTable(
     cookieHash: varchar("cookie_hash", { length: 255 }),
     ...timeStampUtils,
   },
-  // Lookup per IP-Hash bei Bewertungen (getUserId/getOrCreateUser)
+  // Früher Lookup per IP-Hash (getUserId); seit der Erkennung nur per Cookie
+  // ungenutzt und kann mit einer späteren Migration entfallen
   (table) => [index("user_ip_hash_idx").on(table.ipHash)]
 );
 
