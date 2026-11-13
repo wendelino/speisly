@@ -22,8 +22,9 @@ import type {
  *   werden Zutaten und Extras abgeglichen (Reihenfolge egal), jeweils mit
  *   Änderungslog.
  * - Ausgaben im Zeitraum, die die API nicht mehr liefert, werden entfernt –
- *   aber nur mit Schutzregeln (siehe `guardRemovals`), denn mit einer Ausgabe
- *   verschwinden per Cascade auch ihre Bewertungen.
+ *   mit Schutzregeln gegen Störungen der API (siehe `guardRemovals`).
+ *   Bewertungen bleiben dabei erhalten (Mensa und Tag stehen in der
+ *   Bewertung, `mensa_meal_id` wird NULL).
  */
 
 /**
@@ -34,7 +35,7 @@ import type {
 const MASS_REMOVAL_RATIO = 0.5;
 export const MASS_REMOVAL_MIN = 20;
 
-type KeptReason = "day-not-in-api" | "rated" | "mass-removal";
+type KeptReason = "day-not-in-api" | "mass-removal";
 
 type ExistingMeal = MealRecord & { srcId: string };
 
@@ -201,8 +202,7 @@ function servingKey(mealId: string, mensaId: string, date: Date): string {
  * Entscheidet, welche fehlenden Ausgaben wirklich entfernt werden:
  * 1. nur an Tagen, für die die API überhaupt Einträge geliefert hat. Eine
  *    leere oder lückenhafte Antwort (Störung, Feiertag) löscht nichts.
- * 2. nie Ausgaben mit Bewertungen: Wer bewertet hat, hat das Gericht gegessen.
- * 3. Notbremse bei Massenlöschung (siehe `MASS_REMOVAL_RATIO`).
+ * 2. Notbremse bei Massenlöschung (siehe `MASS_REMOVAL_RATIO`).
  */
 function guardRemovals(
   missing: MensaMealRecord[],
@@ -219,12 +219,10 @@ function guardRemovals(
   const kept: SyncPlan["keptServings"] = [];
   let candidates: MensaMealRecord[] = [];
   for (const serving of missing) {
-    if (!apiDates.has(toIsoDay(serving.date))) {
-      kept.push({ serving, reason: "day-not-in-api" });
-    } else if (serving.rated) {
-      kept.push({ serving, reason: "rated" });
-    } else {
+    if (apiDates.has(toIsoDay(serving.date))) {
       candidates.push(serving);
+    } else {
+      kept.push({ serving, reason: "day-not-in-api" });
     }
   }
   let massRemoval: SyncPlan["massRemoval"] = null;

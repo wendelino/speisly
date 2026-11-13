@@ -1,11 +1,6 @@
 import { and, avg, count, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { toIsoDay } from "@/lib/dates";
-import {
-  commentLike,
-  mealRating,
-  mensa,
-  mensaMeal,
-} from "@/lib/db/schema/schema";
+import { commentLike, mealRating, mensa } from "@/lib/db/schema/schema";
 import { db } from "../db";
 
 const round1 = (value: string | null) =>
@@ -74,20 +69,21 @@ export async function getRatingBreakdown(
   mealId: string,
   servingLimit = 6
 ): Promise<MealRatingBreakdown> {
+  // Mensa und Tag aus der Bewertung selbst: zählt auch Ausgaben, die der
+  // Sync inzwischen entfernt hat
   const rows = await db
     .select({
       mensaId: mensa.id,
       mensaName: mensa.name,
-      date: mensaMeal.date,
+      date: mealRating.servingDate,
       count: count(mealRating.id),
       sum: sql<number>`sum(${mealRating.value})::int`,
     })
     .from(mealRating)
-    .innerJoin(mensaMeal, eq(mealRating.mensaMealId, mensaMeal.id))
-    .innerJoin(mensa, eq(mensaMeal.mensaId, mensa.id))
+    .innerJoin(mensa, eq(mealRating.mensaId, mensa.id))
     .where(eq(mealRating.mealId, mealId))
-    .groupBy(mensa.id, mensa.name, mensaMeal.id, mensaMeal.date)
-    .orderBy(desc(mensaMeal.date), mensa.name);
+    .groupBy(mensa.id, mensa.name, mealRating.servingDate)
+    .orderBy(desc(mealRating.servingDate), mensa.name);
   return summarizeBreakdown(rows, servingLimit);
 }
 

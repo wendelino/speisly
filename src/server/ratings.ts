@@ -38,9 +38,13 @@ export async function getUserRating(userId: string, mealId: string) {
  * Legt eine Bewertung an oder aktualisiert sie (eine Query über den
  * Unique-Index Gericht + Nutzer). Gibt zurück, was passiert ist.
  */
+/** Mensa und Tag der bewerteten Ausgabe (bleiben, auch wenn sie entfernt wird) */
+export type RatedServing = { mensaId: string; date: Date };
+
 export async function upsertRating(
   userId: string,
-  input: RatingInput
+  input: RatingInput,
+  serving: RatedServing
 ): Promise<"created" | "updated"> {
   const values = {
     value: input.value,
@@ -60,6 +64,8 @@ export async function upsertRating(
       id: genId(),
       mealId: input.mealId,
       mensaMealId: input.mensaMealId,
+      mensaId: serving.mensaId,
+      servingDate: serving.date,
       userId,
       ...values,
       comment: comment ?? null,

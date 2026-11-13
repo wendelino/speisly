@@ -116,7 +116,7 @@ export async function getOrCreateUser(ctx: RequestContext): Promise<string> {
     return existing;
   }
   const id = genId();
-  await db.insert(user).values({ id, ipHash: ipHash(ctx), cookieHash: id });
+  await db.insert(user).values({ id, ipHash: ipHash(ctx) });
   await setUserCookie(ctx, id);
   return id;
 }

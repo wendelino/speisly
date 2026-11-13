@@ -187,20 +187,28 @@ const destructive = buttonVariants({ variant: "destructive", size: "sm" });
     if (!item) {
       return null;
     }
-    const href = `/meal/${rating.mealId}?mmid=${rating.mensaMealId}`;
+    // ohne Ausgabe (vom Sync entfernt) nur die Detailseite: löschen ja,
+    // bearbeiten erst wieder, wenn es das Gericht erneut gibt
+    const href = rating.mensaMealId
+      ? `/meal/${rating.mealId}?mmid=${rating.mensaMealId}`
+      : `/meal/${rating.mealId}`;
     const link = item.querySelector<HTMLAnchorElement>("[data-link]");
     const edit = item.querySelector<HTMLAnchorElement>("[data-edit]");
     if (link) {
       link.href = href;
     }
-    if (edit) {
+    if (edit && rating.mensaMealId) {
       edit.href = href;
       edit.setAttribute("aria-label", `${rating.mealName}: Bewertung bearbeiten`);
+    } else {
+      edit?.remove();
     }
     item.querySelector("[data-name]")?.append(rating.mealName);
     item
       .querySelector("[data-when]")
-      ?.append(`${dateText(rating.date)} · ${rating.mensaName}`);
+      ?.append(
+        [dateText(rating.date), rating.mensaName].filter(Boolean).join(" · ")
+      );
     item.querySelector("[data-value]")?.append(stars(rating.value));
 
     if (rating.comment) {

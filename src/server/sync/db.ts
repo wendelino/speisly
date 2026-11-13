@@ -45,8 +45,6 @@ export function getExistingMensaMeals({
       date: mensaMeal.date,
       ingredients: mensaMeal.ingredients,
       extras: mensaMeal.extras,
-      // bewertete Ausgaben löscht der Sync nie automatisch (plan.ts)
-      rated: sql<boolean>`exists (select 1 from "meal_rating" r where r."mensa_meal_id" = "mensa_meal"."id")`,
     })
     .from(mensaMeal)
     .where(

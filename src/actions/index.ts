@@ -139,7 +139,7 @@ export const server = {
           }
           // Die Ausgabe muss zum Gericht gehören
           const [serving] = await db
-            .select({ id: mensaMeal.id })
+            .select({ mensaId: mensaMeal.mensaId, date: mensaMeal.date })
             .from(mensaMeal)
             .where(
               and(
@@ -155,7 +155,7 @@ export const server = {
             };
           }
           const userId = await getOrCreateUser(context);
-          const result = await upsertRating(userId, input);
+          const result = await upsertRating(userId, input, serving);
           await invalidateTags(context.cache, [TAG.ratings(input.mealId)], {
             settle: true,
           });

@@ -261,32 +261,19 @@ describe("planSync", () => {
     expect(plan.keptServings).toHaveLength(1);
   });
 
-  test("guard: rated servings are never removed", () => {
-    const rated = { ...serving("meal-1", "2026-11-03", "rated"), rated: true };
+  test("servings missing from the API are removed even if rated (ratings keep their mensa and day)", () => {
     const plan = planSync({
-      ...base,
-      data: [
-        mealData("1", {}, [{ date: "2026-11-02" }, { date: "2026-11-03" }]),
-      ],
-      existingMeals: [EXISTING],
-      existingServings: [serving("meal-1", "2026-11-02"), rated],
-      apiDates: new Set(["2026-11-02", "2026-11-03"]),
-    });
-    // gleiche Mensa/Tag → wird gematcht; Testfall: die API liefert den Tag,
-    // aber das Gericht nicht mehr
-    expect(plan.removedServings).toEqual([]);
-
-    const plan2 = planSync({
       ...base,
       data: [mealData("1")],
       existingMeals: [EXISTING],
-      existingServings: [serving("meal-1", "2026-11-02"), rated],
+      existingServings: [
+        serving("meal-1", "2026-11-02"),
+        serving("meal-1", "2026-11-03", "gone"),
+      ],
       apiDates: new Set(["2026-11-02", "2026-11-03"]),
     });
-    expect(plan2.removedServings).toEqual([]);
-    expect(plan2.keptServings).toMatchObject([
-      { reason: "rated", serving: { id: "rated" } },
-    ]);
+    expect(plan.removedServings).toMatchObject([{ id: "gone" }]);
+    expect(plan.keptServings).toEqual([]);
   });
 
   test("guard: emergency brake on mass removal, unless forced", () => {

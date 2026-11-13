@@ -51,6 +51,11 @@ const [meal, ratingStats, comments, breakdown] = await Promise.all([
   getRatingBreakdown(mealId),
 ]);
 if (!meal) {
+  // Ausgabe vom Sync entfernt (alter Link, Favoriten, „Meine Daten“): zum
+  // Gericht statt 404, sofern es das noch gibt
+  if (mmid && (await findMeal(mealId))) {
+    return Astro.redirect(`/meal/${encodeURIComponent(mealId)}`, 302);
+  }
   return new Response(null, { status: 404 });
 }
 Astro.cache.set(mealPolicy(meal.id));

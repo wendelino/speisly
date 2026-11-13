@@ -5,7 +5,6 @@ import {
   meal,
   mealRating,
   mensa,
-  mensaMeal,
   user,
 } from "@/lib/db/schema/schema";
 import { TAG } from "./cache-tags";
@@ -21,10 +20,13 @@ export type MyRating = {
   id: string;
   mealId: string;
   mealName: string;
-  /** Ausgabe, für die bewertet wurde (Link auf die Detailseite) */
-  mensaMealId: string;
+  /**
+   * Ausgabe, für die bewertet wurde (Link auf die Detailseite); `null`, wenn
+   * der Sync sie inzwischen entfernt hat
+   */
+  mensaMealId: string | null;
   date: string;
-  mensaName: string;
+  mensaName: string | null;
   value: number;
   valuePrice: number | null;
   valueQuantity: number | null;
@@ -67,7 +69,7 @@ export async function getMyData(userId: string): Promise<MyData | null> {
         mealId: mealRating.mealId,
         mealName: meal.name,
         mensaMealId: mealRating.mensaMealId,
-        date: mensaMeal.date,
+        date: mealRating.servingDate,
         mensaName: mensa.name,
         value: mealRating.value,
         valuePrice: mealRating.value_price,
@@ -81,8 +83,7 @@ export async function getMyData(userId: string): Promise<MyData | null> {
       })
       .from(mealRating)
       .innerJoin(meal, eq(mealRating.mealId, meal.id))
-      .innerJoin(mensaMeal, eq(mealRating.mensaMealId, mensaMeal.id))
-      .innerJoin(mensa, eq(mensaMeal.mensaId, mensa.id))
+      .leftJoin(mensa, eq(mealRating.mensaId, mensa.id))
       .where(eq(mealRating.userId, userId))
       .orderBy(desc(mealRating.updatedAt)),
     db

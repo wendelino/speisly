@@ -85,6 +85,20 @@
       "when": 1794498516543,
       "tag": "0011_likes_and_push",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794538701132,
+      "tag": "0012_drop_user_cookie_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794538907092,
+      "tag": "0013_rating_keeps_serving",
+      "breakpoints": true
     }
   ]
 }

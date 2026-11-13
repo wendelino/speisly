@@ -77,18 +77,6 @@ export async function handleSync(
       notify: "immediate",
     });
   }
-  const keptRated = plan.keptServings.filter((k) => k.reason === "rated");
-  if (keptRated.length > 0) {
-    logError({
-      message:
-        "Sync: bewertete Ausgaben fehlen in der API und bleiben erhalten",
-      ctx: { date, servings: keptRated.map((k) => k.serving.id) },
-      source: "sync",
-      level: "warn",
-      notify: false,
-    });
-  }
-
   const { dates, mealIds, newMensen, counts } = await applySyncPlan(plan);
   if (newMensen > 0) {
     getVisibleMensen.clear();

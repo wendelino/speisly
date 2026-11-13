@@ -398,33 +398,35 @@ export type CommentFilter = CommentStatus | "all";
 
 /** Bewertungskommentare zur Moderation, älteste ungeprüfte zuerst */
 export function listComments(filter: CommentFilter = "pending", limit = PAGE) {
-  return db
-    .select({
-      id: mealRating.id,
-      mealId: mealRating.mealId,
-      mealName: meal.name,
-      imgPath: meal.imgPath,
-      mensaName: mensa.name,
-      date: mensaMeal.date,
-      value: mealRating.value,
-      comment: mealRating.comment,
-      status: mealRating.commentStatus,
-      moderatedAt: mealRating.commentModeratedAt,
-      updatedAt: mealRating.updatedAt,
-    })
-    .from(mealRating)
-    .innerJoin(meal, eq(meal.id, mealRating.mealId))
-    .innerJoin(mensaMeal, eq(mensaMeal.id, mealRating.mensaMealId))
-    .innerJoin(mensa, eq(mensa.id, mensaMeal.mensaId))
-    .where(
-      filter === "all"
-        ? isNotNull(mealRating.commentStatus)
-        : eq(mealRating.commentStatus, filter)
-    )
-    .orderBy(
-      filter === "pending" ? mealRating.updatedAt : desc(mealRating.updatedAt)
-    )
-    .limit(limit);
+  return (
+    db
+      .select({
+        id: mealRating.id,
+        mealId: mealRating.mealId,
+        mealName: meal.name,
+        imgPath: meal.imgPath,
+        mensaName: mensa.name,
+        date: mealRating.servingDate,
+        value: mealRating.value,
+        comment: mealRating.comment,
+        status: mealRating.commentStatus,
+        moderatedAt: mealRating.commentModeratedAt,
+        updatedAt: mealRating.updatedAt,
+      })
+      .from(mealRating)
+      .innerJoin(meal, eq(meal.id, mealRating.mealId))
+      // Mensa aus der Bewertung: auch Kommentare zu entfernten Ausgaben
+      .leftJoin(mensa, eq(mensa.id, mealRating.mensaId))
+      .where(
+        filter === "all"
+          ? isNotNull(mealRating.commentStatus)
+          : eq(mealRating.commentStatus, filter)
+      )
+      .orderBy(
+        filter === "pending" ? mealRating.updatedAt : desc(mealRating.updatedAt)
+      )
+      .limit(limit)
+  );
 }
 
 /**
