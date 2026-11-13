@@ -5,7 +5,8 @@
 // [data-rating-summary]-Blöcke danach neu
 // (rating-button-script.astro). Kommentare nur nach Freigabe im Admin; ihre
 // Like-Buttons steuert comment-likes-script.astro.
-// Die Seite braucht die Sprite-Icons "star" und "heart".
+// Die Seite braucht die Sprite-Icons "star", "heart" und "chevron-down".
+// Die Aufschlüsselung nach Mensa/Ausgabe ist eingeklappt (<details>).
 import Icon from "@/components/icons/icon.astro";
 import Meter from "@/components/ui/meter.astro";
 import Stars from "@/components/ui/stars.astro";
@@ -47,6 +48,13 @@ const plural = (n: number) => `${n} ${n === 1 ? "Bewertung" : "Bewertungen"}`;
 const byMensa = (breakdown?.byMensa.length ?? 0) > 1 ? breakdown?.byMensa : [];
 const byServing =
   (breakdown?.servingCount ?? 0) > 1 ? breakdown?.byServing : [];
+const hasBreakdown = (byMensa?.length ?? 0) > 0 || (byServing?.length ?? 0) > 0;
+const breakdownHint = [
+  (byMensa?.length ?? 0) > 0 && "Nach Mensa",
+  (byServing?.length ?? 0) > 0 && "Letzte Ausgaben",
+]
+  .filter(Boolean)
+  .join(" · ");
 ---
 
 <div>
@@ -83,47 +91,61 @@ const byServing =
               ))}
             </ul>
           )}
-          {byMensa && byMensa.length > 0 && (
-            <section aria-labelledby="rating-by-mensa">
-              <h3 class="mb-2 font-display font-semibold text-sm" id="rating-by-mensa">
-                Nach Mensa
-              </h3>
-              <ul class="space-y-2.5">
-                {byMensa.map((item) => (
-                  <li class="grid grid-cols-[7.5rem_1fr_2.25rem] items-center gap-3 text-sm">
-                    <span class="truncate text-muted-foreground" title={item.mensaName}>
-                      {item.mensaName}
-                      <span class="sr-only">{`, ${plural(item.count)}`}</span>
-                    </span>
-                    <Meter tone="primary" value={item.value / 5} />
-                    <span class="text-right font-bold font-display tabular-nums">{formatDecimal(item.value)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {byServing && byServing.length > 0 && (
-            <section aria-labelledby="rating-by-serving">
-              <h3 class="mb-2 font-display font-semibold text-sm" id="rating-by-serving">
-                Letzte Ausgaben
-              </h3>
-              <ul class="divide-y divide-border/70 rounded-2xl bg-muted/60 px-4">
-                {byServing.map((item) => (
-                  <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
-                    <span class="min-w-0">
-                      <span class="block font-medium">{formatDay(item.date, "EEE, d. MMM yyyy")}</span>
-                      <span class="block truncate text-muted-foreground text-xs">
-                        {`${item.mensaName} · ${plural(item.count)}`}
-                      </span>
-                    </span>
-                    <span class="inline-flex shrink-0 items-center gap-1 font-bold font-display tabular-nums">
-                      <Icon class="size-4 fill-gold text-gold" name="star" />
-                      {formatDecimal(item.value)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {hasBreakdown && (
+            <details class="group rounded-2xl ring-1 ring-border/70">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 font-medium text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                <span>
+                  <span class="group-open:hidden">Mehr anzeigen</span>
+                  <span class="hidden group-open:inline">Weniger anzeigen</span>
+                  <span class="block font-normal text-muted-foreground text-xs">{breakdownHint}</span>
+                </span>
+                <Icon class="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" name="chevron-down" />
+              </summary>
+              <div class="space-y-5 px-4 pt-1 pb-4">
+                {byMensa && byMensa.length > 0 && (
+                  <section aria-labelledby="rating-by-mensa">
+                    <h3 class="mb-2 font-display font-semibold text-sm" id="rating-by-mensa">
+                      Nach Mensa
+                    </h3>
+                    <ul class="space-y-2.5">
+                      {byMensa.map((item) => (
+                        <li class="grid grid-cols-[7.5rem_1fr_2.25rem] items-center gap-3 text-sm">
+                          <span class="truncate text-muted-foreground" title={item.mensaName}>
+                            {item.mensaName}
+                            <span class="sr-only">{`, ${plural(item.count)}`}</span>
+                          </span>
+                          <Meter tone="primary" value={item.value / 5} />
+                          <span class="text-right font-bold font-display tabular-nums">{formatDecimal(item.value)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+                {byServing && byServing.length > 0 && (
+                  <section aria-labelledby="rating-by-serving">
+                    <h3 class="mb-2 font-display font-semibold text-sm" id="rating-by-serving">
+                      Letzte Ausgaben
+                    </h3>
+                    <ul class="divide-y divide-border/70 rounded-2xl bg-muted/60 px-4">
+                      {byServing.map((item) => (
+                        <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
+                          <span class="min-w-0">
+                            <span class="block font-medium">{formatDay(item.date, "EEE, d. MMM yyyy")}</span>
+                            <span class="block truncate text-muted-foreground text-xs">
+                              {`${item.mensaName} · ${plural(item.count)}`}
+                            </span>
+                          </span>
+                          <span class="inline-flex shrink-0 items-center gap-1 font-bold font-display tabular-nums">
+                            <Icon class="size-4 fill-gold text-gold" name="star" />
+                            {formatDecimal(item.value)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+            </details>
           )}
         </div>
       )
