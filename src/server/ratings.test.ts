@@ -43,21 +43,22 @@ describe.skipIf(!process.env.DATABASE_URL)("ratings (integration)", () => {
   test("create, update, read and delete", async () => {
     const serving = (
       await db.execute(
-        sql`select id, meal_id from mensa_meal order by id limit 1`
+        sql`select id, meal_id, mensa_id, date from mensa_meal order by id limit 1`
       )
-    ).rows[0] as { id: string; meal_id: string };
+    ).rows[0] as { id: string; meal_id: string; mensa_id: string; date: Date };
     mealId = serving.meal_id;
     mensaMealId = serving.id;
+    const rated = { mensaId: serving.mensa_id, date: new Date(serving.date) };
+    const rate = (input: Parameters<typeof upsertRating>[1]) =>
+      upsertRating(userId, input, rated);
     await db
       .insert(user)
-      .values({ id: userId, ipHash: "test", cookieHash: userId })
+      .values({ id: userId, ipHash: "test" })
       .onConflictDoNothing();
 
-    expect(await upsertRating(userId, { mealId, mensaMealId, value: 3 })).toBe(
-      "created"
-    );
+    expect(await rate({ mealId, mensaMealId, value: 3 })).toBe("created");
     expect(
-      await upsertRating(userId, {
+      await rate({
         mealId,
         mensaMealId,
         value: 5,
@@ -79,7 +80,7 @@ describe.skipIf(!process.env.DATABASE_URL)("ratings (integration)", () => {
       .update(mealRating)
       .set({ commentStatus: "approved" })
       .where(eq(mealRating.userId, userId));
-    await upsertRating(userId, {
+    await rate({
       mealId,
       mensaMealId,
       value: 4,
@@ -88,7 +89,7 @@ describe.skipIf(!process.env.DATABASE_URL)("ratings (integration)", () => {
     expect(await getUserRating(userId, mealId)).toMatchObject({
       commentStatus: "approved",
     });
-    await upsertRating(userId, {
+    await rate({
       mealId,
       mensaMealId,
       value: 4,
@@ -97,7 +98,7 @@ describe.skipIf(!process.env.DATABASE_URL)("ratings (integration)", () => {
     expect(await getUserRating(userId, mealId)).toMatchObject({
       commentStatus: "pending",
     });
-    await upsertRating(userId, {
+    await rate({
       mealId,
       mensaMealId,
       value: 4,

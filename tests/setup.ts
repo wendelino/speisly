@@ -29,6 +29,8 @@ plugin({
         OIDC_CLIENT_SECRET: "test-client-secret",
         ADMIN_GROUP: "speisly-admin",
         SITE_URL: env.SITE_URL ?? "https://speisly.de",
+        VAPID_PRIVATE_KEY: undefined,
+        VAPID_SUBJECT: undefined,
       },
     }));
     build.module("astro:env/client", () => ({
@@ -37,6 +39,7 @@ plugin({
         PUBLIC_COOKIE_CONSENT_NAME: "speisly-cookie-consent",
         PUBLIC_PRIVACY_POLICY_PATH: "/datenschutz",
         PUBLIC_UMAMI_WEBSITE_ID: "test",
+        PUBLIC_VAPID_PUBLIC_KEY: undefined,
       },
     }));
   },

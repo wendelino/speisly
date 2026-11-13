@@ -230,7 +230,6 @@ async function main() {
   const userRows = Array.from({ length: USERS }, (_, i) => ({
     id: id("user", i),
     ipHash: id("ip", i),
-    cookieHash: id("user", i),
   }));
   await insertChunked("user", userRows, (c) => db.insert(user).values(c));
 
@@ -252,6 +251,8 @@ async function main() {
       id: id("rating", ratingRows.length),
       mealId: serving.mealId,
       mensaMealId: serving.id,
+      mensaId: serving.mensaId as string,
+      servingDate: serving.date as Date,
       userId: u.id,
       value: stars(),
       value_price: rand() < 0.7 ? stars() : null,

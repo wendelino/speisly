@@ -3,7 +3,7 @@
 // alles andere ist 404 (erzeugt so auch keine Cache-Einträge, siehe middleware).
 import PlanLayout from "@/layouts/plan-layout.astro";
 import { parseDayParam, todayBerlin } from "@/lib/dates";
-import { dayPolicy } from "@/server/cache-policy";
+import { dayPolicy, withRatingTags } from "@/server/cache-policy";
 import { getMealsForDate } from "@/server/queries/meals";
 import { getVisibleMensen } from "@/server/queries/mensen";
 
@@ -20,7 +20,7 @@ const [groups, mensen] = await Promise.all([
   getMealsForDate(date),
   getVisibleMensen(),
 ]);
-Astro.cache.set(dayPolicy(date, today));
+Astro.cache.set(withRatingTags(dayPolicy(date, today), groups));
 ---
 
 <PlanLayout date={date} groups={groups} mensen={mensen} today={today} />

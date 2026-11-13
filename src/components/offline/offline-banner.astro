@@ -1,0 +1,33 @@
+---
+// Hinweis bei fehlendem Netz: Die Seite kommt dann aus dem Cache des
+// Service Workers (src/service-worker/sw.js) und zeigt den zuletzt
+// geladenen Stand. Außerdem registriert das Script den Service Worker.
+import { WifiOff } from "@lucide/astro";
+---
+
+<div
+  class="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center p-3 pt-[max(0.75rem,env(safe-area-inset-top))]"
+  data-offline-banner
+  hidden
+  role="status"
+>
+  <p class="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 font-semibold text-background text-xs shadow-lift">
+    <WifiOff class="size-4" />
+    Offline – du siehst den zuletzt geladenen Stand
+  </p>
+</div>
+
+<script>
+  import { bootServiceWorker } from "@/lib/service-worker";
+
+  const banner = document.querySelector<HTMLElement>("[data-offline-banner]");
+  const update = () => {
+    if (banner) {
+      banner.hidden = navigator.onLine;
+    }
+  };
+  update();
+  window.addEventListener("online", update);
+  window.addEventListener("offline", update);
+  bootServiceWorker();
+</script>

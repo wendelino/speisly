@@ -1,0 +1,110 @@
+---
+// „Merken“ (Favorit, lib/favorites.ts) und „Teilen“ (Web Share API, sonst
+// Link kopieren) auf der Detailseite. Statisch gerendert, der Zustand kommt
+// aus dem localStorage. Die Seite braucht das Sprite-Icon "heart".
+import { Share2 } from "@lucide/astro";
+import Icon from "@/components/icons/icon.astro";
+import { buttonVariants } from "@/components/ui/variants";
+import { cn } from "@/lib/utils";
+
+type Props = { mealId: string; title: string; text: string; class?: string };
+const { mealId, title, text, class: className } = Astro.props;
+const button = cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1 sm:flex-none");
+---
+
+<div class={cn("flex gap-2", className)}>
+  <button
+    aria-pressed="false"
+    class={cn(button, "meal-fav")}
+    data-favorite={mealId}
+    type="button"
+  ><Icon class="size-4" name="heart" /><span data-fav-label>Merken</span></button>
+  <button class={button} data-share data-share-text={text} data-share-title={title} type="button">
+    <Share2 class="size-4" />
+    <span data-share-label>Teilen</span>
+  </button>
+</div>
+<p aria-live="polite" class="sr-only" data-meal-actions-status></p>
+
+<style>
+  .meal-fav[aria-pressed="true"] {
+    background-color: var(--color-rose-soft);
+    color: var(--color-rose);
+    border-color: transparent;
+  }
+  .meal-fav[aria-pressed="true"] :global(svg) {
+    fill: currentColor;
+  }
+</style>
+
+<script>
+  import { FAVORITES_EVENT, isFavorite, setFavorite } from "@/lib/favorites";
+
+  const status = document.querySelector<HTMLElement>("[data-meal-actions-status]");
+  const announce = (message: string) => {
+    if (status) {
+      status.textContent = message;
+    }
+  };
+
+  const fav = document.querySelector<HTMLButtonElement>("[data-favorite]");
+  if (fav) {
+    const id = fav.dataset.favorite ?? "";
+    const label = fav.querySelector("[data-fav-label]");
+    const render = () => {
+      const on = isFavorite(id);
+      fav.setAttribute("aria-pressed", String(on));
+      if (label) {
+        label.textContent = on ? "Gemerkt" : "Merken";
+      }
+    };
+    render();
+    document.addEventListener(FAVORITES_EVENT, render);
+    fav.addEventListener("click", async () => {
+      const on = setFavorite(id, !isFavorite(id));
+      announce(on ? "Zu Favoriten hinzugefügt" : "Aus Favoriten entfernt");
+      // bestehendes Push-Abo mit den neuen Favoriten aktualisieren
+      const { syncPush } = await import("@/lib/push-client");
+      syncPush();
+    });
+  }
+
+  const share = document.querySelector<HTMLButtonElement>("[data-share]");
+  if (share) {
+    const label = share.querySelector("[data-share-label]");
+    let reset: ReturnType<typeof setTimeout> | undefined;
+    const flash = (text: string) => {
+      if (!label) {
+        return;
+      }
+      label.textContent = text;
+      announce(text);
+      clearTimeout(reset);
+      reset = setTimeout(() => {
+        label.textContent = "Teilen";
+      }, 2500);
+    };
+    share.addEventListener("click", async () => {
+      const url = location.href.split("#")[0];
+      const data = {
+        title: share.dataset.shareTitle,
+        text: share.dataset.shareText,
+        url,
+      };
+      if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
+        try {
+          await navigator.share(data);
+        } catch {
+          // abgebrochen
+        }
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        flash("Link kopiert");
+      } catch {
+        flash("Kopieren nicht möglich");
+      }
+    });
+  }
+</script>

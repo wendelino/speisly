@@ -1,0 +1,157 @@
+---
+// Likes an Kommentaren (Buttons in rating-summary.astro). Die Anzahl steht im
+// gecachten HTML; welche Kommentare man selbst geliked hat (und welcher der
+// eigene ist), wird nur mit Cookie-Consent abgefragt. Ohne Consent fragt der
+// erste Klick danach. Nach einem Neuladen der Übersicht
+// (rating-button-script.astro, Event `speisly:summary-refreshed`) wird der
+// Zustand neu angewendet.
+---
+
+<script>
+  import { actions } from "astro:actions";
+  import { askConsent } from "@/lib/ask-consent";
+  import { readConsent } from "@/lib/cookies";
+
+  const container = () =>
+    document.querySelector<HTMLElement>('[data-rating-summary="comments"]');
+  const mealId = container()?.dataset.mealId;
+
+  const liked = new Set<string>();
+  /** Kommentare, deren Like gerade gesendet wird (gegen Doppelklicks) */
+  const pending = new Set<string>();
+  let own: string | null = null;
+  let loaded: Promise<void> | null = null;
+
+  const buttons = () =>
+    document.querySelectorAll<HTMLButtonElement>("[data-like]");
+
+  function render(button: HTMLButtonElement, count: number) {
+    const id = button.dataset.like ?? "";
+    const pressed = liked.has(id);
+    button.dataset.likes = String(count);
+    button.setAttribute("aria-pressed", String(pressed));
+    button.toggleAttribute("data-own", id === own);
+    // den eigenen Kommentar kann man nicht liken
+    button.disabled = id === own || pending.has(id);
+    button.setAttribute(
+      "aria-label",
+      id === own
+        ? `Dein Kommentar, ${count} „Gefällt mir“`
+        : `Gefällt mir${count > 0 ? ` (${count})` : ""}`
+    );
+    const label = button.querySelector("[data-like-count]");
+    if (label) {
+      label.textContent = count > 0 ? String(count) : "";
+    }
+  }
+
+  function applyAll() {
+    for (const button of buttons()) {
+      render(button, Number(button.dataset.likes ?? 0));
+    }
+  }
+
+  function loadState(): Promise<void> {
+    if (!mealId) {
+      return Promise.resolve();
+    }
+    loaded ??= actions.comments
+      .mine({ mealId })
+      .then(({ data }) => {
+        liked.clear();
+        for (const id of data?.liked ?? []) {
+          liked.add(id);
+        }
+        own = data?.own ?? null;
+        applyAll();
+      })
+      .catch(() => {
+        loaded = null;
+      });
+    return loaded;
+  }
+
+  function showStatus(text: string) {
+    const status = document.querySelector<HTMLElement>("[data-like-status]");
+    if (!status) {
+      return;
+    }
+    // Live-Region bleibt im DOM (leer = unsichtbar), sonst sagen
+    // Screenreader die Meldung oft nicht an
+    status.textContent = text;
+    setTimeout(() => {
+      if (status.textContent === text) {
+        status.textContent = "";
+      }
+    }, 4000);
+  }
+
+  async function toggle(button: HTMLButtonElement) {
+    const id = button.dataset.like ?? "";
+    if (pending.has(id)) {
+      return;
+    }
+    pending.add(id);
+    try {
+      await send(button, id);
+    } finally {
+      pending.delete(id);
+      render(button, Number(button.dataset.likes ?? 0));
+    }
+  }
+
+  async function send(button: HTMLButtonElement, id: string) {
+    if (!(await askConsent())) {
+      return;
+    }
+    await loadState();
+    if (id === own) {
+      return;
+    }
+    const next = !liked.has(id);
+    const before = Number(button.dataset.likes ?? 0);
+    // optimistisch umschalten, bei Fehler zurück
+    if (next) {
+      liked.add(id);
+    } else {
+      liked.delete(id);
+    }
+    render(button, Math.max(0, before + (next ? 1 : -1)));
+    try {
+      const { data, error } = await actions.comments.like({
+        ratingId: id,
+        liked: next,
+      });
+      if (data?.success) {
+        render(button, data.likes ?? 0);
+        return;
+      }
+      throw new Error(data?.message ?? error?.message ?? "");
+    } catch (error) {
+      if (next) {
+        liked.delete(id);
+      } else {
+        liked.add(id);
+      }
+      render(button, before);
+      showStatus(
+        (error instanceof Error && error.message) || "Das hat nicht geklappt"
+      );
+    }
+  }
+
+  if (mealId) {
+    document.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+        "[data-like]"
+      );
+      if (button && !pending.has(button.dataset.like ?? "")) {
+        toggle(button);
+      }
+    });
+    document.addEventListener("speisly:summary-refreshed", applyAll);
+    if (buttons().length > 0 && readConsent() === "accepted") {
+      loadState();
+    }
+  }
+</script>

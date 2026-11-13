@@ -99,3 +99,17 @@ html[data-filter-active] [data-filter-fab] svg {
   [data-rate-label]:not([data-rate-label="loading"]) {
   display: none;
 }
+
+/* Like an Kommentaren (rating-summary.astro, comment-likes-script.astro) */
+@layer components {
+  .c-like {
+    @apply inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-full px-2.5 font-semibold text-muted-foreground text-xs tabular-nums outline-none transition-[background-color,color,scale] duration-200 hover:bg-rose-soft hover:text-rose focus-visible:ring-[3px] focus-visible:ring-ring active:scale-90 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .c-like[aria-pressed="true"] {
+    @apply bg-rose-soft text-rose [&_svg]:fill-current;
+  }
+  /* eigener Kommentar: Anzahl zeigen, aber nicht klickbar */
+  .c-like[data-own] {
+    @apply pointer-events-none opacity-70;
+  }
+}

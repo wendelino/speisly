@@ -7,6 +7,7 @@ import type { SpriteIconName } from "@/components/icons/sprite-icons";
 import InstallHint from "@/components/install/install-hint.astro";
 import Footer from "@/components/layout/footer.astro";
 import SiteHeader from "@/components/layout/site-header.astro";
+import OfflineBanner from "@/components/offline/offline-banner.astro";
 import { installPromptBoot } from "@/lib/install-prompt";
 import { mealImageBoot } from "@/lib/meal-assets";
 import { viewTransitionBoot } from "@/lib/view-transitions";
@@ -124,5 +125,6 @@ const twitterCard = ogImages.some((img) => (img.width ?? 0) > (img.height ?? 0))
     <div class="flex-1"><slot/></div>
     <Footer/>
     <InstallHint />
+    <OfflineBanner />
   </body>
 </html>

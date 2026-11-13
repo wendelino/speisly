@@ -38,6 +38,30 @@ const { groups, date, today } = Astro.props;
 const dietList = (pred: (d: Diet) => boolean) =>
   DIETS.filter(pred).join(" ") || undefined;
 
+/**
+ * Position jedes Gerichts je Sortierung (CSS `order`, meal.css). Die
+ * Reihenfolge im HTML bleibt der Standard; Bewertung: beste zuerst,
+ * unbewertete zuletzt, bei Gleichstand mehr Bewertungen zuerst.
+ */
+function sortOrders(meals: Meal[]) {
+  const rank = (sorted: Meal[]) =>
+    new Map(sorted.map((meal, index) => [meal.mensaMealId, index]));
+  const priceAsc = rank([...meals].sort((a, b) => a.priceStud - b.priceStud));
+  const priceDesc = rank([...meals].sort((a, b) => b.priceStud - a.priceStud));
+  const rating = rank(
+    [...meals].sort(
+      (a, b) =>
+        (b.rating?.value ?? -1) - (a.rating?.value ?? -1) ||
+        (b.rating?.count ?? 0) - (a.rating?.count ?? 0)
+    )
+  );
+  return (meal: Meal) => ({
+    priceAsc: priceAsc.get(meal.mensaMealId) ?? 0,
+    priceDesc: priceDesc.get(meal.mensaMealId) ?? 0,
+    rating: rating.get(meal.mensaMealId) ?? 0,
+  });
+}
+
 const prepared = groups.map((group) => {
   const regular = group.meals
     .filter((m) => !m.flags.isSmall)
@@ -59,7 +83,14 @@ const prepared = groups.map((group) => {
     Diet,
     { kept: number; regular: number; portion: number }
   >;
-  return { group, regular, portion, stats };
+  return {
+    group,
+    regular,
+    portion,
+    stats,
+    regularOrder: sortOrders(regular),
+    portionOrder: sortOrders(portion),
+  };
 });
 ---
 
@@ -69,7 +100,7 @@ const prepared = groups.map((group) => {
   ) : (
     <>
       <div class="container-page space-y-8 pt-2 pb-8 md:pt-6" id="mealslist">
-        {prepared.map(({ group, regular, portion, stats }) => (
+        {prepared.map(({ group, regular, portion, stats, regularOrder, portionOrder }) => (
           <section
             aria-labelledby={`${group.slug}-title`}
             class="scroll-mt-16 md:scroll-mt-40"
@@ -98,7 +129,7 @@ const prepared = groups.map((group) => {
                   data-hide-diet={dietList((d) => stats[d].regular === 0)}
                 >
                   {regular.map((meal, index) => (
-                    <MealCard meal={meal} priority={index < 3} />
+                    <MealCard meal={meal} order={regularOrder(meal)} priority={index < 3} />
                   ))}
                 </div>
               )}
@@ -126,7 +157,7 @@ const prepared = groups.map((group) => {
                   </summary>
                   <div class="m-grid p-1.5 pt-2">
                     {portion.map((meal) => (
-                      <MealCard meal={meal} />
+                      <MealCard meal={meal} order={portionOrder(meal)} />
                     ))}
                   </div>
                 </details>

@@ -151,6 +151,76 @@ import BackLayout from "@/layouts/back-layout.astro";
                   </li>
                 </ul>
 
+                <h4>Sortierung</h4>
+                <ul>
+                  <li>
+                    <strong>Cookie-Name:</strong> speisly_sort
+                  </li>
+                  <li>
+                    <strong>Zweck:</strong> Speicherung der gewählten
+                    Sortierung der Gerichte (z. B. nach Preis oder Bewertung)
+                  </li>
+                  <li>
+                    <strong>Speicherdauer:</strong> 365 Tage
+                  </li>
+                  <li>
+                    <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f
+                    DSGVO (berechtigtes Interesse an der Funktionsfähigkeit
+                    der Website)
+                  </li>
+                </ul>
+
+                <h4>Favoriten</h4>
+                <ul>
+                  <li>
+                    <strong>Name (lokaler Speicher):</strong>
+                    speisly-favorites
+                  </li>
+                  <li>
+                    <strong>Zweck:</strong> Speichert im lokalen Speicher
+                    Ihres Browsers die Gerichte, die Sie mit „Merken“ als
+                    Favorit markiert haben. Zur Anzeige der nächsten Termine
+                    werden die Gericht-IDs an unseren Server geschickt, dort
+                    aber nicht gespeichert (außer bei aktivierten
+                    Benachrichtigungen, siehe Abschnitt 6).
+                  </li>
+                  <li>
+                    <strong>Speicherdauer:</strong> bis Sie die Favoriten
+                    entfernen oder die Websitedaten in Ihrem Browser löschen
+                  </li>
+                  <li>
+                    <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b
+                    und f DSGVO (von Ihnen gewünschte Funktion)
+                  </li>
+                </ul>
+
+                <h4>Offline-Speicher (Service Worker)</h4>
+                <ul>
+                  <li>
+                    <strong>Name (Cache-Speicher):</strong> speisly-pages-*,
+                    speisly-assets-*, speisly-images-*
+                  </li>
+                  <li>
+                    <strong>Zweck:</strong> Damit Speisly auch ohne
+                    Internetverbindung funktioniert, legt Ihr Browser die
+                    zuletzt geladenen Speisepläne und Gerichtsseiten, die
+                    nächsten Tage sowie Bilder und Programmdateien im
+                    Cache-Speicher ab. Es werden keine personenbezogenen
+                    Daten gespeichert; die Inhalte sind für alle Besucher
+                    gleich.
+                  </li>
+                  <li>
+                    <strong>Speicherdauer:</strong> bis zur nächsten
+                    Aktualisierung von Speisly (Seiten und Programmdateien)
+                    bzw. bis Sie die Websitedaten in Ihrem Browser löschen
+                  </li>
+                  <li>
+                    <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f
+                    DSGVO (berechtigtes Interesse an der Funktionsfähigkeit
+                    der Website)
+                  </li>
+                </ul>
+
             <h3>3.2 Cookies mit Einwilligung</h3>
             <p>
               Diese Cookies erfordern Ihre ausdrückliche Einwilligung und
@@ -167,7 +237,9 @@ import BackLayout from "@/layouts/back-layout.astro";
                     jeder Nutzer nur einmal pro Gericht bewerten kann
                   </li>
                   <li>
-                    <strong>Speicherdauer:</strong> 365 Tage
+                    <strong>Speicherdauer:</strong> 365 Tage ab der letzten
+                    Nutzung (bei aktiver Nutzung wird es höchstens monatlich
+                    erneuert); „Alle meine Daten löschen“ entfernt es sofort
                   </li>
                   <li>
                     <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a
@@ -232,8 +304,8 @@ import BackLayout from "@/layouts/back-layout.astro";
               Datenbank gespeichert, nicht die ursprüngliche IP-Adresse
             </li>
             <li>
-              <strong>Zweck:</strong> Identifikation von Nutzern für das
-              Bewertungssystem (in Kombination mit Cookie-Hash) und
+              <strong>Zweck:</strong> Schutz vor Missbrauch des
+              Bewertungssystems (Rate-Limit, Missbrauchserkennung) und
               Sicherstellung der Funktionsfähigkeit der Website
             </li>
             <li>
@@ -257,9 +329,12 @@ import BackLayout from "@/layouts/back-layout.astro";
       <section>
         <h2>5. Bewertungssystem</h2>
         <p>
-          Wenn Sie Gerichte bewerten möchten, verwenden wir eine Kombination
-          aus gehashten IP-Adressen und Cookie-Hashes, um sicherzustellen,
-          dass jeder Nutzer nur einmal pro Gericht bewerten kann.
+          Wenn Sie Gerichte bewerten möchten, erkennen wir Sie an einem
+          Cookie mit einer pseudonymen Nutzerkennung, damit jede Bewertung
+          nur einmal pro Gericht zählt und Sie sie später ändern können.
+          Zusätzlich speichern wir beim ersten Bewerten die gehashte
+          IP-Adresse zur Missbrauchserkennung; zur Wiedererkennung nutzen
+          wir sie nicht.
         </p>
           <h4>Verarbeitete Daten:</h4>
           <ul>
@@ -267,7 +342,19 @@ import BackLayout from "@/layouts/back-layout.astro";
             <li>Gehashte Cookie-ID (SHA-256) - nur bei Einwilligung</li>
             <li>Bewertungsdaten (Sternebewertung, optional Kommentar)</li>
             <li>Zeitstempel der Bewertung</li>
+            <li>
+              „Gefällt mir“ an Kommentaren (welcher Kommentar, Zeitstempel),
+              verknüpft mit derselben pseudonymen Nutzerkennung
+            </li>
           </ul>
+        <p>
+          Kommentare werden vor der Veröffentlichung von uns geprüft und
+          erscheinen ohne Namen. Die Anzahl der „Gefällt mir“ ist öffentlich,
+          nicht aber, wer sie vergeben hat. Zum Schutz vor Missbrauch
+          begrenzen wir die Zahl der Bewertungen, Likes und Formularanfragen
+          je gehashter IP-Adresse; die Zähler liegen nur im Arbeitsspeicher
+          des Servers und verfallen nach wenigen Minuten.
+        </p>
         <p>
           <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO
           (Einwilligung) für die Verwendung von Cookies, Art. 6 Abs. 1 lit. f
@@ -277,7 +364,41 @@ import BackLayout from "@/layouts/back-layout.astro";
       </section>
 
       <section>
-        <h2>6. Ihre Rechte</h2>
+        <h2>6. Push-Benachrichtigungen</h2>
+        <p>
+          Auf der Seite „Favoriten“ können Sie Benachrichtigungen
+          aktivieren. Wir melden uns dann am Vorabend, wenn eines Ihrer
+          Lieblingsgerichte am nächsten Tag angeboten wird.
+        </p>
+          <h4>Verarbeitete Daten:</h4>
+          <ul>
+            <li>
+              Push-Adresse (Endpoint) und Schlüssel, die Ihr Browser beim
+              Aktivieren erzeugt
+            </li>
+            <li>Ihre Favoriten (Gericht-IDs) und die gewählten Mensen</li>
+            <li>Datum der letzten Benachrichtigung</li>
+          </ul>
+        <p>
+          Die Nachrichten werden über den Push-Dienst Ihres Browsers
+          zugestellt (z. B. Google Firebase Cloud Messaging bei Chrome,
+          Mozilla Push Service bei Firefox, Apple Push Notification Service
+          bei Safari). Der Inhalt der Nachricht ist dabei verschlüsselt.
+        </p>
+        <p>
+          <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO
+          (Einwilligung durch das Aktivieren und die Erlaubnis im Browser).
+          Sie können die Benachrichtigungen jederzeit auf der Seite
+          „Favoriten“ abschalten; die gespeicherten Daten werden dann sofort
+          gelöscht. Schalten Sie sie stattdessen in den Einstellungen Ihres
+          Browsers ab, erfahren wir davon erst, wenn der Push-Dienst die
+          Adresse beim nächsten Zustellversuch als ungültig meldet; dann
+          löschen wir die Daten automatisch.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Ihre Rechte</h2>
         <p>
           Sie haben nach der DSGVO verschiedene Rechte bezüglich Ihrer
           personenbezogenen Daten:
@@ -327,6 +448,16 @@ import BackLayout from "@/layouts/back-layout.astro";
               beschweren, wenn Sie der Ansicht sind, dass die Verarbeitung
               Ihrer personenbezogenen Daten gegen die DSGVO verstößt.
             </p>
+          <h4>Selbst ausüben: „Meine Daten“</h4>
+          <p>
+            Auf der Seite <a href="/meine-daten">„Meine Daten“</a> sehen Sie
+            alle Bewertungen, Kommentare (samt Prüfstatus) und „Gefällt mir“,
+            die zur Kennung Ihres Browsers gespeichert sind. Dort können Sie
+            sie als JSON-Datei herunterladen (Auskunft, Datenübertragbarkeit),
+            einzelne Bewertungen löschen oder alle Daten auf einmal löschen.
+            Weil wir Sie nur an einem Cookie erkennen, gilt das jeweils für
+            den Browser, mit dem Sie die Seite aufrufen.
+          </p>
           <h4>Kontakt für Auskünfte:</h4>
           <p>
             Um Ihre Rechte auszuüben, wenden Sie sich bitte an den
@@ -337,7 +468,7 @@ import BackLayout from "@/layouts/back-layout.astro";
       </section>
 
       <section>
-        <h2>7. Datensicherheit</h2>
+        <h2>8. Datensicherheit</h2>
         <p>
           Wir setzen technische und organisatorische Maßnahmen ein, um Ihre
           personenbezogenen Daten vor Verlust, Zerstörung, Manipulation oder
@@ -357,7 +488,7 @@ import BackLayout from "@/layouts/back-layout.astro";
       </section>
 
       <section>
-        <h2>8. Speicherdauer</h2>
+        <h2>9. Speicherdauer</h2>
         <p>
           Wir speichern personenbezogene Daten nur so lange, wie es für die
           jeweiligen Zwecke erforderlich ist oder gesetzliche
@@ -373,18 +504,23 @@ import BackLayout from "@/layouts/back-layout.astro";
             Funktionsfähigkeit des Bewertungssystems erforderlich sind
           </li>
           <li>
-            <strong>Bewertungsdaten:</strong> Unbegrenzt, solange keine
-            Löschung beantragt wird
+            <strong>Bewertungsdaten:</strong> Unbegrenzt, bis Sie sie auf der
+            Seite „Meine Daten“ löschen oder die Löschung beantragen
+          </li>
+          <li>
+            <strong>Push-Abonnements:</strong> Bis Sie die
+            Benachrichtigungen auf der Seite „Favoriten“ abschalten oder der
+            Push-Dienst die Adresse als ungültig meldet
           </li>
         </ul>
         <p class="muted">
-          Sie können jederzeit die Löschung Ihrer Daten verlangen (siehe
-          Abschnitt 6).
+          Sie können Ihre Daten jederzeit auf der Seite „Meine Daten“ selbst
+          löschen oder die Löschung verlangen (siehe Abschnitt 7).
         </p>
       </section>
 
       <section>
-        <h2>9. Weitergabe von Daten</h2>
+        <h2>10. Weitergabe von Daten</h2>
         <p>
           Wir geben Ihre personenbezogenen Daten grundsätzlich nicht an Dritte
           weiter. Ausnahmen bestehen nur:
@@ -413,7 +549,7 @@ import BackLayout from "@/layouts/back-layout.astro";
       </section>
 
       <section>
-        <h2>10. Änderungen dieser Datenschutzerklärung</h2>
+        <h2>11. Änderungen dieser Datenschutzerklärung</h2>
         <p>
           Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit
           sie stets den aktuellen rechtlichen Anforderungen entspricht oder um

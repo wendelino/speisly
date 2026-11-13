@@ -208,7 +208,8 @@ await check(
   async () => {
     await page.click("[data-filter-fab]");
     await page.getByRole("dialog", { name: "Filter" }).waitFor();
-    await page.click("#vegan-filter");
+    await page.click("#diet-select");
+    await page.getByRole("option", { name: "Vegan" }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("dialog").waitFor({ state: "hidden" });
     let cards = await visibleCards(page);
@@ -296,7 +297,7 @@ await check(
   "Bewerten: Consent, speichern, Übersicht aktualisiert, löschen",
   async () => {
     const summary = async () =>
-      (await page.locator("[data-rating-summary]").innerText()).replace(
+      (await page.locator("[data-rating-summary=stats]").innerText()).replace(
         /\s+/g,
         " "
       );
@@ -353,7 +354,9 @@ await check(
     await page.waitForFunction(
       (prev) =>
         (
-          document.querySelector("[data-rating-summary]") as HTMLElement | null
+          document.querySelector(
+            "[data-rating-summary=stats]"
+          ) as HTMLElement | null
         )?.innerText.replace(/\s+/g, " ") !== prev,
       before
     );

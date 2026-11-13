@@ -1,9 +1,13 @@
 ---
 // Gerichtskarte im Speiseplan – statisches HTML, kein JS.
-// data-meal/-veggie/-vegan/-allergens steuern den CSS-Filter (lib/filters/boot.ts).
+// data-meal/-veggie/-vegan/-allergens steuern den CSS-Filter (lib/filters/boot.ts),
+// data-meal-id das Favoriten-Herz (lib/favorites.ts), `order` die Sortierung
+// (meal-list.astro, meal.css).
 // Klassen m-*: src/styles/meal.css. data-vt: Rolle für die View Transition,
 // der Name entsteht erst beim Klick (lib/view-transitions.ts).
+import Icon from "@/components/icons/icon.astro";
 import { allergenGroups } from "@/lib/allergens";
+import { formatDecimal } from "@/lib/format";
 import { visibleIngredientTypes } from "@/lib/ingredients";
 import DietBadge from "./diet-badge.astro";
 import MealImage from "./meal-image.astro";
@@ -12,9 +16,14 @@ import PriceTag from "./price-tag.astro";
 type Props = {
   meal: Meal;
   priority?: boolean;
+  /** Position je Sortierung (meal-list.astro), als CSS-Variablen */
+  order?: { priceAsc: number; priceDesc: number; rating: number };
 };
 
-const { meal, priority = false } = Astro.props;
+const { meal, priority = false, order } = Astro.props;
+const style = order
+  ? `--o-pa:${order.priceAsc};--o-pd:${order.priceDesc};--o-r:${order.rating}`
+  : undefined;
 const allergens = allergenGroups(meal.ingredients);
 ---
 
@@ -23,9 +32,11 @@ const allergens = allergenGroups(meal.ingredients);
   data-allergens={allergens.length > 0 ? allergens.join(" ") : undefined}
   data-astro-prefetch
   data-meal
+  data-meal-id={meal.id}
   data-vegan={meal.flags.isVegan ? "" : undefined}
   data-veggie={meal.flags.isVeggie ? "" : undefined}
   href={`/meal/${meal.id}?mmid=${meal.mensaMealId}`}
+  style={style}
 >
   <MealImage alt={meal.name} priority={priority} src={meal.imgPath} vt />
   <div class="absolute -top-2 left-0.5 " data-vt="ingredients">
@@ -35,11 +46,20 @@ const allergens = allergenGroups(meal.ingredients);
       ))
     }
   </div>
+  <span aria-hidden="true" class="m-fav"><Icon class="size-3.5" name="heart" /></span>
   <div class="m-body">
     <h3 class="m-title" data-vt="title">
       {`${meal.name} ${meal.subtitle}`}
     </h3><div class="m-foot">
-      <PriceTag cents={meal.priceStud} vt /><span
+      <span class="m-price-row"><PriceTag cents={meal.priceStud} vt />{
+        meal.rating && (
+          <span class="m-rate">
+            <Icon class="size-3.5 fill-gold text-gold" name="star" />
+            {formatDecimal(meal.rating.value)}
+            <span class="sr-only">{` von 5 Sternen (${meal.rating.count} ${meal.rating.count === 1 ? "Bewertung" : "Bewertungen"})`}</span>
+          </span>
+        )
+      }</span><span
         aria-hidden="true"
         class="m-go">→</span>
     </div>

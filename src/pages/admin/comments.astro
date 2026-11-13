@@ -76,7 +76,7 @@ const LINK = "font-semibold underline-offset-4 hover:underline";
                   {entry.comment}
                 </p>
                 <p class="mt-2 text-muted-foreground text-xs">
-                  {entry.mensaName} · {formatDateTime(entry.updatedAt)}
+                  {entry.mensaName ?? "Mensa unbekannt"} · {formatDateTime(entry.updatedAt)}
                   {entry.moderatedAt && <> · geprüft {formatDateTime(entry.moderatedAt)}</>}
                   {" · "}
                   <a class="underline-offset-4 hover:underline" href={`/admin/search?q=${entry.id}`}>

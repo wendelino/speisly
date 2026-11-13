@@ -34,11 +34,16 @@
   async function refreshSummary() {
     const response = await fetch(location.href, { cache: "reload" });
     const html = new DOMParser().parseFromString(await response.text(), "text/html");
-    const fresh = html.querySelector("[data-rating-summary]");
-    const current = document.querySelector("[data-rating-summary]");
-    if (fresh && current) {
-      current.replaceWith(fresh);
+    for (const current of document.querySelectorAll<HTMLElement>("[data-rating-summary]")) {
+      const fresh = html.querySelector(
+        `[data-rating-summary="${current.dataset.ratingSummary}"]`
+      );
+      if (fresh) {
+        current.replaceWith(fresh);
+      }
     }
+    // Likes neu anwenden (comment-likes-script.astro)
+    document.dispatchEvent(new CustomEvent("speisly:summary-refreshed"));
   }
 
   if (button) {

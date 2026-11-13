@@ -60,12 +60,18 @@ function mergeResults(a: SyncResult, b: SyncResult): SyncResult {
   };
 }
 
-function authorized(request: Request, expectedToken: string): boolean {
+/** Bearer-Token prüfen (zeitkonstant); auch für /api/notify */
+export function authorized(request: Request, expectedToken: string): boolean {
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   const expected = Buffer.from(expectedToken);
   const actual = Buffer.from(token);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  // leeres Token (Variable gesetzt, aber leer) darf nie passen
+  return (
+    expected.length > 0 &&
+    actual.length === expected.length &&
+    timingSafeEqual(actual, expected)
+  );
 }
 
 /** Seiten lokal vorwärmen (nicht über die öffentliche URL) */

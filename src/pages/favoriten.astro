@@ -1,0 +1,237 @@
+---
+// Lieblingsgerichte (lib/favorites.ts, im Browser gespeichert) mit nächstem
+// Termin und die Push-Benachrichtigung „Favorit morgen auf dem Plan“
+// (lib/push-client.ts). Prerendered; die Liste lädt das Script über die
+// Action favorites.list.
+import { Bell, Heart } from "@lucide/astro";
+import PageHeader from "@/components/layout/page-header.astro";
+import Card from "@/components/ui/card.astro";
+import { buttonVariants } from "@/components/ui/variants";
+import BackLayout from "@/layouts/back-layout.astro";
+import { cn } from "@/lib/utils";
+
+const toggleClass = cn(buttonVariants({ variant: "default", size: "sm" }), "shrink-0");
+---
+
+<BackLayout description="Deine Lieblingsgerichte und wann es sie wieder gibt." title="Favoriten">
+  <PageHeader
+    intro="Merk dir Gerichte auf ihrer Seite mit dem Herz. Hier siehst du, wann es sie wieder gibt."
+    title="Deine Favoriten"
+    tone="rose"
+  >
+    <Heart slot="icon" />
+  </PageHeader>
+
+  <Card class="mb-6" data-push-card hidden padding="md">
+    <div class="flex items-start gap-4">
+      <span class="grid size-10 shrink-0 place-items-center rounded-full bg-sun-soft text-sun">
+        <Bell class="size-5" />
+      </span>
+      <div class="min-w-0 flex-1">
+        <h2 class="font-display font-semibold">Benachrichtigungen</h2>
+        <p class="mt-0.5 text-muted-foreground text-sm" data-push-text>
+          Wir sagen dir am Vorabend Bescheid, wenn ein Favorit auf dem Plan steht.
+        </p>
+      </div>
+      <button class={toggleClass} data-push-toggle disabled type="button">Aktivieren</button>
+    </div>
+  </Card>
+
+  <div aria-busy="true" aria-live="polite" data-favorites>
+    <p class="text-center text-muted-foreground text-sm" data-favorites-loading>Lade Favoriten…</p>
+  </div>
+
+  <template data-favorite-template>
+    <li class="flex items-center gap-3 rounded-2xl bg-card p-4 shadow-soft ring-1 ring-border/60">
+      <a class="min-w-0 flex-1 outline-none focus-visible:underline" data-link>
+        <span class="block truncate font-display font-semibold" data-name></span>
+        <span class="block truncate text-muted-foreground text-sm" data-when></span>
+      </a>
+      <button
+        aria-label="Aus Favoriten entfernen"
+        class="grid size-9 shrink-0 place-items-center rounded-full bg-rose-soft text-rose outline-none transition-transform focus-visible:ring-[3px] focus-visible:ring-ring active:scale-90"
+        data-remove
+        type="button"
+      >
+        <Heart class="size-4 fill-current" />
+      </button>
+    </li>
+  </template>
+</BackLayout>
+
+<script>
+  import { actions } from "astro:actions";
+  import { readFavorites, setFavorite } from "@/lib/favorites";
+  import {
+    currentSubscription,
+    disablePush,
+    enablePush,
+    pushSupport,
+    syncPush,
+  } from "@/lib/push-client";
+
+  const TIME_ZONE = "Europe/Berlin";
+  const container = document.querySelector<HTMLElement>("[data-favorites]");
+  const template = document.querySelector<HTMLTemplateElement>(
+    "[data-favorite-template]"
+  );
+
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(
+    new Date()
+  );
+  const dayLabel = (iso: string) => {
+    const diff = Math.round(
+      (Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) /
+        86_400_000
+    );
+    if (diff === 0) {
+      return "Heute";
+    }
+    if (diff === 1) {
+      return "Morgen";
+    }
+    return new Date(`${iso}T12:00:00Z`).toLocaleDateString("de-DE", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+  };
+
+  function empty(text: string) {
+    if (!container) {
+      return;
+    }
+    container.innerHTML = "";
+    const p = document.createElement("p");
+    p.className = "rounded-2xl bg-muted/60 p-5 text-center text-muted-foreground text-sm";
+    p.textContent = text;
+    container.append(p);
+    container.removeAttribute("aria-busy");
+  }
+
+  async function render() {
+    if (!(container && template)) {
+      return;
+    }
+    const ids = readFavorites();
+    if (ids.length === 0) {
+      empty("Noch keine Favoriten. Tippe auf einem Gericht auf „Merken“.");
+      return;
+    }
+    const { data, error } = await actions.favorites.list({ ids });
+    if (error || !data) {
+      empty("Favoriten konnten nicht geladen werden. Bist du online?");
+      return;
+    }
+    // Gerichte, die es nicht mehr gibt, aus dem Browser entfernen
+    const known = new Set(data.map((meal) => meal.id));
+    const gone = ids.filter((id) => !known.has(id));
+    if (gone.length > 0) {
+      for (const id of gone) {
+        setFavorite(id, false);
+      }
+      syncPush();
+    }
+    if (data.length === 0) {
+      empty("Noch keine Favoriten. Tippe auf einem Gericht auf „Merken“.");
+      return;
+    }
+    // Gerichte mit Termin zuerst, nach Datum
+    const sorted = [...data].sort((a, b) =>
+      (a.next?.date ?? "9999").localeCompare(b.next?.date ?? "9999")
+    );
+    const list = document.createElement("ul");
+    list.className = "space-y-3";
+    for (const meal of sorted) {
+      const item = template.content.firstElementChild?.cloneNode(true) as HTMLElement;
+      const link = item.querySelector<HTMLAnchorElement>("[data-link]");
+      const name = item.querySelector("[data-name]");
+      const when = item.querySelector("[data-when]");
+      if (!(link && name && when)) {
+        continue;
+      }
+      link.href = meal.next
+        ? `/meal/${meal.id}?mmid=${meal.next.mensaMealId}`
+        : `/meal/${meal.id}`;
+      name.textContent = `${meal.name} ${meal.subtitle}`.trim();
+      if (meal.next) {
+        when.textContent = `${dayLabel(meal.next.date)} · ${meal.next.mensen.join(", ")}`;
+        when.classList.add("text-primary", "font-medium");
+      } else {
+        when.textContent = meal.last
+          ? `Gerade nicht geplant · zuletzt ${dayLabel(meal.last)}`
+          : "Gerade nicht geplant";
+      }
+      item.querySelector("[data-remove]")?.addEventListener("click", () => {
+        setFavorite(meal.id, false);
+        item.remove();
+        syncPush();
+        if (!list.children.length) {
+          empty("Noch keine Favoriten. Tippe auf einem Gericht auf „Merken“.");
+        }
+      });
+      list.append(item);
+    }
+    container.innerHTML = "";
+    container.append(list);
+    container.removeAttribute("aria-busy");
+  }
+
+  async function setupPush() {
+    const card = document.querySelector<HTMLElement>("[data-push-card]");
+    const toggle = document.querySelector<HTMLButtonElement>("[data-push-toggle]");
+    const text = document.querySelector<HTMLElement>("[data-push-text]");
+    const support = pushSupport();
+    if (!(card && toggle && text) || support === "not-configured") {
+      return;
+    }
+    card.hidden = false;
+    if (support === "unsupported") {
+      text.textContent =
+        "Dein Browser unterstützt keine Benachrichtigungen. Auf dem iPhone geht das, wenn du Speisly zum Home-Bildschirm hinzufügst.";
+      toggle.hidden = true;
+      return;
+    }
+    const DEFAULT_TEXT = text.textContent ?? "";
+    let enabled = Boolean(await currentSubscription());
+    const show = () => {
+      toggle.textContent = enabled ? "Deaktivieren" : "Aktivieren";
+      text.textContent =
+        Notification.permission === "denied"
+          ? "Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Website-Einstellungen."
+          : enabled
+            ? "Aktiv: Am Vorabend kommt eine Nachricht, wenn ein Favorit auf dem Plan steht."
+            : DEFAULT_TEXT;
+      toggle.disabled = Notification.permission === "denied" && !enabled;
+    };
+    show();
+    // Favoriten und Mensen des Abos auf den aktuellen Stand bringen
+    if (enabled) {
+      syncPush();
+    }
+    toggle.addEventListener("click", async () => {
+      toggle.disabled = true;
+      if (enabled) {
+        if (!(await disablePush())) {
+          text.textContent = "Das hat nicht geklappt. Bitte versuch es später noch einmal.";
+          toggle.disabled = false;
+          return;
+        }
+        enabled = false;
+      } else {
+        const result = await enablePush();
+        enabled = result === "enabled";
+        if (result === "error") {
+          text.textContent = "Das hat nicht geklappt. Bitte versuch es später noch einmal.";
+          toggle.disabled = false;
+          return;
+        }
+      }
+      show();
+    });
+  }
+
+  render();
+  setupPush();
+</script>

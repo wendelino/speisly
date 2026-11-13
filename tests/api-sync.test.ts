@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import type { APIContext } from "astro";
 import type { SyncStats } from "@/server/sync";
-import { createSyncHandler } from "@/server/sync-endpoint";
+import { authorized, createSyncHandler } from "@/server/sync-endpoint";
 import type { SyncCounts, SyncStatus } from "@/server/sync-runs";
 import type { RunSummary } from "@/server/sync-summary";
 
@@ -255,5 +255,24 @@ describe("POST /api/sync", () => {
     expect(reports[0].errors.map((e) => e.message)).toEqual([
       "Error syncing data",
     ]);
+  });
+});
+
+describe("authorized", () => {
+  const request = (header?: string) =>
+    new Request("http://localhost/api/notify", {
+      method: "POST",
+      headers: header ? { authorization: header } : {},
+    });
+
+  test("accepts the exact bearer token", () => {
+    expect(authorized(request("Bearer secret"), "secret")).toBe(true);
+    expect(authorized(request("Bearer secreT"), "secret")).toBe(false);
+    expect(authorized(request("secret"), "secret")).toBe(false);
+  });
+
+  test("an empty configured token never matches", () => {
+    expect(authorized(request(), "")).toBe(false);
+    expect(authorized(request("Bearer "), "")).toBe(false);
   });
 });

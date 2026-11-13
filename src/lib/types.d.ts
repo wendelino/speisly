@@ -20,6 +20,8 @@ declare type Meal = {
   priceWork: number;
   priceGuest: number;
   flags: MealFlags;
+  /** Durchschnitt aller Bewertungen des Gerichts (null: noch keine) */
+  rating?: { value: number; count: number } | null;
 };
 
 declare type Mensa = {
@@ -47,6 +49,20 @@ declare type MealComment = {
   value: number;
   comment: string;
   updatedAt: Date;
+  /** Anzahl „Gefällt mir“ */
+  likes: number;
+};
+
+/** Durchschnitt und Anzahl einer Gruppe von Bewertungen */
+declare type RatingGroup = { value: number; count: number };
+
+/** Bewertungen eines Gerichts nach Mensa und nach Ausgabe */
+declare type MealRatingBreakdown = {
+  byMensa: (RatingGroup & { mensaName: string })[];
+  /** neueste Ausgaben zuerst (begrenzt) */
+  byServing: (RatingGroup & { mensaName: string; date: string })[];
+  /** Ausgaben mit Bewertungen insgesamt */
+  servingCount: number;
 };
 
 // biome-ignore lint/style/noNamespace: so erweitert Astro die Locals

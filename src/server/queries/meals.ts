@@ -1,11 +1,32 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { toUtcDate } from "@/lib/dates";
-import { meal, mensa, mensaMeal } from "@/lib/db/schema/schema";
+import { meal, mealRating, mensa, mensaMeal } from "@/lib/db/schema/schema";
 import { generateFlags } from "@/lib/meal-flags";
 import { db } from "../db";
 import { logError } from "../log";
 
 function selectMealsOfDay(isoDay: string) {
+  const day = toUtcDate(isoDay);
+  // Durchschnittsbewertung je Gericht (für Anzeige und Sortierung), nur für
+  // die Gerichte dieses Tages
+  const ratings = db
+    .select({
+      mealId: mealRating.mealId,
+      avg: sql<string>`avg(${mealRating.value})`.as("rating_avg"),
+      count: sql<number>`count(*)::int`.as("rating_count"),
+    })
+    .from(mealRating)
+    .where(
+      inArray(
+        mealRating.mealId,
+        db
+          .select({ id: mensaMeal.mealId })
+          .from(mensaMeal)
+          .where(eq(mensaMeal.date, day))
+      )
+    )
+    .groupBy(mealRating.mealId)
+    .as("ratings");
   return db
     .select({
       mensaId: mensa.id,
@@ -21,11 +42,14 @@ function selectMealsOfDay(isoDay: string) {
       priceWork: meal.priceWork,
       priceGuest: meal.priceGuest,
       mensaMealId: mensaMeal.id,
+      ratingAvg: ratings.avg,
+      ratingCount: ratings.count,
     })
     .from(mensaMeal)
     .innerJoin(mensa, eq(mensaMeal.mensaId, mensa.id))
     .innerJoin(meal, eq(mensaMeal.mealId, meal.id))
-    .where(eq(mensaMeal.date, toUtcDate(isoDay)))
+    .leftJoin(ratings, eq(ratings.mealId, meal.id))
+    .where(eq(mensaMeal.date, day))
     .orderBy(asc(mensa.name), asc(meal.name));
 }
 
@@ -51,13 +75,24 @@ export async function getMealsForDate(
   }
 
   const groups = new Map<string, MensaMealGroup>();
-  for (const { mensaId: id, mensaName, mensaSlug, ...row } of rows) {
+  for (const {
+    mensaId: id,
+    mensaName,
+    mensaSlug,
+    ratingAvg,
+    ratingCount,
+    ...row
+  } of rows) {
     let group = groups.get(id);
     if (!group) {
       group = { id, name: mensaName, slug: mensaSlug, meals: [] };
       groups.set(id, group);
     }
-    group.meals.push({ ...row, flags: generateFlags(row) });
+    const rating =
+      ratingAvg && ratingCount
+        ? { value: Math.round(Number(ratingAvg) * 10) / 10, count: ratingCount }
+        : null;
+    group.meals.push({ ...row, rating, flags: generateFlags(row) });
   }
   return [...groups.values()];
 }

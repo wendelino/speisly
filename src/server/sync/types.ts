@@ -53,8 +53,6 @@ export type MensaMealRecord = {
   date: Date;
   ingredients: string[];
   extras: string[];
-  /** hat Bewertungen (nur beim Laden für den Sync gesetzt) */
-  rated?: boolean;
 };
 
 export type DataSourceRecord = {

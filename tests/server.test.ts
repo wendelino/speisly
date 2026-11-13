@@ -149,6 +149,7 @@ describe("cron", () => {
       { cron: "17 7,10,17 * * 1-5", scope: "today" },
       { cron: "17 2 * * 0-4", scope: "week" },
       { cron: "1 0 * * *", scope: "midnight" },
+      { cron: "0 18 * * 0-4", scope: "notify" },
     ]);
   });
 
@@ -173,6 +174,22 @@ describe("cron", () => {
       Authorization: "Bearer geheim",
       "Content-Type": "application/json",
     });
+  });
+
+  test("triggerSync calls /api/notify for the notify scope", async () => {
+    const calls: string[] = [];
+    const fake = ((url: string) => {
+      calls.push(url);
+      return Promise.resolve(Response.json({ day: "2026-10-08", sent: 2 }));
+    }) as unknown as typeof fetch;
+    const ok = await triggerSync({
+      baseUrl: "http://127.0.0.1:4321",
+      token: "geheim",
+      scope: "notify",
+      fetch: fake,
+    });
+    expect(ok).toBe(true);
+    expect(calls).toEqual(["http://127.0.0.1:4321/api/notify"]);
   });
 
   test("triggerSync reports failures instead of throwing", async () => {
@@ -200,9 +217,9 @@ describe("cron", () => {
     ).toBe(false);
   });
 
-  test("startCron registers three jobs in Berlin time", () => {
+  test("startCron registers four jobs in Berlin time", () => {
     const cron = startCron({ baseUrl: "http://127.0.0.1:1", token: "x" });
-    expect(cron.jobs).toHaveLength(3);
+    expect(cron.jobs).toHaveLength(4);
     const midnight = cron.jobs[2].nextDate().setZone("Europe/Berlin");
     expect([midnight.hour, midnight.minute]).toEqual([0, 1]);
     cron.stop();

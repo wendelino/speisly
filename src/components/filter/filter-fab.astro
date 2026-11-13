@@ -55,7 +55,7 @@ const CHIP =
 </div>
 <script
   data-filter-mensen
-  set:html={JSON.stringify(mensen)}
+  set:html={JSON.stringify(mensen).replaceAll("<", "\\u003c")}
   type="application/json"
 />
 

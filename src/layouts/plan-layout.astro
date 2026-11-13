@@ -6,6 +6,7 @@ import FilterFab from "@/components/filter/filter-fab.astro";
 import DaySwipe from "@/components/day/day-swipe.astro";
 import MealList from "@/components/meal/meal-list.astro";
 import PlanToolbar from "@/components/meal/plan-toolbar.astro";
+import { favoritesBoot } from "@/lib/favorites";
 import { filterBoot } from "@/lib/filters/boot";
 import { formatLongDay } from "@/lib/format";
 import BaseLayout from "./base-layout.astro";
@@ -22,6 +23,7 @@ type Props = {
 const { date, today, groups, mensen } = Astro.props;
 const dayLabel = formatLongDay(date);
 const filterScript = `(${filterBoot.toString()})();`;
+const favoritesScript = `(${favoritesBoot.toString()})();`;
 // nach einem Wisch (day-swipe.astro) vor dem ersten Paint die Richtung der
 // Enter-Animation setzen
 const swipeEnterScript = `try{var d=sessionStorage.getItem("speisly-swipe");if(d){sessionStorage.removeItem("speisly-swipe");document.documentElement.dataset.swipeEnter=d}}catch(e){}`;
@@ -29,6 +31,7 @@ const swipeEnterScript = `try{var d=sessionStorage.getItem("speisly-swipe");if(d
 
 <BaseLayout mealAssets title={date === today ? undefined : `Speiseplan ${dayLabel}`}>
   <script is:inline set:html={filterScript} slot="head" />
+  <script is:inline set:html={favoritesScript} slot="head" />
   <script is:inline set:html={swipeEnterScript} slot="head" />
   <main class="overflow-x-clip">
     <h1 class="sr-only">{`Speiseplan für ${dayLabel}`}</h1>

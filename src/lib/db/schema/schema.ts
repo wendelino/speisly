@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -15,17 +16,16 @@ import { dataSource } from "./data-source";
 import { commentStatus, mealChangeField } from "./enums";
 import { syncRun } from "./sync-run";
 
-export const user = pgTable(
-  "user",
-  {
-    ...uuid,
-    ipHash: varchar("ip_hash", { length: 255 }).notNull(),
-    cookieHash: varchar("cookie_hash", { length: 255 }),
-    ...timeStampUtils,
-  },
-  // Lookup per IP-Hash bei Bewertungen (getUserId/getOrCreateUser)
-  (table) => [index("user_ip_hash_idx").on(table.ipHash)]
-);
+/**
+ * Pseudonyme Nutzer des Bewertungssystems. Erkannt werden sie nur am
+ * signierten Cookie (src/server/user.ts); `ip_hash` ist eine Notiz zur
+ * Missbrauchserkennung und dient nicht der Wiedererkennung.
+ */
+export const user = pgTable("user", {
+  ...uuid,
+  ipHash: varchar("ip_hash", { length: 255 }).notNull(),
+  ...timeStampUtils,
+});
 
 // Mensa table
 export const mensa = pgTable("mensa", {
@@ -175,7 +175,12 @@ export const mensaMeal = pgTable(
   ]
 );
 
-// MealRating table
+/**
+ * Bewertungen. Mensa und Tag der Ausgabe stehen in der Bewertung selbst
+ * (`mensa_id`, `serving_date`): Entfernt der Sync die Ausgabe, weil die API
+ * sie nicht mehr liefert, bleibt die Bewertung samt Aufschlüsselung erhalten
+ * (`mensa_meal_id` wird dann NULL). Nur mit dem Gericht verschwindet sie.
+ */
 export const mealRating = pgTable(
   "meal_rating",
   {
@@ -183,9 +188,17 @@ export const mealRating = pgTable(
     mealId: varchar("meal_id", { length: ID_LENGTH })
       .notNull()
       .references(() => meal.id, { onDelete: "cascade" }),
-    mensaMealId: varchar("mensa_meal_id", { length: ID_LENGTH })
-      .notNull()
-      .references(() => mensaMeal.id, { onDelete: "cascade" }),
+    /** bewertete Ausgabe, solange es sie gibt */
+    mensaMealId: varchar("mensa_meal_id", { length: ID_LENGTH }).references(
+      () => mensaMeal.id,
+      { onDelete: "set null" }
+    ),
+    mensaId: varchar("mensa_id", { length: ID_LENGTH }).references(
+      () => mensa.id,
+      { onDelete: "set null" }
+    ),
+    /** Tag der bewerteten Ausgabe (wie `mensa_meal.date`) */
+    servingDate: timestamp("serving_date").notNull(),
     userId: varchar("user_id", { length: ID_LENGTH })
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -204,5 +217,53 @@ export const mealRating = pgTable(
   (table) => [
     uniqueIndex("meal_rating_meal_user_idx").on(table.mealId, table.userId),
     index("meal_rating_comment_status_idx").on(table.commentStatus),
+    index("meal_rating_mensa_meal_id_idx").on(table.mensaMealId),
   ]
 );
+
+/**
+ * „Gefällt mir“ an freigegebenen Kommentaren (eine Bewertung mit Kommentar).
+ * Ein Like je Nutzer und Kommentar; eigene Kommentare kann man nicht liken.
+ */
+export const commentLike = pgTable(
+  "comment_like",
+  {
+    ratingId: varchar("rating_id", { length: ID_LENGTH })
+      .notNull()
+      .references(() => mealRating.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: ID_LENGTH })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.ratingId, table.userId] }),
+    index("comment_like_user_id_idx").on(table.userId),
+  ]
+);
+
+/**
+ * Web-Push-Abos für „Favorit morgen auf dem Plan“ (src/server/push.ts).
+ * Unabhängig vom Nutzer-Cookie: das Abo selbst ist die Einwilligung. Die
+ * Favoriten (Gericht-IDs) und die gewählten Mensen (leer = alle) schickt
+ * der Browser bei jeder Änderung mit.
+ */
+export const pushSubscription = pgTable("push_subscription", {
+  ...uuid,
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: varchar("p256dh", { length: 255 }).notNull(),
+  auth: varchar("auth", { length: 255 }).notNull(),
+  favorites: varchar("favorites", { length: ID_LENGTH })
+    .array()
+    .notNull()
+    .default([]),
+  mensaIds: varchar("mensa_ids", { length: ID_LENGTH })
+    .array()
+    .notNull()
+    .default([]),
+  /** Tag (`YYYY-MM-DD`), für den zuletzt benachrichtigt wurde (keine Doppelten) */
+  lastNotifiedFor: date("last_notified_for"),
+  ...timeStampUtils,
+});
