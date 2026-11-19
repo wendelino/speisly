@@ -50,6 +50,7 @@ const ADMIN_ACTION = "/_actions/admin.";
 
 /**
  * /admin und die Admin-Actions nur mit gültiger Session (src/server/admin.ts).
+ * Ist sie abgelaufen, wird sie mit dem Refresh-Cookie still erneuert.
  * Antworten dort nie cachen und nicht indexieren.
  */
 const adminGuard = defineMiddleware(async (context, next) => {
@@ -60,13 +61,24 @@ const adminGuard = defineMiddleware(async (context, next) => {
   }
   if (!ADMIN_PUBLIC.has(path)) {
     // erst hier laden: liest Secrets, die beim Prerendern fehlen
-    const [{ adminAuth }, { SESSION_COOKIE }] = await Promise.all([
+    const [admin, { SESSION_COOKIE, REFRESH_COOKIE }] = await Promise.all([
       import("@/server/admin"),
       import("@/server/admin-auth"),
     ]);
-    const session = await adminAuth?.readSession(
+    const { adminAuth } = admin;
+    let session = await adminAuth?.readSession(
       context.cookies.get(SESSION_COOKIE)?.value
     );
+    const refreshCookie = context.cookies.get(REFRESH_COOKIE)?.value;
+    if (!session && adminAuth && refreshCookie) {
+      const renewed = await adminAuth.refresh(refreshCookie);
+      if (renewed.ok) {
+        admin.setAdminCookies(context.cookies, renewed);
+        session = renewed.profile;
+      } else if (renewed.rejected) {
+        admin.clearAdminCookies(context.cookies);
+      }
+    }
     if (!session) {
       if (!isAdmin) {
         return new Response(null, { status: 401 });

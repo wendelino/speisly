@@ -207,7 +207,7 @@ Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`
 | `HOST`, `PORT` | nein | Default `0.0.0.0:4321` (Next lief auf 3000: `PORT=3000` setzen, dann bleibt der Proxy gleich) |
 | `PUBLIC_COOKIE_CONSENT_NAME` | nein | **muss** dem bisherigen `NEXT_PUBLIC_COOKIE_CONSENT_NAME` entsprechen, sonst ist der Cookie-Consent aller Nutzer weg |
 | `PUBLIC_PRIVACY_POLICY_PATH`, `PUBLIC_UMAMI_WEBSITE_ID` | nein | |
-| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ADMIN_GROUP` | nein | Login für `/admin`; ohne Client-ID/Secret ist der Admin-Bereich aus |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ADMIN_GROUP` | nein | Login für `/admin`; ohne Client-ID/Secret ist der Admin-Bereich aus. Damit man angemeldet bleibt, muss der Client Refresh-Tokens bekommen (Scope `offline_access`, Grant `refresh_token`); sonst gilt die Session 8 h |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | nein | Fehler- und Kontaktnachrichten per Telegram |
 | `PUBLIC_VAPID_PUBLIC_KEY` (**beim Build**), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | nein | Web-Push für Favoriten (`bunx web-push generate-vapid-keys`); ohne Schlüssel ist der Bereich „Benachrichtigungen“ ausgeblendet. `VAPID_SUBJECT`: `mailto:` oder `https:`, Default `SITE_URL` |
 | `CRON_DISABLED` | nein | `1` = kein Cron, kein Pre-Warm |
