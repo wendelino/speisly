@@ -267,3 +267,19 @@ export const pushSubscription = pgTable("push_subscription", {
   lastNotifiedFor: date("last_notified_for"),
   ...timeStampUtils,
 });
+
+/**
+ * Web-Push-Abos der Admins für Fehlermeldungen und neue Kommentare
+ * (src/server/admin-notify.ts). Eigene Tabelle und eigene Service-Worker-
+ * Registrierung (Scope /admin/, src/lib/admin-push-client.ts): Abmelden der
+ * Favoriten-Pushes lässt die Admin-Meldungen unberührt und umgekehrt.
+ */
+export const adminPushSubscription = pgTable("admin_push_subscription", {
+  ...uuid,
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: varchar("p256dh", { length: 255 }).notNull(),
+  auth: varchar("auth", { length: 255 }).notNull(),
+  /** `sub` der Admin-Session, die das Abo angelegt hat */
+  adminSub: varchar("admin_sub", { length: 255 }).notNull(),
+  ...timeStampUtils,
+});

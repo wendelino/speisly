@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { buildNotifications, isPushEndpoint } from "./push";
+import { buildNotifications } from "./push";
+import { isPushEndpoint } from "./web-push";
 
 const servings = [
   {

@@ -1,6 +1,8 @@
 ---
-// Admin: Kommentare zu Bewertungen freigeben oder ablehnen. Nur freigegebene
-// Kommentare dürfen öffentlich erscheinen (neue/geänderte sind "pending").
+// Admin: Kommentare zu Bewertungen prüfen. Neue/geänderte Kommentare sind
+// ohne Treffer im Wortfilter sofort öffentlich, mit Treffer zurückgehalten
+// (src/server/ratings.ts). Beide stehen hier als „ungeprüft“, bis sie
+// bestätigt oder abgelehnt werden (comment_moderated_at).
 import { actions } from "astro:actions";
 import { Star } from "@lucide/astro";
 import FilterLinks from "@/components/admin/filter-links.astro";
@@ -9,6 +11,7 @@ import Badge from "@/components/ui/badge.astro";
 import Button from "@/components/ui/button.astro";
 import AdminLayout from "@/layouts/admin-layout.astro";
 import { formatDateTime } from "@/lib/admin-format";
+import { findFlaggedWords } from "@/server/comment-filter";
 import {
   type CommentFilter,
   type CommentStatus,
@@ -22,11 +25,28 @@ const param = Astro.url.searchParams.get("status");
 const filter: CommentFilter = FILTERS.find((f) => f === param) ?? "pending";
 const entries = await listComments(filter);
 
-const STATUS: Record<CommentStatus, { label: string; tone: "sun" | "mint" | "rose" }> = {
-  pending: { label: "ungeprüft", tone: "sun" },
+type View = "held" | "live" | "approved" | "rejected";
+const VIEW: Record<View, { label: string; tone: "sun" | "sky" | "mint" | "rose" }> = {
+  held: { label: "zurückgehalten", tone: "sun" },
+  live: { label: "öffentlich · ungeprüft", tone: "sky" },
   approved: { label: "freigegeben", tone: "mint" },
   rejected: { label: "abgelehnt", tone: "rose" },
 };
+/** Buttons je Zustand: Ziel-Status und Beschriftung */
+const ACTIONS: Record<View, [CommentStatus, string][]> = {
+  held: [["approved", "Freigeben"], ["rejected", "Ablehnen"]],
+  live: [["approved", "Bestätigen"], ["rejected", "Ablehnen"]],
+  approved: [["rejected", "Ablehnen"], ["pending", "Zurückhalten"]],
+  rejected: [["approved", "Freigeben"], ["pending", "Zurückhalten"]],
+};
+const viewOf = (status: CommentStatus | null, moderatedAt: Date | null): View =>
+  status === "rejected"
+    ? "rejected"
+    : status === "approved"
+      ? moderatedAt
+        ? "approved"
+        : "live"
+      : "held";
 const LINK = "font-semibold underline-offset-4 hover:underline";
 ---
 
@@ -44,19 +64,13 @@ const LINK = "font-semibold underline-offset-4 hover:underline";
   {
     entries.length === 0 ? (
       <p class="text-muted-foreground">
-        {filter === "pending" ? "Keine Kommentare zu prüfen." : "Keine Kommentare."}
+        {filter === "pending" ? "Alle Kommentare sind geprüft." : "Keine Kommentare."}
       </p>
     ) : (
       <ul class="space-y-3">
         {entries.map((entry) => {
-          const status = entry.status ?? "pending";
-          const actionsFor = (
-            status === "pending"
-              ? ["approved", "rejected"]
-              : status === "approved"
-                ? ["rejected", "pending"]
-                : ["approved", "pending"]
-          ) as CommentStatus[];
+          const view = viewOf(entry.status, entry.moderatedAt);
+          const words = view === "held" ? findFlaggedWords(entry.comment ?? "") : [];
           return (
             <li class="flex gap-4 rounded-2xl bg-card p-4 shadow-soft ring-1 ring-border/70">
               <MealThumb class="hidden sm:block" src={entry.imgPath} />
@@ -65,7 +79,10 @@ const LINK = "font-semibold underline-offset-4 hover:underline";
                   <a class={LINK} href={`/admin/meal/${entry.mealId}`}>
                     {entry.mealName}
                   </a>
-                  <Badge tone={STATUS[status].tone}>{STATUS[status].label}</Badge>
+                  <Badge tone={VIEW[view].tone}>{VIEW[view].label}</Badge>
+                  {words.length > 0 && (
+                    <span class="text-muted-foreground text-xs">Wortfilter: {words.join(", ")}</span>
+                  )}
                   <span class="inline-flex items-center gap-0.5 text-sm">
                     <Star aria-hidden="true" class="size-3.5 fill-gold text-gold" />
                     {entry.value}
@@ -85,7 +102,7 @@ const LINK = "font-semibold underline-offset-4 hover:underline";
                 </p>
               </div>
               <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-start">
-                {actionsFor.map((next) => (
+                {ACTIONS[view].map(([next, label]) => (
                   <form action={actions.admin.setCommentStatus} method="POST">
                     <input name="id" type="hidden" value={entry.id}>
                     <input name="status" type="hidden" value={next}>
@@ -95,7 +112,7 @@ const LINK = "font-semibold underline-offset-4 hover:underline";
                       type="submit"
                       variant={next === "approved" ? "default" : next === "rejected" ? "outline" : "ghost"}
                     >
-                      {next === "approved" ? "Freigeben" : next === "rejected" ? "Ablehnen" : "Zurücksetzen"}
+                      {label}
                     </Button>
                   </form>
                 ))}
