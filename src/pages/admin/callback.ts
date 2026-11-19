@@ -1,10 +1,6 @@
 import type { APIRoute } from "astro";
-import { adminAuth, adminCookie, adminUrl } from "@/server/admin";
-import {
-  FLOW_COOKIE,
-  SESSION_COOKIE,
-  SESSION_TTL_SECONDS,
-} from "@/server/admin-auth";
+import { adminAuth, adminUrl, setAdminCookies } from "@/server/admin";
+import { FLOW_COOKIE } from "@/server/admin-auth";
 
 /** Rückkehr vom OIDC-Provider: Session-Cookie setzen oder ablehnen */
 export const prerender = false;
@@ -27,10 +23,6 @@ export const GET: APIRoute = async (context) => {
       headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
-  context.cookies.set(
-    SESSION_COOKIE,
-    result.session,
-    adminCookie(SESSION_TTL_SECONDS)
-  );
+  setAdminCookies(context.cookies, result);
   return context.redirect(result.next, 302);
 };

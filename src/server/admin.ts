@@ -6,8 +6,15 @@ import {
   OIDC_ISSUER,
   SITE_URL,
 } from "astro:env/server";
-import type { AstroCookieSetOptions } from "astro";
-import { type AdminAuth, createAdminAuth } from "./admin-auth";
+import type { AstroCookieSetOptions, AstroCookies } from "astro";
+import {
+  type AdminAuth,
+  createAdminAuth,
+  REFRESH_COOKIE,
+  REFRESH_TTL_SECONDS,
+  SESSION_COOKIE,
+  type SessionCookies,
+} from "./admin-auth";
 
 /** `null`: kein OIDC-Client konfiguriert, /admin ist abgeschaltet */
 export const adminAuth: AdminAuth | null =
@@ -39,4 +46,19 @@ export function adminCookie(maxAge: number): AstroCookieSetOptions {
     path: "/",
     maxAge,
   };
+}
+
+/** Session- und Refresh-Cookie nach Login oder Erneuerung setzen */
+export function setAdminCookies(cookies: AstroCookies, next: SessionCookies) {
+  cookies.set(SESSION_COOKIE, next.session, adminCookie(next.sessionTtl));
+  if (next.refresh) {
+    cookies.set(REFRESH_COOKIE, next.refresh, adminCookie(REFRESH_TTL_SECONDS));
+  } else {
+    cookies.delete(REFRESH_COOKIE, { path: "/" });
+  }
+}
+
+export function clearAdminCookies(cookies: AstroCookies) {
+  cookies.delete(SESSION_COOKIE, { path: "/" });
+  cookies.delete(REFRESH_COOKIE, { path: "/" });
 }

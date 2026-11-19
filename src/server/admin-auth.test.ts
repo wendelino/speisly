@@ -7,7 +7,13 @@ import {
   type JWTPayload,
   SignJWT,
 } from "jose";
-import { createAdminAuth, profileOf, safeNext } from "./admin-auth";
+import {
+  createAdminAuth,
+  profileOf,
+  REFRESHABLE_SESSION_TTL_SECONDS,
+  SESSION_TTL_SECONDS,
+  safeNext,
+} from "./admin-auth";
 
 const ISSUER = "https://sso.example.test";
 const CLIENT_ID = "speisly-test";
@@ -19,6 +25,7 @@ const DISCOVERY = {
   jwks_uri: `${ISSUER}/jwks`,
   userinfo_endpoint: `${ISSUER}/userinfo`,
   end_session_endpoint: `${ISSUER}/end-session`,
+  revocation_endpoint: `${ISSUER}/revoke`,
 };
 
 let privateKey: CryptoKey;
@@ -49,12 +56,21 @@ type Provider = {
   /** Claims des ID-Tokens; `nonce` kommt aus dem Login */
   claims: (nonce: string) => Promise<string>;
   userinfo?: Record<string, unknown>;
+  /**
+   * Antwort auf `grant_type=refresh_token`; ohne Angabe: neues ID-Token und
+   * rotiertes Refresh-Token
+   */
+  onRefresh?: (refreshToken: string) => Promise<Response> | Response;
+  /** Ohne Refresh-Token beim Login */
+  noRefreshToken?: boolean;
 };
 
 /** Simulierter Provider; merkt sich, was an den Token-Endpoint ging */
 function setup(provider: Provider) {
   const tokenRequests: { headers: Headers; body: URLSearchParams }[] = [];
+  const revoked: URLSearchParams[] = [];
   let nonce = "";
+  let rotation = 0;
   const fakeFetch = (async (
     input: string | URL | Request,
     init?: RequestInit
@@ -64,14 +80,28 @@ function setup(provider: Provider) {
       return Response.json(DISCOVERY);
     }
     if (url === DISCOVERY.token_endpoint) {
-      tokenRequests.push({
-        headers: new Headers(init?.headers),
-        body: new URLSearchParams(String(init?.body)),
-      });
+      const body = new URLSearchParams(String(init?.body));
+      tokenRequests.push({ headers: new Headers(init?.headers), body });
+      if (body.get("grant_type") === "refresh_token") {
+        if (provider.onRefresh) {
+          return provider.onRefresh(body.get("refresh_token") ?? "");
+        }
+        rotation += 1;
+        return Response.json({
+          id_token: await provider.claims(""),
+          access_token: "access",
+          refresh_token: `refresh-${rotation}`,
+        });
+      }
       return Response.json({
         id_token: await provider.claims(nonce),
         access_token: "access",
+        refresh_token: provider.noRefreshToken ? undefined : "refresh-0",
       });
+    }
+    if (url === DISCOVERY.revocation_endpoint) {
+      revoked.push(new URLSearchParams(String(init?.body)));
+      return new Response(null, { status: 200 });
     }
     if (url === DISCOVERY.userinfo_endpoint && provider.userinfo) {
       return Response.json(provider.userinfo);
@@ -108,7 +138,7 @@ function setup(provider: Provider) {
     return { start, url, result };
   }
 
-  return { auth, login, tokenRequests };
+  return { auth, login, tokenRequests, revoked };
 }
 
 const admin = (nonce: string) =>
@@ -127,7 +157,9 @@ describe("admin login (OIDC)", () => {
     expect(url.searchParams.get("client_id")).toBe(CLIENT_ID);
     expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT);
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-    expect(url.searchParams.get("scope")).toBe("openid profile email groups");
+    expect(url.searchParams.get("scope")).toBe(
+      "openid profile email groups offline_access"
+    );
     expect(start.flowCookie.split(".")).toHaveLength(3);
   });
 
@@ -274,6 +306,161 @@ describe("admin login (OIDC)", () => {
     expect(url.searchParams.get("post_logout_redirect_uri")).toBe(
       "https://speisly.de/"
     );
+  });
+});
+
+describe("staying signed in (refresh token)", () => {
+  async function loggedIn(provider: Provider) {
+    const ctx = setup(provider);
+    const { result } = await ctx.login();
+    if (!(result.ok && result.refresh)) {
+      throw new Error("expected a refreshable session");
+    }
+    return { ...ctx, result, refreshCookie: result.refresh };
+  }
+
+  test("login stores the refresh token encrypted, session is short", async () => {
+    const { result } = await loggedIn({ claims: admin });
+    expect(result.sessionTtl).toBe(REFRESHABLE_SESSION_TTL_SECONDS);
+    // JWE (5 Teile), das Refresh-Token steht nicht im Klartext darin
+    expect(result.refresh?.split(".")).toHaveLength(5);
+    expect(result.refresh).not.toContain("refresh-0");
+  });
+
+  test("without a refresh token the session lasts until the next login", async () => {
+    const { result } = await setup({
+      claims: admin,
+      noRefreshToken: true,
+    }).login();
+    expect(result).toMatchObject({ ok: true, sessionTtl: SESSION_TTL_SECONDS });
+    expect(result.ok && result.refresh).toBeUndefined();
+  });
+
+  test("refresh issues a new session and rotates the token", async () => {
+    const { auth, refreshCookie, tokenRequests } = await loggedIn({
+      claims: admin,
+    });
+    const renewed = await auth.refresh(refreshCookie);
+    if (!renewed.ok) {
+      throw new Error("expected a renewed session");
+    }
+    expect(renewed.profile).toEqual({
+      sub: "u1",
+      name: "Ada",
+      email: "ada@example.test",
+    });
+    expect(await auth.readSession(renewed.session)).toEqual(renewed.profile);
+    const request = tokenRequests.at(-1);
+    expect(request?.body.get("grant_type")).toBe("refresh_token");
+    expect(request?.body.get("refresh_token")).toBe("refresh-0");
+
+    // das rotierte Token wird beim nächsten Mal benutzt
+    await auth.refresh(renewed.refresh);
+    expect(tokenRequests.at(-1)?.body.get("refresh_token")).toBe("refresh-1");
+  });
+
+  test("parallel requests share one refresh", async () => {
+    const { auth, refreshCookie, tokenRequests } = await loggedIn({
+      claims: admin,
+    });
+    const [a, b] = await Promise.all([
+      auth.refresh(refreshCookie),
+      auth.refresh(refreshCookie),
+    ]);
+    expect(a).toBe(b);
+    expect(
+      tokenRequests.filter((r) => r.body.get("grant_type") === "refresh_token")
+    ).toHaveLength(1);
+  });
+
+  test("without an ID token on refresh, userinfo decides", async () => {
+    const { auth, refreshCookie } = await loggedIn({
+      claims: admin,
+      userinfo: { sub: "u1", name: "Ada", groups: ["speisly-admin"] },
+      onRefresh: () => Response.json({ access_token: "access-2" }),
+    });
+    const renewed = await auth.refresh(refreshCookie);
+    expect(renewed).toMatchObject({ ok: true, profile: { sub: "u1" } });
+    // ohne Rotation bleibt das bisherige Refresh-Token
+    expect(renewed.ok && renewed.refresh).toBeTruthy();
+  });
+
+  test("removed from the admin group: refresh is rejected", async () => {
+    let member = true;
+    const { auth, refreshCookie } = await loggedIn({
+      claims: (nonce) =>
+        idToken({
+          sub: "u1",
+          name: "Ada",
+          nonce,
+          groups: member ? ["speisly-admin"] : ["andere"],
+        }),
+      userinfo: { sub: "u1", groups: ["andere"] },
+    });
+    member = false;
+    expect(await auth.refresh(refreshCookie)).toEqual({
+      ok: false,
+      rejected: true,
+    });
+  });
+
+  test("revoked token is rejected, provider outage is not", async () => {
+    let status = 400;
+    const { auth, refreshCookie } = await loggedIn({
+      claims: admin,
+      onRefresh: () => Response.json({ error: "invalid_grant" }, { status }),
+    });
+    expect(await auth.refresh(refreshCookie)).toEqual({
+      ok: false,
+      rejected: true,
+    });
+
+    status = 503;
+    const other = await loggedIn({
+      claims: admin,
+      onRefresh: () => new Response(null, { status }),
+    });
+    expect(await other.auth.refresh(other.refreshCookie)).toEqual({
+      ok: false,
+      rejected: false,
+    });
+  });
+
+  test("foreign or tampered refresh cookies are rejected", async () => {
+    const { auth, result, refreshCookie, tokenRequests } = await loggedIn({
+      claims: admin,
+    });
+    const before = tokenRequests.length;
+    expect(await auth.refresh(result.session)).toMatchObject({
+      rejected: true,
+    });
+    expect(await auth.refresh(`${refreshCookie.slice(0, -2)}xx`)).toMatchObject(
+      { rejected: true }
+    );
+    expect(tokenRequests).toHaveLength(before);
+  });
+
+  test("an ID token for another subject is rejected", async () => {
+    const { auth, refreshCookie } = await loggedIn({
+      claims: admin,
+      onRefresh: async () =>
+        Response.json({
+          id_token: await idToken({ sub: "u2", groups: ["speisly-admin"] }),
+          access_token: "access",
+        }),
+    });
+    expect(await auth.refresh(refreshCookie)).toMatchObject({
+      ok: false,
+      rejected: true,
+    });
+  });
+
+  test("logout revokes the refresh token", async () => {
+    const { auth, refreshCookie, revoked } = await loggedIn({ claims: admin });
+    await auth.revoke(refreshCookie);
+    expect(revoked).toHaveLength(1);
+    expect(revoked[0].get("token")).toBe("refresh-0");
+    expect(revoked[0].get("token_type_hint")).toBe("refresh_token");
   });
 });
 

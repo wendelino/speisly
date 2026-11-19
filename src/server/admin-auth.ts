@@ -1,8 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
   createRemoteJWKSet,
+  EncryptJWT,
   type JWTPayload,
   type JWTVerifyGetKey,
+  jwtDecrypt,
   jwtVerify,
   SignJWT,
 } from "jose";
@@ -10,20 +12,36 @@ import {
 /**
  * Login für /admin über den eigenen OIDC-Provider (Authorization Code mit
  * PKCE). Nach dem Login hält ein eigenes, signiertes Session-Cookie den
- * Zugang; der Provider wird danach nicht mehr gefragt.
+ * Zugang.
  *
  * Ablauf: /admin/login → Provider → /admin/callback (Code tauschen, ID-Token
  * prüfen, Gruppe prüfen) → Session-Cookie → /admin.
+ *
+ * Angemeldet bleiben: Gibt der Provider ein Refresh-Token (`offline_access`),
+ * liegt es verschlüsselt im Refresh-Cookie und die Session ist kurz. Ist sie
+ * abgelaufen, holt die Middleware mit dem Refresh-Token neue Tokens, prüft
+ * die Gruppe erneut und setzt beide Cookies neu (src/middleware.ts). Wer am
+ * Provider gesperrt oder aus der Gruppe genommen wird, verliert den Zugang so
+ * nach spätestens einer Session-Laufzeit.
  */
 
 export const SESSION_COOKIE = "speisly_admin";
+export const REFRESH_COOKIE = "speisly_admin_refresh";
 export const FLOW_COOKIE = "speisly_admin_flow";
+/** Session ohne Refresh-Token: bis zum nächsten Login */
 export const SESSION_TTL_SECONDS = 8 * 3600;
+/** Session mit Refresh-Token: danach wird still erneuert */
+export const REFRESHABLE_SESSION_TTL_SECONDS = 15 * 60;
+/** Wie lange der Browser das Refresh-Cookie hält (bei jeder Erneuerung neu) */
+export const REFRESH_TTL_SECONDS = 30 * 24 * 3600;
 export const FLOW_TTL_SECONDS = 10 * 60;
+/** Parallele Requests mit demselben Refresh-Cookie teilen sich ein Ergebnis */
+const REFRESH_DEDUPE_MS = 60_000;
 
 /** Unterscheidet Session und Login-Ablauf von anderen JWTs mit JWT_SECRET */
 const SESSION_AUDIENCE = "speisly-admin-session";
 const FLOW_AUDIENCE = "speisly-admin-flow";
+const REFRESH_AUDIENCE = "speisly-admin-refresh";
 const ALGORITHM = "HS256";
 const TRAILING_SLASH = /\/$/;
 
@@ -41,6 +59,13 @@ type Discovery = {
   jwks_uri: string;
   userinfo_endpoint?: string;
   end_session_endpoint?: string;
+  revocation_endpoint?: string;
+};
+
+type TokenResponse = {
+  id_token?: string;
+  access_token?: string;
+  refresh_token?: string;
 };
 
 /** Profil aus ID-Token und Userinfo des Providers */
@@ -58,9 +83,25 @@ const MAX_PICTURE_LENGTH = 2048;
 
 type Flow = { state: string; nonce: string; verifier: string; next: string };
 
+/** Neue Cookies nach Login oder Erneuerung */
+export type SessionCookies = {
+  session: string;
+  sessionTtl: number;
+  /** Fehlt, wenn der Provider kein Refresh-Token ausgegeben hat */
+  refresh?: string;
+};
+
 export type LoginResult =
-  | { ok: true; session: string; next: string }
+  | ({ ok: true; next: string } & SessionCookies)
   | { ok: false; status: 400 | 403 | 502; reason: string };
+
+export type RefreshResult =
+  | ({ ok: true; profile: AdminSession } & SessionCookies)
+  /**
+   * `rejected`: Provider lehnt das Refresh-Token ab oder die Gruppe fehlt,
+   * das Cookie ist wertlos. Sonst (Netzwerk, 5xx) später erneut versuchen.
+   */
+  | { ok: false; rejected: boolean };
 
 type Deps = {
   settings: OidcSettings;
@@ -137,6 +178,11 @@ export function createAdminAuth({
   jwks,
 }: Deps) {
   const key = new TextEncoder().encode(secret);
+  // eigener Schlüssel fürs Verschlüsseln, abgeleitet aus demselben Secret
+  const refreshKey = createHash("sha256")
+    .update(`speisly-admin-refresh:${secret}`)
+    .digest();
+  const pendingRefresh = new Map<string, Promise<RefreshResult>>();
   let discovery: Promise<Discovery> | undefined;
   let remoteJwks: JWTVerifyGetKey | undefined;
 
@@ -210,7 +256,8 @@ export function createAdminAuth({
       response_type: "code",
       client_id: settings.clientId,
       redirect_uri: redirectUri,
-      scope: "openid profile email groups",
+      // offline_access: Refresh-Token, um angemeldet zu bleiben
+      scope: "openid profile email groups offline_access",
       state: flow.state,
       nonce: flow.nonce,
       code_challenge: base64url(
@@ -224,35 +271,77 @@ export function createAdminAuth({
     };
   }
 
-  async function exchangeCode(
-    discovered: Discovery,
-    {
-      code,
-      redirectUri,
-      verifier,
-    }: { code: string; redirectUri: string; verifier: string }
-  ) {
-    const basic = Buffer.from(
+  /** Das Refresh-Token ist ein Geheimnis: verschlüsselt, nicht nur signiert */
+  function sealRefresh(refreshToken: string, sub: string) {
+    return new EncryptJWT({ rt: refreshToken, sub })
+      .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
+      .setAudience(REFRESH_AUDIENCE)
+      .setIssuedAt()
+      .setExpirationTime(`${REFRESH_TTL_SECONDS}s`)
+      .encrypt(refreshKey);
+  }
+
+  async function openRefresh(
+    cookie: string | undefined
+  ): Promise<{ rt: string; sub: string } | null> {
+    if (!cookie) {
+      return null;
+    }
+    try {
+      const { payload } = await jwtDecrypt(cookie, refreshKey, {
+        audience: REFRESH_AUDIENCE,
+      });
+      return typeof payload.rt === "string" && typeof payload.sub === "string"
+        ? { rt: payload.rt, sub: payload.sub }
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function clientAuth() {
+    return `Basic ${Buffer.from(
       `${encodeURIComponent(settings.clientId)}:${encodeURIComponent(settings.clientSecret)}`
-    ).toString("base64");
+    ).toString("base64")}`;
+  }
+
+  /** POST an den Token-Endpoint; `status` bei HTTP-Fehlern */
+  async function tokenRequest(
+    discovered: Discovery,
+    body: Record<string, string>
+  ): Promise<TokenResponse> {
     const res = await fetchImpl(discovered.token_endpoint, {
       method: "POST",
       headers: {
-        authorization: `Basic ${basic}`,
+        authorization: clientAuth(),
         "content-type": "application/x-www-form-urlencoded",
         accept: "application/json",
       },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: redirectUri,
-        code_verifier: verifier,
-      }),
+      body: new URLSearchParams(body),
     });
     if (!res.ok) {
-      throw new Error(`token endpoint: HTTP ${res.status}`);
+      throw Object.assign(new Error(`token endpoint: HTTP ${res.status}`), {
+        status: res.status,
+      });
     }
-    return (await res.json()) as { id_token?: string; access_token?: string };
+    return (await res.json()) as TokenResponse;
+  }
+
+  /** Session- und (falls vorhanden) Refresh-Cookie für ein Profil */
+  async function issueCookies(
+    profile: AdminSession,
+    refreshToken: string | undefined
+  ): Promise<SessionCookies> {
+    const sessionTtl = refreshToken
+      ? REFRESHABLE_SESSION_TTL_SECONDS
+      : SESSION_TTL_SECONDS;
+    return {
+      session: await sign(profile, SESSION_AUDIENCE, sessionTtl),
+      sessionTtl,
+      refresh: refreshToken
+        ? await sealRefresh(refreshToken, profile.sub)
+        : undefined,
+    };
   }
 
   /**
@@ -325,16 +414,19 @@ export function createAdminAuth({
 
     let claims: JWTPayload;
     let accessToken: string | undefined;
+    let refreshToken: string | undefined;
     try {
-      const tokens = await exchangeCode(discovered, {
+      const tokens = await tokenRequest(discovered, {
+        grant_type: "authorization_code",
         code,
-        redirectUri,
-        verifier: flow.verifier,
+        redirect_uri: redirectUri,
+        code_verifier: flow.verifier,
       });
       if (!tokens.id_token) {
         return { ok: false, status: 502, reason: "Kein ID-Token" };
       }
       accessToken = tokens.access_token;
+      refreshToken = tokens.refresh_token;
       ({ payload: claims } = await jwtVerify(tokens.id_token, await getJwks(), {
         issuer: discovered.issuer,
         audience: settings.clientId,
@@ -350,23 +442,138 @@ export function createAdminAuth({
     if (claims.nonce !== flow.nonce || !claims.sub) {
       return { ok: false, status: 400, reason: "Ungültiges ID-Token" };
     }
-    const info = await userinfoFor(discovered, claims, accessToken);
-    const fromToken = groupsOf(claims);
-    const groups = fromToken.length > 0 ? fromToken : groupsOf(info);
-    if (!groups.includes(settings.adminGroup)) {
+    const profile = await adminProfile(
+      discovered,
+      { ...claims, sub: claims.sub },
+      accessToken
+    );
+    if (!profile) {
       return {
         ok: false,
         status: 403,
         reason: "Kein Zugriff auf den Admin-Bereich",
       };
     }
-    // ID-Token hat Vorrang, Userinfo ergänzt
-    const session = profileOf(claims.sub, { ...info, ...claims });
     return {
       ok: true,
-      session: await sign(session, SESSION_AUDIENCE, SESSION_TTL_SECONDS),
+      ...(await issueCookies(profile, refreshToken)),
       next: flow.next,
     };
+  }
+
+  /** Profil, wenn der Nutzer in der Admin-Gruppe ist, sonst `null` */
+  async function adminProfile(
+    discovered: Discovery,
+    claims: JWTPayload & { sub: string },
+    accessToken: string | undefined
+  ): Promise<AdminSession | null> {
+    const info = await userinfoFor(discovered, claims, accessToken);
+    const fromToken = groupsOf(claims);
+    const groups = fromToken.length > 0 ? fromToken : groupsOf(info);
+    if (!groups.includes(settings.adminGroup)) {
+      return null;
+    }
+    // ID-Token hat Vorrang, Userinfo ergänzt
+    return profileOf(claims.sub, { ...info, ...claims });
+  }
+
+  async function doRefresh(cookie: string): Promise<RefreshResult> {
+    const sealed = await openRefresh(cookie);
+    if (!sealed) {
+      return { ok: false, rejected: true };
+    }
+    let tokens: TokenResponse;
+    let claims: JWTPayload & { sub: string };
+    let discovered: Discovery;
+    try {
+      discovered = await getDiscovery();
+      tokens = await tokenRequest(discovered, {
+        grant_type: "refresh_token",
+        refresh_token: sealed.rt,
+      });
+      if (tokens.id_token) {
+        // kein Nonce beim Refresh (OIDC Core 12.2), aber derselbe Nutzer
+        const { payload } = await jwtVerify(tokens.id_token, await getJwks(), {
+          issuer: discovered.issuer,
+          audience: settings.clientId,
+        });
+        if (payload.sub !== sealed.sub) {
+          return { ok: false, rejected: true };
+        }
+        claims = { ...payload, sub: sealed.sub };
+      } else {
+        claims = { sub: sealed.sub };
+      }
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      // 400/401: invalid_grant – abgelaufen, widerrufen oder schon verbraucht
+      const rejected = status === 400 || status === 401;
+      if (!rejected) {
+        console.error("[admin-auth] refresh failed", error);
+      }
+      return { ok: false, rejected };
+    }
+    // ohne ID-Token kommen Gruppen und Profil vom Userinfo-Endpoint
+    const profile = await adminProfile(discovered, claims, tokens.access_token);
+    if (!profile) {
+      return { ok: false, rejected: true };
+    }
+    return {
+      ok: true,
+      profile,
+      // ohne Rotation bleibt das alte Refresh-Token gültig
+      ...(await issueCookies(profile, tokens.refresh_token ?? sealed.rt)),
+    };
+  }
+
+  /**
+   * Neue Session aus dem Refresh-Cookie. Seite, Islands und Prefetch kommen
+   * oft gleichzeitig mit demselben (bei Rotation nur einmal gültigen) Token:
+   * sie teilen sich eine Anfrage beim Provider und dasselbe Ergebnis.
+   */
+  function refresh(cookie: string | undefined): Promise<RefreshResult> {
+    if (!cookie) {
+      return Promise.resolve({ ok: false, rejected: false });
+    }
+    let pending = pendingRefresh.get(cookie);
+    if (!pending) {
+      pending = doRefresh(cookie);
+      pendingRefresh.set(cookie, pending);
+      const forget = () =>
+        setTimeout(
+          () => pendingRefresh.delete(cookie),
+          REFRESH_DEDUPE_MS
+        ).unref?.();
+      pending.then(forget, forget);
+    }
+    return pending;
+  }
+
+  /** Refresh-Token beim Provider widerrufen (beim Abmelden, best effort) */
+  async function revoke(cookie: string | undefined): Promise<void> {
+    const sealed = await openRefresh(cookie);
+    if (!sealed) {
+      return;
+    }
+    try {
+      const { revocation_endpoint } = await getDiscovery();
+      if (!revocation_endpoint) {
+        return;
+      }
+      await fetchImpl(revocation_endpoint, {
+        method: "POST",
+        headers: {
+          authorization: clientAuth(),
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          token: sealed.rt,
+          token_type_hint: "refresh_token",
+        }),
+      });
+    } catch (error) {
+      console.error("[admin-auth] revoke failed", error);
+    }
   }
 
   async function readSession(
@@ -398,7 +605,7 @@ export function createAdminAuth({
     }
   }
 
-  return { startLogin, finishLogin, readSession, logoutUrl };
+  return { startLogin, finishLogin, readSession, refresh, revoke, logoutUrl };
 }
 
 export type AdminAuth = ReturnType<typeof createAdminAuth>;
