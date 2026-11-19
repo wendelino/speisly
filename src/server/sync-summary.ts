@@ -1,8 +1,8 @@
 import { formatDecimal } from "@/lib/format";
+import { notifyAdmins } from "./admin-notify";
 import { markNotified } from "./log";
 import type { RunError } from "./sync-run-context";
 import type { SyncCounts, SyncScope, SyncStatus } from "./sync-runs";
-import { sendTelegramMessage } from "./telegram";
 
 export type RunSummary = {
   scope: SyncScope;
@@ -62,7 +62,13 @@ export async function reportSyncRun(summary: RunSummary): Promise<void> {
   if (!shouldReport(summary)) {
     return;
   }
-  await sendTelegramMessage(formatSummary(summary));
+  const [title, ...rest] = formatSummary(summary).split("\n");
+  await notifyAdmins({
+    title,
+    body: rest.join("\n").trim(),
+    url: "/admin/sync",
+    tag: "sync-summary",
+  });
   await markNotified(
     summary.errors.filter((e) => e.noteworthy).map((e) => e.fingerprint)
   );

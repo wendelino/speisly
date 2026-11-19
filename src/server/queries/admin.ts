@@ -38,6 +38,15 @@ export type DoneFilter = "open" | "done" | "all";
 
 const PAGE = 100;
 
+/**
+ * Noch nicht von einem Admin bestätigt: vom Wortfilter zurückgehaltene und
+ * automatisch veröffentlichte Kommentare (src/server/ratings.ts)
+ */
+const unreviewedComment = and(
+  isNotNull(mealRating.commentStatus),
+  isNull(mealRating.commentModeratedAt)
+);
+
 /** Offene Fehler, offenes Feedback und ungeprüfte Kommentare (Übersicht und Navigation) */
 export async function openCounts() {
   const [[errors], [openFeedback], [pendingComments]] = await Promise.all([
@@ -49,10 +58,7 @@ export async function openCounts() {
       .select({ count: count() })
       .from(feedback)
       .where(eq(feedback.status, "open")),
-    db
-      .select({ count: count() })
-      .from(mealRating)
-      .where(eq(mealRating.commentStatus, "pending")),
+    db.select({ count: count() }).from(mealRating).where(unreviewedComment),
   ]);
   return {
     openErrors: errors.count,
@@ -396,7 +402,10 @@ export function listFeedback(filter: DoneFilter = "open", limit = PAGE) {
 export type CommentStatus = "pending" | "approved" | "rejected";
 export type CommentFilter = CommentStatus | "all";
 
-/** Bewertungskommentare zur Moderation, älteste ungeprüfte zuerst */
+/**
+ * Bewertungskommentare zur Moderation, älteste ungeprüfte zuerst.
+ * `pending` = ungeprüft (zurückgehalten oder automatisch veröffentlicht).
+ */
 export function listComments(filter: CommentFilter = "pending", limit = PAGE) {
   return (
     db
@@ -420,7 +429,9 @@ export function listComments(filter: CommentFilter = "pending", limit = PAGE) {
       .where(
         filter === "all"
           ? isNotNull(mealRating.commentStatus)
-          : eq(mealRating.commentStatus, filter)
+          : filter === "pending"
+            ? unreviewedComment
+            : eq(mealRating.commentStatus, filter)
       )
       .orderBy(
         filter === "pending" ? mealRating.updatedAt : desc(mealRating.updatedAt)

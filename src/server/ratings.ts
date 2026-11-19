@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { commentLike, mealRating } from "@/lib/db/schema/schema";
 import { genId } from "@/lib/db/utils";
+import { findFlaggedWords } from "./comment-filter";
 import { db } from "./db";
 
 export type RatingInput = {
@@ -41,22 +42,57 @@ export async function getUserRating(userId: string, mealId: string) {
 /** Mensa und Tag der bewerteten Ausgabe (bleiben, auch wenn sie entfernt wird) */
 export type RatedServing = { mensaId: string; date: Date };
 
+export type UpsertRatingResult = {
+  result: "created" | "updated";
+  ratingId: string;
+  /**
+   * Neuer bzw. geänderter Kommentar, den der Wortfilter zurückhält: die
+   * Admins werden benachrichtigt (actions/index.ts). Sonst `null`.
+   */
+  heldComment: { comment: string; words: string[] } | null;
+};
+
+/**
+ * Status eines neuen oder geänderten Kommentars: ohne Treffer im Wortfilter
+ * sofort öffentlich (`approved`), mit Treffer zurückgehalten (`pending`).
+ * `comment_moderated_at` bleibt in beiden Fällen leer: Im Admin
+ * (/admin/comments) steht er als „ungeprüft“, bis ihn jemand bestätigt.
+ */
+function statusFor(comment: string | null) {
+  if (!comment) {
+    return { status: null, words: [] };
+  }
+  const words = findFlaggedWords(comment);
+  return {
+    status: words.length > 0 ? ("pending" as const) : ("approved" as const),
+    words,
+  };
+}
+
 export async function upsertRating(
   userId: string,
   input: RatingInput,
   serving: RatedServing
-): Promise<"created" | "updated"> {
+): Promise<UpsertRatingResult> {
   const values = {
     value: input.value,
     value_price: input.valuePrice ?? null,
     value_quantity: input.valueQuantity ?? null,
     value_taste: input.valueTaste ?? null,
   };
-  // Leere Kommentare zählen als kein Kommentar; neue oder geänderte
-  // Kommentare müssen im Admin (/admin/comments) freigegeben werden
+  // Leere Kommentare zählen als kein Kommentar
   const comment =
     input.comment === undefined ? undefined : input.comment.trim() || null;
-  const commentStatus = comment ? ("pending" as const) : null;
+  const { status: commentStatus, words } = statusFor(comment ?? null);
+  // vorheriger Text: entscheidet über Likes und Benachrichtigung
+  const [previous] =
+    comment === undefined
+      ? []
+      : await db
+          .select({ comment: mealRating.comment })
+          .from(mealRating)
+          .where(byUser(userId, input.mealId))
+          .limit(1);
   const unchanged = sql`${mealRating.comment} is not distinct from ${comment ?? null}`;
   const [row] = await db
     .insert(mealRating)
@@ -80,7 +116,7 @@ export async function upsertRating(
           : {
               ...values,
               comment,
-              // unveränderter Kommentar behält seine Freigabe
+              // unveränderter Kommentar behält Status und Prüfung
               commentStatus: sql`case when ${unchanged} then ${mealRating.commentStatus} else ${commentStatus}::comment_status end`,
               commentModeratedAt: sql`case when ${unchanged} then ${mealRating.commentModeratedAt} else null end`,
             },
@@ -88,15 +124,23 @@ export async function upsertRating(
     // xmax = 0 nur bei frisch eingefügten Zeilen
     .returning({
       id: mealRating.id,
-      status: mealRating.commentStatus,
       created: sql<boolean>`xmax = 0`,
     });
-  // Likes gelten dem freigegebenen Text: neuer (wieder ungeprüfter) oder
-  // entfernter Kommentar startet ohne
-  if (row && !row.created && row.status !== "approved") {
+  const changed =
+    comment !== undefined &&
+    (row?.created || (previous?.comment ?? null) !== comment);
+  // Likes gelten dem Text: ein neuer oder entfernter Kommentar startet ohne
+  if (row && !row.created && changed) {
     await db.delete(commentLike).where(eq(commentLike.ratingId, row.id));
   }
-  return row?.created ? "created" : "updated";
+  return {
+    result: row?.created ? "created" : "updated",
+    ratingId: row?.id ?? "",
+    heldComment:
+      changed && comment && commentStatus === "pending"
+        ? { comment, words }
+        : null,
+  };
 }
 
 /** Löscht die Bewertung des Nutzers. `true`, wenn genau eine gelöscht wurde. */

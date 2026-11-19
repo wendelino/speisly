@@ -1,9 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { AstroCookies } from "astro";
 import { eq, sql } from "drizzle-orm";
-import { mealRating, user } from "@/lib/db/schema/schema";
+import { user } from "@/lib/db/schema/schema";
+import { moderateByToken } from "./comment-notify";
 import { hasConsent } from "./consent";
 import { db } from "./db";
+import { signModerationToken } from "./moderation-token";
 import { deleteUserRating, getUserRating, upsertRating } from "./ratings";
 
 const cookies = (value?: string) =>
@@ -50,7 +52,7 @@ describe.skipIf(!process.env.DATABASE_URL)("ratings (integration)", () => {
     mensaMealId = serving.id;
     const rated = { mensaId: serving.mensa_id, date: new Date(serving.date) };
     const rate = (input: Parameters<typeof upsertRating>[1]) =>
-      upsertRating(userId, input, rated);
+      upsertRating(userId, input, rated).then((r) => r.result);
     await db
       .insert(user)
       .values({ id: userId, ipHash: "test" })
@@ -67,36 +69,71 @@ describe.skipIf(!process.env.DATABASE_URL)("ratings (integration)", () => {
       })
     ).toBe("updated");
 
+    // unauffälliger Kommentar: sofort öffentlich (im Admin noch ungeprüft)
     const mine = await getUserRating(userId, mealId);
     expect(mine).toMatchObject({
       value: 5,
       value_taste: 4,
       comment: "gut",
+      commentStatus: "approved",
+    });
+
+    // gleicher Kommentar behält seinen Status, ohne neue Meldung
+    const kept = await upsertRating(
+      userId,
+      { mealId, mensaMealId, value: 4, comment: "gut" },
+      rated
+    );
+    expect(kept.heldComment).toBeNull();
+
+    // Treffer im Wortfilter: zurückgehalten, Admins werden benachrichtigt
+    const flagged = "Der Koch ist ein Vollidiot";
+    const held = await upsertRating(
+      userId,
+      { mealId, mensaMealId, value: 1, comment: flagged },
+      rated
+    );
+    expect(held.heldComment).toEqual({
+      comment: flagged,
+      words: ["vollidiot"],
+    });
+    expect(await getUserRating(userId, mealId)).toMatchObject({
       commentStatus: "pending",
     });
 
-    // gleicher Kommentar behält die Freigabe, ein neuer muss wieder geprüft werden
-    await db
-      .update(mealRating)
-      .set({ commentStatus: "approved" })
-      .where(eq(mealRating.userId, userId));
-    await rate({
-      mealId,
-      mensaMealId,
-      value: 4,
-      comment: "gut",
+    // Freigabe aus der Benachrichtigung gilt nur für genau diesen Text
+    const cache = { enabled: false } as Parameters<typeof moderateByToken>[0];
+    const stale = await signModerationToken(held.ratingId, "gut", "approved");
+    expect(await moderateByToken(cache, stale)).toEqual({
+      ok: false,
+      reason: "changed",
     });
+    expect(await moderateByToken(cache, "kaputt")).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+    const reject = await signModerationToken(
+      held.ratingId,
+      flagged,
+      "rejected"
+    );
+    expect(await moderateByToken(cache, reject)).toEqual({
+      ok: true,
+      action: "rejected",
+    });
+    expect(await getUserRating(userId, mealId)).toMatchObject({
+      commentStatus: "rejected",
+    });
+
+    // geänderter, unauffälliger Text ist wieder öffentlich
+    const fixed = await upsertRating(
+      userId,
+      { mealId, mensaMealId, value: 2, comment: "Leider kalt" },
+      rated
+    );
+    expect(fixed.heldComment).toBeNull();
     expect(await getUserRating(userId, mealId)).toMatchObject({
       commentStatus: "approved",
-    });
-    await rate({
-      mealId,
-      mensaMealId,
-      value: 4,
-      comment: "neu",
-    });
-    expect(await getUserRating(userId, mealId)).toMatchObject({
-      commentStatus: "pending",
     });
     await rate({
       mealId,

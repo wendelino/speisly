@@ -202,7 +202,8 @@ export function RatingDialog({
                 value={comment}
               />
               <p className="text-muted-foreground text-xs" id="comment-hint">
-                Kommentare werden von uns geprüft, bevor sie erscheinen.
+                Kommentare erscheinen ohne Namen. Wir lesen sie nach und
+                entfernen, was beleidigt oder anstößig ist.
               </p>
             </div>
           </DrawerBody>

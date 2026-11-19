@@ -5,24 +5,21 @@ import { todayBerlin } from "@/lib/dates";
 import { mensaMeal } from "@/lib/db/schema/schema";
 import { MAX_FAVORITES } from "@/lib/favorites";
 import { FEEDBACK_MESSAGE } from "@/lib/feedback";
+import {
+  removeAdminSubscription,
+  upsertAdminSubscription,
+} from "@/server/admin-notify";
 import { invalidateTags } from "@/server/cache";
 import { TAG } from "@/server/cache-tags";
 import { getOwnCommentState, setCommentLike } from "@/server/comment-likes";
+import { moderateComment, notifyHeldComment } from "@/server/comment-notify";
 import { hasConsent } from "@/server/consent";
 import { db } from "@/server/db";
 import { saveFeedback } from "@/server/feedback";
 import { logError } from "@/server/log";
 import { deleteMyData, getMyData } from "@/server/my-data";
-import {
-  deleteSubscription,
-  isPushEndpoint,
-  upsertSubscription,
-} from "@/server/push";
-import {
-  setCommentStatus,
-  setErrorResolved,
-  setFeedbackDone,
-} from "@/server/queries/admin";
+import { deleteSubscription, upsertSubscription } from "@/server/push";
+import { setErrorResolved, setFeedbackDone } from "@/server/queries/admin";
 import { getFavoriteMeals } from "@/server/queries/favorites";
 import {
   RATE_LIMIT_MESSAGE,
@@ -40,6 +37,7 @@ import {
   getUserId,
   ipHash,
 } from "@/server/user";
+import { isPushEndpoint } from "@/server/web-push";
 
 /**
  * Admin-Actions: die Middleware lässt sie nur mit Session durch
@@ -52,6 +50,7 @@ function requireAdmin(locals: App.Locals) {
       message: "Nicht angemeldet",
     });
   }
+  return locals.admin;
 }
 
 /** `true`, wenn die Anfrage das Rate-Limit noch nicht erreicht hat */
@@ -155,7 +154,21 @@ export const server = {
             };
           }
           const userId = await getOrCreateUser(context);
-          const result = await upsertRating(userId, input, serving);
+          const { result, ratingId, heldComment } = await upsertRating(
+            userId,
+            input,
+            serving
+          );
+          // Wortfilter hat angeschlagen: zur Prüfung melden (sonst ist der
+          // Kommentar schon öffentlich und steht nur im Admin als ungeprüft)
+          if (heldComment) {
+            notifyHeldComment({
+              ratingId,
+              mealId: input.mealId,
+              stars: input.value,
+              ...heldComment,
+            });
+          }
           await invalidateTags(context.cache, [TAG.ratings(input.mealId)], {
             settle: true,
           });
@@ -410,14 +423,35 @@ export const server = {
       }),
       handler: async ({ id: ratingId, status }, context) => {
         requireAdmin(context.locals);
-        const mealId = await setCommentStatus(ratingId, status);
-        // Detailseite zeigt freigegebene Kommentare (das OG-Bild nicht)
-        if (mealId) {
-          await invalidateTags(context.cache, [TAG.comments(mealId)], {
-            settle: true,
-          });
-        }
-        return { updated: mealId !== null };
+        return {
+          updated: await moderateComment(context.cache, ratingId, status),
+        };
+      },
+    }),
+    /** Push-Meldungen (Fehler, neue Kommentare) auf diesem Gerät */
+    pushSubscribe: defineAction({
+      input: z.object({
+        endpoint: z
+          .url()
+          .max(1000)
+          .refine(isPushEndpoint, "Unbekannter Push-Dienst"),
+        keys: z.object({
+          p256dh: z.string().min(1).max(255),
+          auth: z.string().min(1).max(255),
+        }),
+      }),
+      handler: async (input, context) => {
+        const admin = requireAdmin(context.locals);
+        await upsertAdminSubscription(input, admin.sub);
+        return { success: true };
+      },
+    }),
+    pushUnsubscribe: defineAction({
+      input: z.object({ endpoint: z.url().max(1000) }),
+      handler: async ({ endpoint }, context) => {
+        requireAdmin(context.locals);
+        await removeAdminSubscription(endpoint);
+        return { success: true };
       },
     }),
   },

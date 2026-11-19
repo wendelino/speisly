@@ -11,7 +11,9 @@
  *    nächsten Tage samt CSS/JS vorhalten, höchstens stündlich
  *
  * Push: zeigt Benachrichtigungen zu Favoriten (src/server/push.ts) und
- * öffnet beim Antippen den Speiseplan des Tages.
+ * öffnet beim Antippen den Speiseplan des Tages. Admin-Meldungen
+ * (src/server/admin-notify.ts) kommen über eine zweite Registrierung mit
+ * Scope /admin/; „Freigeben“/„Ablehnen“ moderiert per POST /api/moderate.
  *
  * Nie gecacht: Actions, API, Admin, Server Islands, OG-Bilder.
  */
@@ -273,19 +275,69 @@ self.addEventListener("push", (event) => {
   } catch {
     data = { body: event.data?.text() };
   }
+  // Admin-Meldungen (src/server/admin-notify.ts) können Buttons haben:
+  // Titel in `actions`, die signierten Tokens bleiben in `data`
+  const actions = Array.isArray(data.actions) ? data.actions : [];
+  const tokens = {};
+  for (const item of actions) {
+    tokens[item.action] = item.token;
+  }
   event.waitUntil(
     self.registration.showNotification(data.title || "Speisly", {
       body: data.body || "",
       icon: "/icons/icon-192x192.png",
       badge: "/icons/icon-192x192.png",
       tag: data.tag,
-      data: { url: data.url || "/" },
+      renotify: Boolean(data.tag && actions.length > 0),
+      actions: actions.map(({ action, title }) => ({ action, title })),
+      data: { url: data.url || "/", tokens },
     })
   );
 });
 
+const MODERATION_RESULT = {
+  approved: "Kommentar freigegeben",
+  rejected: "Kommentar abgelehnt",
+  changed: "Kommentar wurde inzwischen geändert – bitte im Admin prüfen",
+  gone: "Kommentar gibt es nicht mehr",
+  invalid: "Link abgelaufen – bitte im Admin prüfen",
+};
+
+/** Button „Freigeben“/„Ablehnen“: ohne Fenster per POST /api/moderate */
+async function moderate(notification, token) {
+  let text = "Das hat nicht geklappt – bitte im Admin prüfen";
+  let url = notification.data?.url || "/admin/comments";
+  try {
+    const response = await fetch("/api/moderate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const result = await response.json().catch(() => ({}));
+    const key = result.ok ? result.action : result.reason;
+    text = MODERATION_RESULT[key] || text;
+    if (result.ok) {
+      url = "/admin/comments";
+    }
+  } catch {
+    // offline: Hinweis unten
+  }
+  await self.registration.showNotification(text, {
+    body: notification.body,
+    icon: "/icons/icon-192x192.png",
+    badge: "/icons/icon-192x192.png",
+    tag: notification.tag,
+    data: { url },
+  });
+}
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  const token = event.action && event.notification.data?.tokens?.[event.action];
+  if (token) {
+    event.waitUntil(moderate(event.notification, token));
+    return;
+  }
   const url = new URL(event.notification.data?.url || "/", self.location.origin)
     .href;
   event.waitUntil(

@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { inArray, sql } from "drizzle-orm";
 import { errorLog } from "@/lib/db/schema/error-log";
 import { genId } from "@/lib/db/utils";
+import { notifyAdmins } from "./admin-notify";
 import { db } from "./db";
 import { currentSyncRun, type RunError } from "./sync-run-context";
-import { sendTelegramMessage } from "./telegram";
 
 /** Woher ein Fehler kommt; zusammen mit der Meldung der Gruppierungsschlüssel */
 export type LogSource =
@@ -198,12 +198,18 @@ async function persist(
     return;
   }
   const repeat = state.count > 1 ? ` (${state.count}× insgesamt)` : "";
-  await sendTelegramMessage(`[${props.source}] ${props.message}${repeat}`);
+  await notifyAdmins({
+    title: `[${props.source}] ${props.message}${repeat}`,
+    body: props.level === "warn" ? "Warnung" : "Fehler",
+    url: "/admin/errors",
+    tag: `error-${fingerprint}`,
+  });
   await markNotified([fingerprint]);
 }
 
 /**
- * Loggt einen Fehler gruppiert in die DB und meldet ihn ggf. per Telegram.
+ * Loggt einen Fehler gruppiert in die DB und meldet ihn ggf. per Telegram
+ * und Push an die Admins (./admin-notify.ts).
  * Fire-and-forget: blockiert den Request nicht und wirft nie.
  */
 export function logError({

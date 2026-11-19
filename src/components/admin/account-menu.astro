@@ -1,7 +1,7 @@
 ---
 // Konto im Admin-Header: Profil vom SSO-Provider (Bild, Name, Benutzername,
 // E-Mail) als Menü aus <details>, schließt bei Klick daneben oder Escape
-import { ChevronDown, ExternalLink, LogOut } from "@lucide/astro";
+import { Bell, ChevronDown, ExternalLink, LogOut } from "@lucide/astro";
 import type { AdminSession } from "@/server/admin-auth";
 
 type Props = { admin: AdminSession };
@@ -47,6 +47,20 @@ const ITEM =
       </div>
     </div>
     <div class="my-1 border-border/70 border-t"></div>
+    <button
+      class={`${ITEM} w-full text-left disabled:opacity-60`}
+      data-admin-push
+      hidden
+      type="button"
+    >
+      <Bell aria-hidden="true" class="size-4 shrink-0 text-muted-foreground" />
+      <span class="min-w-0">
+        <span class="block" data-admin-push-label>Push-Meldungen</span>
+        <span class="block font-normal text-muted-foreground text-xs" data-admin-push-hint>
+          Fehler und neue Kommentare auf diesem Gerät
+        </span>
+      </span>
+    </button>
     <a class={ITEM} href="/">
       <ExternalLink aria-hidden="true" class="size-4 text-muted-foreground" />
       Zur Website
@@ -80,6 +94,55 @@ const ITEM =
 </style>
 
 <script>
+  import { adminPushEnabled, disableAdminPush, enableAdminPush } from "@/lib/admin-push-client";
+  import { pushSupport } from "@/lib/push-client";
+
+  // Push-Meldungen für dieses Gerät ein-/ausschalten
+  async function setupAdminPush() {
+    const button = document.querySelector<HTMLButtonElement>("[data-admin-push]");
+    const label = button?.querySelector("[data-admin-push-label]");
+    const hint = button?.querySelector("[data-admin-push-hint]");
+    if (!(button && label && hint) || pushSupport() !== "supported") {
+      return;
+    }
+    const DEFAULT_HINT = hint.textContent?.trim() ?? "";
+    let enabled = await adminPushEnabled().catch(() => false);
+    const show = (message?: string) => {
+      label.textContent = enabled ? "Push-Meldungen ausschalten" : "Push-Meldungen einschalten";
+      hint.textContent =
+        message ??
+        (Notification.permission === "denied"
+          ? "Im Browser blockiert – in den Website-Einstellungen erlauben"
+          : enabled
+            ? "Aktiv: Fehler und neue Kommentare kommen auf dieses Gerät"
+            : DEFAULT_HINT);
+      button.disabled = Notification.permission === "denied" && !enabled;
+    };
+    button.hidden = false;
+    show();
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      if (enabled) {
+        if (!(await disableAdminPush())) {
+          button.disabled = false;
+          show("Das hat nicht geklappt.");
+          return;
+        }
+        enabled = false;
+      } else {
+        const result = await enableAdminPush();
+        enabled = result === "enabled";
+        if (result === "error") {
+          button.disabled = false;
+          show("Das hat nicht geklappt.");
+          return;
+        }
+      }
+      show();
+    });
+  }
+  setupAdminPush();
+
   // Menü schließen bei Klick außerhalb oder Escape
   document.addEventListener("click", (event) => {
     for (const menu of document.querySelectorAll<HTMLDetailsElement>(".account-menu[open]")) {
