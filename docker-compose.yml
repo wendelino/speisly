@@ -1,0 +1,51 @@
+# Produktion in Dokploy: Compose-Dienst vom Typ „Stack“ (Docker Swarm).
+# Nur Swarm kennt `start-first` und Rollback: Die neue Version startet neben
+# der alten und übernimmt erst, wenn ihr Healthcheck grün ist; schlägt die
+# Migration fehl, bleibt die alte online. Einrichtung: README, „Deployment“.
+#
+# Das Image baut GitHub Actions (.github/workflows/ci.yml), hier wird nichts
+# gebaut. Postgres läuft separat in Dokploy und ist über `dokploy-network`
+# erreichbar. Domain/HTTPS: Dokploy-Tab „Domains“ (Port 4321), Dokploy
+# ergänzt die Traefik-Labels beim Deploy.
+
+services:
+  app:
+    image: ghcr.io/wendelino/speisly:latest
+    # Alle Umgebungsvariablen aus Dokploy (Tab „Environment“, als .env neben
+    # dieser Datei abgelegt). Liste und Pflichtwerte: env-schema.mjs
+    env_file: .env
+    environment:
+      # fest auf das Volume (hat Vorrang vor einem IMAGE_DIR aus .env)
+      IMAGE_DIR: /data/img
+    expose:
+      - "4321"
+    volumes:
+      - images:/data/img
+    networks:
+      - dokploy-network
+    # Server gibt laufenden Requests 10 s (server/index.mjs)
+    stop_grace_period: 15s
+    deploy:
+      replicas: 1
+      update_config:
+        order: start-first
+        failure_action: rollback
+        # so lange muss die neue Version gesund bleiben, bevor die alte geht
+        monitor: 30s
+      rollback_config:
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+volumes:
+  # Bildvarianten aus dem Sync (WebP). Fester Name, damit der Stack-Name nicht
+  # davor steht. Geht das Volume verloren, zeigen die Seiten die Originalbilder,
+  # bis der Sync (heute…+7) bzw. scripts/images/backfill.ts sie neu erzeugt.
+  images:
+    name: speisly-images
+
+networks:
+  dokploy-network:
+    external: true

@@ -1,0 +1,22 @@
+# Build-Kontext klein halten und nichts Lokales ins Image (vor allem keine .env)
+.git
+.github
+.astro
+.cursor
+.vscode
+**/.DS_Store
+node_modules
+dist
+data
+.env*
+coverage
+docs
+tests
+scripts
+# Ausnahme: Bild-Backfill (läuft im Container, README „Bilder“)
+!scripts/images
+**/*.test.ts
+*.md
+Dockerfile
+.dockerignore
+docker-compose*.yml
