@@ -22,6 +22,8 @@ plugin({
         MEINE_MENSA_API_URL:
           env.MEINE_MENSA_API_URL ?? "https://api.example.test",
         IMAGE_DIR: env.IMAGE_DIR ?? "./data/img-test",
+        IMAGE_SOURCE_URL: "https://meine-mensa.de/mediathek/",
+        ALLERGEN_INFO_URL: "https://allergene.example.test/",
         TELEGRAM_BOT_TOKEN: undefined,
         TELEGRAM_CHAT_ID: undefined,
         OIDC_ISSUER: "https://sso.example.test",
@@ -30,16 +32,10 @@ plugin({
         ADMIN_GROUP: "speisly-admin",
         SITE_URL: env.SITE_URL ?? "https://speisly.de",
         VAPID_PRIVATE_KEY: undefined,
+        VAPID_PUBLIC_KEY: undefined,
         VAPID_SUBJECT: undefined,
-      },
-    }));
-    build.module("astro:env/client", () => ({
-      loader: "object",
-      exports: {
-        PUBLIC_COOKIE_CONSENT_NAME: "speisly-cookie-consent",
-        PUBLIC_PRIVACY_POLICY_PATH: "/datenschutz",
-        PUBLIC_UMAMI_WEBSITE_ID: "test",
-        PUBLIC_VAPID_PUBLIC_KEY: undefined,
+        UMAMI_SCRIPT_URL: undefined,
+        UMAMI_WEBSITE_ID: undefined,
       },
     }));
   },

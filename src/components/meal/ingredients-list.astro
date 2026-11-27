@@ -1,12 +1,11 @@
 ---
 // Inhaltsstoffe und Allergene als Kennzeichnung (Code) + Bezeichnung, mit
 // Hinweis „ohne Gewähr“ (auch in footer.astro und im Filter-Dialog)
+import { ALLERGEN_INFO_URL } from "astro:env/server";
 import { ArrowUpRight } from "@lucide/astro";
 
 type Props = { ingredients: string[] | null | undefined };
 const { ingredients } = Astro.props;
-const INFO_URL =
-  "https://studentenwerk-halle.de/mensen-cafebars/kennzeichnungspflichtige-zusatzstoffe-und-allergene/#c639";
 ---
 
 {
@@ -36,7 +35,7 @@ const INFO_URL =
 </p>
 <a
   class="mt-2 inline-flex items-center gap-1 font-semibold text-primary text-sm underline-offset-4 hover:underline"
-  href={INFO_URL}
+  href={ALLERGEN_INFO_URL}
   rel="noopener noreferrer"
   target="_blank"
 >

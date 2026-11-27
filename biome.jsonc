@@ -3,6 +3,8 @@
   "extends": ["ultracite/core", "ultracite/react", "ultracite/astro"],
   // drizzle: von drizzle-kit erzeugt; dist: Build (auch nicht scannen)
   "files": { "includes": ["**", "!drizzle", "!!**/dist"] },
+  // Build-ID aus astro.config.mjs (`vite.define`)
+  "javascript": { "globals": ["__BUILD_ID__"] },
   "linter": {
     "rules": {
       "style": {

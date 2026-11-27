@@ -1,13 +1,15 @@
 /**
- * Start-Wrapper (server/): Komprimierung und Cron-Aufrufe. Der Zusammenbau
+ * Start-Wrapper (server/): Komprimierung, Cron-Aufrufe und Prüfung der Umgebung. Der Zusammenbau
  * mit dem echten Astro-Build wird E2E geprüft (docs, Phase 9).
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import zlib from "node:zlib";
+import { envSchema } from "../env-schema.mjs";
 import { createCompression, negotiateEncoding } from "../server/compress.mjs";
 import { SCHEDULES, startCron, triggerSync } from "../server/cron.mjs";
+import { invalidEnv } from "../server/env.mjs";
 
 describe("negotiateEncoding", () => {
   test("prefers brotli, respects q=0", () => {
@@ -224,5 +226,36 @@ describe("cron", () => {
     expect([midnight.hour, midnight.minute]).toEqual([0, 1]);
     cron.stop();
     expect(cron.jobs.every((j) => !j.isActive)).toBe(true);
+  });
+});
+
+describe("invalidEnv", () => {
+  const valid = {
+    SITE_URL: "https://speisly.example",
+    DATABASE_URL: "postgresql://u:p@localhost/db",
+    JWT_SECRET: "s",
+    API_BEARER_TOKEN: "t",
+    MEINE_MENSA_API_URL: "https://api.example.test/api",
+    IMAGE_SOURCE_URL: "https://bilder.example.test/mediathek/",
+    ALLERGEN_INFO_URL: "https://allergene.example.test/",
+  };
+
+  test("required values are enough, optional services may be missing", () => {
+    expect(invalidEnv(envSchema, valid)).toEqual([]);
+  });
+
+  test("reports missing and invalid values without their content", () => {
+    const errors = invalidEnv(envSchema, {
+      ...valid,
+      DATABASE_URL: "",
+      SITE_URL: "speisly.example",
+      UMAMI_SCRIPT_URL: "geheim kein url",
+    });
+    expect(errors).toEqual([
+      "SITE_URL ist ungültig (url, startsWith)",
+      "DATABASE_URL fehlt",
+      "UMAMI_SCRIPT_URL ist ungültig (url)",
+    ]);
+    expect(errors.join()).not.toContain("geheim");
   });
 });

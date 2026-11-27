@@ -12,6 +12,7 @@ import {
   TriangleAlert,
 } from "@lucide/astro";
 import AccountMenu from "@/components/admin/account-menu.astro";
+import PublicConfig from "@/components/layout/public-config.astro";
 import { cn } from "@/lib/utils";
 import { openCounts } from "@/server/queries/admin";
 import "@/styles/globals.css";
@@ -46,6 +47,7 @@ const query = path === "/admin/search" ? (Astro.url.searchParams.get("q") ?? "")
     <Font cssVariable="--font-bricolage" preload />
     <title>{title} | Speisly Admin</title>
     <link rel="icon" href="/favicon.ico" sizes="128x128" type="image/x-icon">
+    <PublicConfig />
   </head>
   <body class="min-h-screen antialiased">
     <header class="sticky top-0 z-10 border-border/70 border-b bg-card/90 backdrop-blur">

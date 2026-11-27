@@ -18,7 +18,7 @@ import {
 
 /** `null`: kein OIDC-Client konfiguriert, /admin ist abgeschaltet */
 export const adminAuth: AdminAuth | null =
-  OIDC_CLIENT_ID && OIDC_CLIENT_SECRET
+  OIDC_ISSUER && OIDC_CLIENT_ID && OIDC_CLIENT_SECRET
     ? createAdminAuth({
         settings: {
           issuer: OIDC_ISSUER,

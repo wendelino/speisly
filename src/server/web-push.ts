@@ -1,5 +1,9 @@
-import { PUBLIC_VAPID_PUBLIC_KEY } from "astro:env/client";
-import { SITE_URL, VAPID_PRIVATE_KEY, VAPID_SUBJECT } from "astro:env/server";
+import {
+  SITE_URL,
+  VAPID_PRIVATE_KEY,
+  VAPID_PUBLIC_KEY,
+  VAPID_SUBJECT,
+} from "astro:env/server";
 import webpush from "web-push";
 
 /**
@@ -8,17 +12,29 @@ import webpush from "web-push";
  * Fehlern keinen Import-Zyklus bildet. Ohne VAPID-Schlüssel abgeschaltet.
  */
 
-export const pushEnabled = Boolean(
-  PUBLIC_VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY
-);
-
-if (pushEnabled) {
-  webpush.setVapidDetails(
-    VAPID_SUBJECT || SITE_URL,
-    PUBLIC_VAPID_PUBLIC_KEY as string,
-    VAPID_PRIVATE_KEY as string
-  );
+/**
+ * Ungültige Angaben (z. B. Subject `http://localhost` statt https:/mailto:)
+ * schalten Push ab, statt jede Seite scheitern zu lassen: Das Layout liest
+ * `pushEnabled` (components/layout/public-config.astro).
+ */
+function configureVapid(): boolean {
+  if (!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY)) {
+    return false;
+  }
+  try {
+    webpush.setVapidDetails(
+      VAPID_SUBJECT || SITE_URL,
+      VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY
+    );
+    return true;
+  } catch (error) {
+    console.error("[push] VAPID ungültig, Web-Push ist abgeschaltet:", error);
+    return false;
+  }
 }
+
+export const pushEnabled = configureVapid();
 
 /**
  * Hosts der Push-Dienste der Browser (Chrome/Edge/Samsung/Opera über FCM,

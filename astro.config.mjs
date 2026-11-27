@@ -2,43 +2,23 @@
 import node from "@astrojs/node";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
-import {
-  defineConfig,
-  envField,
-  fontProviders,
-  memoryCache,
-} from "astro/config";
-import { loadEnv } from "vite";
+import { defineConfig, fontProviders, memoryCache } from "astro/config";
+import { envSchema } from "./env-schema.mjs";
 
 /**
- * Öffentliche Basis-URL (z. B. https://speisly.de oder die eines Previews).
- * Pflicht: daraus entstehen alle absoluten URLs (OpenGraph, OIDC-Redirects,
- * Origin-Prüfung, Host für den Seiten-Cache). Fehlt sie, bricht der Start
- * mit Exit-Code 1 ab statt still auf eine falsche Domain zu zeigen.
+ * Kennung dieses Builds (Service-Worker-Version, src/pages/sw.js.ts). Die
+ * einzige Angabe, die beim Build entsteht: Alle Einstellungen (URLs, Schlüssel,
+ * Analytics) liest der Server erst beim Start aus der Umgebung, ein Image
+ * läuft so unverändert in Produktion und Preview.
  */
-function requireSiteUrl() {
-  const mode = process.env.NODE_ENV ?? "production";
-  const raw = process.env.SITE_URL || loadEnv(mode, process.cwd(), "").SITE_URL;
-  let url;
-  try {
-    url = raw ? new URL(raw) : undefined;
-  } catch {
-    url = undefined;
-  }
-  if (!(url && (url.protocol === "https:" || url.protocol === "http:"))) {
-    console.error(
-      `[config] SITE_URL fehlt oder ist keine gültige http(s)-URL: ${raw ?? "(leer)"}`
-    );
-    process.exit(1);
-  }
-  return url.origin;
-}
+const BUILD_ID = Date.now().toString(36);
 
 // Migrationsplan: docs/astro-migration-plan.md
 export default defineConfig({
-  site: requireSiteUrl(),
-  // Default `output: "static"`: alles wird prerendered, außer Seiten mit
-  // `export const prerender = false` (die laufen über den Node-Adapter).
+  // Alles wird auf dem Server gerendert, nichts beim Build: Seiten enthalten
+  // Werte aus der Umgebung (SITE_URL, Umami, VAPID), die beim Build nicht
+  // feststehen. Gecacht wird im Route Cache (src/server/cache-policy.ts).
+  output: "server",
   adapter: node({ mode: "standalone" }),
   // Eigener CSRF-Schutz in src/middleware.ts: Astros Origin-Prüfung vergleicht
   // mit der Request-URL, die hinter dem Proxy http:// und der Host aus SITE_URL ist, und
@@ -63,6 +43,7 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
   },
   // Prefetch nur bei Nutzerabsicht (Hover/Touch) für Links mit
   // data-astro-prefetch, nicht alles im Viewport
@@ -91,104 +72,6 @@ export default defineConfig({
       },
     },
   ],
-  env: {
-    schema: {
-      DATABASE_URL: envField.string({ context: "server", access: "secret" }),
-      JWT_SECRET: envField.string({ context: "server", access: "secret" }),
-      JWT_ALGORITHM: envField.string({
-        context: "server",
-        access: "secret",
-        default: "HS256",
-      }),
-      API_BEARER_TOKEN: envField.string({
-        context: "server",
-        access: "secret",
-      }),
-      // Basis-URL der Speiseplan-API (meine-mensa.de), z. B. https://…/api
-      MEINE_MENSA_API_URL: envField.string({
-        context: "server",
-        access: "secret",
-      }),
-      // Bildvarianten aus dem Sync (persistentes Volume in Produktion)
-      IMAGE_DIR: envField.string({
-        context: "server",
-        access: "secret",
-        default: "./data/img",
-      }),
-      TELEGRAM_BOT_TOKEN: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-      TELEGRAM_CHAT_ID: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-      // Admin-Bereich (/admin): Login über den eigenen OIDC-Provider. Ohne
-      // Client-ID/Secret ist /admin abgeschaltet (src/server/admin.ts).
-      OIDC_ISSUER: envField.string({
-        context: "server",
-        access: "secret",
-        default: "https://sso.lnio.de",
-      }),
-      OIDC_CLIENT_ID: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-      OIDC_CLIENT_SECRET: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-      // Nur Mitglieder dieser Gruppe (Claim `groups`) kommen hinein
-      ADMIN_GROUP: envField.string({
-        context: "server",
-        access: "secret",
-        default: "speisly-admin",
-      }),
-      // Öffentliche Basis-URL (Pflicht, siehe requireSiteUrl): absolute
-      // URLs, OIDC-Redirects, Origin-Prüfung, Host für den Seiten-Cache
-      SITE_URL: envField.string({
-        context: "server",
-        access: "secret",
-        url: true,
-      }),
-      // Web-Push (Favorit morgen auf dem Plan, src/server/push.ts). Schlüssel
-      // erzeugen: `bunx web-push generate-vapid-keys`. Ohne Schlüssel sind
-      // Benachrichtigungen abgeschaltet (Favoriten funktionieren trotzdem).
-      VAPID_PRIVATE_KEY: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-      // Kontakt für Push-Dienste (mailto: oder https:), Default SITE_URL
-      VAPID_SUBJECT: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-      PUBLIC_VAPID_PUBLIC_KEY: envField.string({
-        context: "client",
-        access: "public",
-        optional: true,
-      }),
-      PUBLIC_COOKIE_CONSENT_NAME: envField.string({
-        context: "client",
-        access: "public",
-        default: "speisly-cookie-consent",
-      }),
-      PUBLIC_PRIVACY_POLICY_PATH: envField.string({
-        context: "client",
-        access: "public",
-        default: "/datenschutz",
-      }),
-      PUBLIC_UMAMI_WEBSITE_ID: envField.string({
-        context: "client",
-        access: "public",
-        default: "d6c44311-0001-4b07-a1c0-75bee4883fb1",
-      }),
-    },
-  },
+  // Umgebungsvariablen (Pflicht/optional, Bedeutung): env-schema.mjs
+  env: { schema: envSchema },
 });

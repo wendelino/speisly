@@ -7,7 +7,8 @@ import sharp from "sharp";
 /**
  * Vorab berechnete Bildvarianten der Gerichtsbilder.
  *
- * Der Sync lädt jedes neue Bild einmal von meine-mensa.de und legt WebP in
+ * Der Sync lädt jedes neue Bild einmal aus der Mediathek der Speiseplan-API
+ * (`IMAGE_SOURCE_URL`) und legt WebP in
  * zwei Breiten ab: `<dir>/<key>-<breite>.webp`. Nur WebP, kein AVIF: Der
  * iOS-Blockierungsmodus (Lockdown Mode) blockiert AVIF, Safari wählt eine
  * AVIF-<source> dort trotzdem und zeigt dann nichts. Die kleine Breite
@@ -43,14 +44,18 @@ export const IMAGE_FILE_PATTERN = /^[0-9a-f]{16}-(240|400|800)\.(avif|webp)$/;
 const MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 20_000;
 
-/** Nur Bilder aus der Mediathek von meine-mensa.de laden */
-export function isAllowedImageUrl(url: string): boolean {
+/**
+ * Nur Bilder unter `source` laden (z. B. `https://…/mediathek/`): gleicher
+ * Origin, Pfad beginnt mit dem Pfad von `source`, nur https.
+ */
+export function isAllowedImageUrl(url: string, source: string): boolean {
   try {
     const parsed = new URL(url);
+    const allowed = new URL(source);
     return (
       parsed.protocol === "https:" &&
-      parsed.hostname === "meine-mensa.de" &&
-      parsed.pathname.startsWith("/mediathek/")
+      parsed.origin === allowed.origin &&
+      parsed.pathname.startsWith(allowed.pathname)
     );
   } catch {
     return false;
@@ -81,13 +86,14 @@ export type EnsureResult = "exists" | "created" | "skipped" | "failed";
 type StoreOptions = {
   dir: string;
   fetch?: typeof fetch;
-  isAllowed?: (url: string) => boolean;
+  /** erlaubte Bildquelle, siehe `isAllowedImageUrl` */
+  source: string;
 };
 
 export function createImageStore({
   dir,
   fetch: fetchImpl = fetch,
-  isAllowed = isAllowedImageUrl,
+  source,
 }: StoreOptions) {
   // Dateien werden zur Laufzeit nie gelöscht: einmal gefunden, immer da
   const known = new Set<string>();
@@ -150,7 +156,7 @@ export function createImageStore({
   async function ensure(
     url: string
   ): Promise<{ result: EnsureResult; error?: unknown }> {
-    if (!isAllowed(url)) {
+    if (!isAllowedImageUrl(url, source)) {
       return { result: "skipped" };
     }
     const key = imageKey(url);

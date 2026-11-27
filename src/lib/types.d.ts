@@ -1,3 +1,6 @@
+/** Kennung des Builds (astro.config.mjs, `vite.define`) */
+declare const __BUILD_ID__: string;
+
 declare type MealFlags = {
   isVegan?: boolean;
   isVeggie?: boolean;

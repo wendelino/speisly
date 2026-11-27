@@ -25,6 +25,14 @@ export function untilMidnight(
     : { maxAge, tags: policy.tags };
 }
 
+/**
+ * Seiten ohne Daten (Datenschutz, Kontakt, Favoriten, …): ändern sich nur mit
+ * einem Deploy, und der leert den Cache ohnehin (er liegt im Prozess).
+ */
+export function staticPolicy(): CachePolicy {
+  return { maxAge: 30 * DAY, tags: [] };
+}
+
 /** Startseite: Speiseplan von heute, bis Mitternacht */
 export function homePolicy(today: string, now?: Date): CachePolicy {
   return untilMidnight(

@@ -2,6 +2,9 @@
 import { Mail } from "@lucide/astro";
 import FormPage from "@/components/forms/form-page.astro";
 import BackLayout from "@/layouts/back-layout.astro";
+import { staticPolicy } from "@/server/cache-policy";
+
+Astro.cache.set(staticPolicy());
 ---
 
 <BackLayout description="Fragen, Ideen oder einen Fehler entdeckt? Schreib uns." title="Kontakt">

@@ -1,4 +1,4 @@
-import { IMAGE_DIR } from "astro:env/server";
+import { IMAGE_DIR, IMAGE_SOURCE_URL } from "astro:env/server";
 import { and, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { toIsoDay, toUtcDate } from "@/lib/dates";
 import { meal, mensaMeal } from "@/lib/db/schema/schema";
@@ -7,7 +7,10 @@ import { logError } from "../log";
 import type { SyncResult } from "../sync";
 import { createImageStore, type ImageStore } from "./store";
 
-export const images = createImageStore({ dir: IMAGE_DIR });
+export const images = createImageStore({
+  dir: IMAGE_DIR,
+  source: IMAGE_SOURCE_URL,
+});
 
 /**
  * Sorgt dafür, dass alle Bilder der Gerichte im Zeitraum Varianten haben.

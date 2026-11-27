@@ -1,4 +1,3 @@
-import { PUBLIC_PRIVACY_POLICY_PATH } from "astro:env/client";
 import { Cookie } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { writeConsent } from "@/lib/cookies";
+import { PRIVACY_POLICY_PATH, writeConsent } from "@/lib/cookies";
 
 type ConsentDialogProps = {
   open: boolean;
@@ -58,7 +57,7 @@ export function ConsentDialog({
             bessere Erfahrung zu bieten. Mehr Infos findest du in unserer{" "}
             <a
               className="font-semibold text-primary underline-offset-4 hover:underline"
-              href={PUBLIC_PRIVACY_POLICY_PATH}
+              href={PRIVACY_POLICY_PATH}
             >
               Datenschutzerklärung
             </a>

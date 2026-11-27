@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-// Prerendered zur Build-Zeit (ersetzt src/app/manifest.ts)
+// Web-App-Manifest (Browser-Cache: server/index.mjs)
 export const GET: APIRoute = () =>
   Response.json(
     {
@@ -23,5 +23,11 @@ export const GET: APIRoute = () =>
         }))
       ),
     },
-    { headers: { "Content-Type": "application/manifest+json" } }
+    {
+      headers: {
+        "Content-Type": "application/manifest+json",
+        // ändert sich praktisch nie (wie die Icons, server/index.mjs)
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      },
+    }
   );

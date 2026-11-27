@@ -16,7 +16,8 @@ import {
   isAllowedImageUrl,
 } from "./store";
 
-const URL_A = "https://meine-mensa.de/mediathek/a.jpg";
+const SOURCE = "https://meine-mensa.de/mediathek/";
+const URL_A = `${SOURCE}a.jpg`;
 let dir: string;
 let jpeg: Buffer;
 let fetchCount = 0;
@@ -53,18 +54,21 @@ afterAll(async () => {
 });
 
 describe("image store", () => {
-  test("only meine-mensa.de/mediathek is allowed", () => {
-    expect(isAllowedImageUrl(URL_A)).toBe(true);
-    expect(isAllowedImageUrl("http://meine-mensa.de/mediathek/a.jpg")).toBe(
+  test("only URLs under the image source are allowed", () => {
+    const allowed = (url: string) => isAllowedImageUrl(url, SOURCE);
+    expect(allowed(URL_A)).toBe(true);
+    expect(allowed("http://meine-mensa.de/mediathek/a.jpg")).toBe(false);
+    expect(allowed("https://evil.de/mediathek/a.jpg")).toBe(false);
+    expect(allowed("https://meine-mensa.de.evil.de/mediathek/a.jpg")).toBe(
       false
     );
-    expect(isAllowedImageUrl("https://evil.de/mediathek/a.jpg")).toBe(false);
-    expect(isAllowedImageUrl("https://meine-mensa.de/other/a.jpg")).toBe(false);
-    expect(isAllowedImageUrl("kein url")).toBe(false);
+    expect(allowed("https://meine-mensa.de/other/a.jpg")).toBe(false);
+    expect(allowed("kein url")).toBe(false);
+    expect(isAllowedImageUrl(URL_A, "keine url")).toBe(false);
   });
 
   test("creates WebP in 240 and 800 px, once", async () => {
-    const store = createImageStore({ dir, fetch: fakeFetch });
+    const store = createImageStore({ dir, source: SOURCE, fetch: fakeFetch });
     expect(store.variants(URL_A)).toBeNull();
 
     fetchCount = 0;
@@ -97,12 +101,12 @@ describe("image store", () => {
   });
 
   test("a second store finds existing files on disk", () => {
-    const store = createImageStore({ dir, fetch: fakeFetch });
+    const store = createImageStore({ dir, source: SOURCE, fetch: fakeFetch });
     expect(store.variants(URL_A)).not.toBeNull();
   });
 
   test("failures leave no files and are reported, foreign URLs skipped", async () => {
-    const store = createImageStore({ dir, fetch: fakeFetch });
+    const store = createImageStore({ dir, source: SOURCE, fetch: fakeFetch });
     const before = (await readdir(dir)).length;
     const missing = "https://meine-mensa.de/mediathek/missing.jpg";
     const html = "https://meine-mensa.de/mediathek/html.jpg";
@@ -142,7 +146,7 @@ describe.skipIf(!process.env.DATABASE_URL)("syncImages", () => {
   });
 
   test("reports days and meals whose images are new", async () => {
-    const store = createImageStore({ dir, fetch: fakeFetch });
+    const store = createImageStore({ dir, source: SOURCE, fetch: fakeFetch });
     const range = { from: target.date, to: target.date };
 
     const first = await syncImages(range, store);

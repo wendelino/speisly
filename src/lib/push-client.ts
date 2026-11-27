@@ -1,6 +1,6 @@
 import { actions } from "astro:actions";
-import { PUBLIC_VAPID_PUBLIC_KEY } from "astro:env/client";
 import { readFavorites } from "./favorites";
+import { vapidPublicKey } from "./public-config";
 import { registerServiceWorker } from "./service-worker";
 
 /**
@@ -14,7 +14,7 @@ const MENSA_COOKIE = "speisly_mensa_preferences";
 export type PushSupport = "supported" | "unsupported" | "not-configured";
 
 export function pushSupport(): PushSupport {
-  if (!PUBLIC_VAPID_PUBLIC_KEY) {
+  if (!vapidPublicKey()) {
     return "not-configured";
   }
   return "serviceWorker" in navigator &&
@@ -95,7 +95,7 @@ export async function enablePush(): Promise<EnableResult> {
       (await registration.pushManager.getSubscription()) ??
       (await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: base64UrlToBytes(PUBLIC_VAPID_PUBLIC_KEY ?? ""),
+        applicationServerKey: base64UrlToBytes(vapidPublicKey() ?? ""),
       }));
     return (await save(subscription)) ? "enabled" : "error";
   } catch (error) {
