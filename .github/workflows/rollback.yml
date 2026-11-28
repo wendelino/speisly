@@ -1,0 +1,57 @@
+# Rollback auf ein früheres Image: setzt `latest` auf `sha-<commit>` und
+# deployt neu. Starten unter Actions → Rollback → Run workflow.
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit (kurz, 7 Zeichen) des Images, z. B. 82c8fa3"
+        required: true
+        type: string
+
+concurrency:
+  # teilt sich die Gruppe mit Deploys von main, damit nichts gleichzeitig läuft
+  group: ci-refs/heads/main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: latest auf sha-${{ inputs.sha }} setzen
+        env:
+          SHA: ${{ inputs.sha }}
+        run: |
+          case "$SHA" in
+            *[!0-9a-f]*|"") echo "::error::Ungültiger Commit: $SHA"; exit 1 ;;
+          esac
+          docker buildx imagetools create -t "$IMAGE:latest" "$IMAGE:sha-$SHA"
+      - name: Dokploy-Deploy auslösen
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+        run: |
+          if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_COMPOSE_ID" ]; then
+            echo "::error::DOKPLOY_URL, DOKPLOY_API_KEY oder DOKPLOY_COMPOSE_ID fehlt"
+            exit 1
+          fi
+          curl -sS --fail-with-body -X POST "${DOKPLOY_URL%/}/api/compose.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"composeId\":\"$DOKPLOY_COMPOSE_ID\"}"

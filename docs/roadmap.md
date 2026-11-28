@@ -14,12 +14,12 @@ Geplante Änderungen in dieser Reihenfolge. Jeder Schritt bekommt einen eigenen 
 
 ## 1b – Image in GitHub Actions bauen, Deploy per Docker Compose
 
-- [ ] `Dockerfile` (Multi-Stage, Bun, Layer-Cache für `bun.lock`, Nicht-Root-Nutzer, Healthcheck `/api/health`, Start = Migration + Server) und `.dockerignore`
-- [ ] Workflow: bei PRs `biome check` + `astro check`; bei Push auf `main` dieselben Checks, dann Build (linux/amd64), Push nach GHCR (privat, Tags: Commit-SHA + `latest`), danach Dokploy-Deploy-Webhook
-- [ ] `docker-compose.yml`: nur die App + Volume für `IMAGE_DIR`, externes Netzwerk `dokploy-network` (Postgres bleibt separat), Env aus Dokploy
-- [ ] Prüfen: Zero-Downtime und Rollback bei fehlgeschlagener Migration (heute: Swarm `start-first` + Rollback). Optionen: Dokploy-Stack-Modus mit `deploy.update_config` oder anders absichern
-- [ ] Server: Pull-Token `read:packages` in Dokploy; GitHub-Secrets: Webhook-URL, `ASTRO_KEY`
-- [ ] Rollback dokumentieren (Image-Tag auf alten SHA)
+- [x] `Dockerfile` (Multi-Stage, Bun, Layer-Cache für `bun.lock`, Nicht-Root-Nutzer, Healthcheck `/api/health`, Start = Env-Prüfung + Migration + Server, Bild-Backfill im Image) und `.dockerignore`
+- [x] Workflow `ci.yml`: bei PRs `biome check` + `astro check`; bei Push auf `main` dieselben Checks, dann Build (linux/amd64), Push nach GHCR (privat, Tags `sha-<commit>` + `latest`), danach Deploy über die Dokploy-API (`compose.deploy`; der Deploy-Webhook ignoriert Aufrufe ohne GitHub-Push-Payload)
+- [x] `docker-compose.yml` für Dokploy-Typ „Stack“: nur die App + Volume `speisly-images`, externes `dokploy-network`, Env aus Dokploy
+- [x] Zero-Downtime und Rollback: `start-first` + `failure_action: rollback`, lokal im Test-Swarm geprüft (kaputtes und gutes Update, keine fehlgeschlagenen Requests)
+- [x] Rollback von Hand: Workflow `rollback.yml` (setzt `latest` auf `sha-<commit>`, deployt)
+- [ ] Einrichtung auf dem Server (README „Deployment“): GitHub-Secrets, GHCR-Token in Dokploy, Compose-Dienst (Stack, Autodeploy aus), Bilder-Volume, Umstellung von der Application
 
 ## 1c – Tech-Stack prüfen (Performance)
 

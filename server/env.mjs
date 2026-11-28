@@ -28,3 +28,20 @@ export function invalidEnv(schema, env) {
   }
   return errors;
 }
+
+/**
+ * Beendet den Prozess mit Exit-Code 1, wenn die Umgebung nicht zum Schema
+ * passt, und nennt alle betroffenen Variablen.
+ *
+ * @param {Record<string, object>} schema
+ * @param {Record<string, string | undefined>} env
+ */
+export function exitOnInvalidEnv(schema, env) {
+  const errors = invalidEnv(schema, env);
+  if (errors.length > 0) {
+    console.error(
+      `[server] Umgebungsvariablen fehlen oder sind ungültig (siehe .env.example):\n${errors.map((e) => `  - ${e}`).join("\n")}`
+    );
+    process.exit(1);
+  }
+}

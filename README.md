@@ -87,7 +87,8 @@ bun scripts/dev/seed.ts
 
 ```
 speisly/
-├── server/                # Produktionsstart: HTTP-Server, Komprimierung, Cron
+├── .github/workflows/     # CI: Checks, Image nach GHCR, Deploy; Rollback
+├── server/                # Produktionsstart: Env-Prüfung, HTTP-Server, Komprimierung, Cron
 ├── src/
 │   ├── actions/           # Astro Actions (Bewertungen, Feedback)
 │   ├── components/        # Astro-Komponenten (nach Bereich: day, filter, meal, rating, …), React nur für Dialoge
@@ -149,18 +150,13 @@ bun run build
 bun run start        # migriert die DB, dann Server (Bun); bun run start:node für Node ≥ 22
 ```
 
-**Migrationen beim Start:** `bun run start` (und `start:node`) ruft vor dem Server `bun run db:migrate` auf, gegen die Datenbank aus `DATABASE_URL`. Bereits eingespielte Migrationen werden übersprungen. Schlägt eine Migration fehl oder ist die Datenbank nicht erreichbar, beendet sich der Container mit Fehler; mit Dokploys Swarm-Update (`start-first`, `FailureAction: rollback`) bleibt dann die alte Version online. Der Build braucht keine Datenbank: In Dokploy läuft er außerhalb von `dokploy-network`, wo `prod-db` nicht auflösbar ist.
+**Start-Reihenfolge:** `bun run start` (und `start:node`) prüft zuerst die Umgebungsvariablen (`server/check-env.mjs`), migriert dann die Datenbank aus `DATABASE_URL` (`bun run db:migrate`, eingespielte Migrationen werden übersprungen) und startet danach den Server. Fehlt eine Variable, schlägt die Migration fehl oder ist die Datenbank nicht erreichbar, beendet sich der Prozess mit Exit-Code 1; im Dokploy-Stack bleibt dann die alte Version online (siehe „Deployment“). Der Build braucht weder Datenbank noch Umgebungsvariablen.
 
-Empfohlen: in Dokploy einen Healthcheck auf `/api/health` eintragen (Advanced → Swarm Settings → Health Check), damit eine neue Version erst als gesund gilt, wenn der Server nach der Migration antwortet, und nicht schon nach 5 Sekunden Laufzeit:
+Docker lokal (Image wie in CI, Env aus `.env`):
 
-```json
-{
-  "Test": ["CMD-SHELL", "bun -e \"fetch('http://127.0.0.1:'+(process.env.PORT||4321)+'/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))\""],
-  "Interval": 10000000000,
-  "Timeout": 5000000000,
-  "StartPeriod": 60000000000,
-  "Retries": 3
-}
+```bash
+docker build --secret id=astro_key,env=ASTRO_KEY -t speisly .
+docker run --rm --env-file .env -e IMAGE_DIR=/data/img -p 4321:4321 -v speisly-img:/data/img speisly
 ```
 
 `bun run start` startet `server/index.mjs`:
@@ -191,6 +187,8 @@ Der Sync deckt heute bis +7 Tage ab. Für ältere Gerichte (z. B. nach dem Umzug
 IMAGE_SOURCE_URL=… IMAGE_DIR=/data/img bun scripts/images/backfill.ts   # optional: --since 2026-01-01
 ```
 
+Im Container (Produktion) sind alle Variablen schon gesetzt: in Dokploy im Terminal des Containers `bun scripts/images/backfill.ts` ausführen, oder auf dem Server `docker exec -it $(docker ps -qf name=<stack>_app) bun scripts/images/backfill.ts`.
+
 ### Umgebungsvariablen
 
 Vorlage: `.env.example`, vollständige Liste mit Regeln: `env-schema.mjs`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`--env-file-if-exists`).
@@ -215,20 +213,32 @@ Vorlage: `.env.example`, vollständige Liste mit Regeln: `env-schema.mjs`. Bun l
 | `UMAMI_SCRIPT_URL`, `UMAMI_WEBSITE_ID` | nein | Analytics (Umami), nur im Production-Build; ohne beide Werte kein Tracking. Gezählt wird nur auf dem Host von `SITE_URL` |
 | `CRON_DISABLED` | nein | `1` = kein Cron, kein Pre-Warm |
 
-### Deployment (Umstieg von der Next-Version)
+### Deployment (GitHub Actions + Dokploy)
 
-Ausführliche Schritt-für-Schritt-Anleitung mit allen Änderungen an `.env`, Datenbank, Startbefehl und Proxy: [`migrate-to-astro.md`](migrate-to-astro.md). Kurzfassung:
+**Ablauf:** Ein PR bekommt Lint und Typecheck (`.github/workflows/ci.yml`). Ein Push auf `main` läuft dieselben Checks, baut dann das Image (linux/amd64), pusht es nach GHCR (`ghcr.io/wendelino/speisly`, Tags `sha-<commit>` und `latest`) und löst über die Dokploy-API den Deploy aus. Auf dem Server wird nichts mehr gebaut.
 
-1. `.env` anpassen:
-   - `NEXT_PUBLIC_*` entfällt (Cookie-Name und Datenschutz-Pfad stehen fest im Code, `src/lib/cookies.ts`).
-   - `NEXT_PUBLIC_URL` entfällt.
-   - `IMAGE_DIR` und `ASTRO_KEY` setzen.
-2. `bun install && bun db:migrate`. Die Migration `0005` legt zwei Indizes an.
-3. `bun run build`. Vom Build hängt nur `ASTRO_KEY` ab, alles andere liest der Server beim Start.
-4. Einmalig: `bun scripts/images/backfill.ts` (lädt alle Gerichtsbilder, dauert einige Minuten).
-5. `bun run start` statt bisher `bun --bun src/_boot.ts`. Ein Reverse Proxy kann davor bleiben, Komprimierung übernimmt der Server.
-6. Prüfen: `curl -sI "$SITE_URL/" -H 'Accept-Encoding: br'` zeigt `content-encoding: br` und nach dem zweiten Aufruf `x-astro-cache: HIT`.
-   - Optional gegen eine Staging-Instanz mit Seed-Daten: `API_BEARER_TOKEN=… bun scripts/e2e/smoke.ts --base https://staging…`. Der Test schreibt Testdaten, also **nicht gegen Produktion** laufen lassen.
+**Rolling Update:** Dokploy betreibt `docker-compose.yml` als Swarm-Stack. Die neue Version startet neben der alten (`start-first`) und bekommt erst Traffic, wenn ihr Healthcheck (`/api/health`, im Image) grün ist. Scheitert sie (fehlende Variable, Migration, Absturz), rollt Swarm zurück (`failure_action: rollback`), und die alte Version bleibt ohne Unterbrechung online. Lokal mit einem Test-Swarm geprüft: gutes und kaputtes Update ohne einen einzigen fehlgeschlagenen Request.
+
+**Rollback von Hand:** Actions → „Rollback“ → Run workflow mit dem Commit (7 Zeichen). Der Workflow setzt `latest` auf `sha-<commit>` und deployt. Achtung: Der nächste Push auf `main` deployt wieder den neuesten Stand. Migrationen werden dabei nicht zurückgedreht, ein Rollback über eine Migration hinweg funktioniert also nur, solange die alte Version mit dem neuen Schema zurechtkommt.
+
+#### Einmalige Einrichtung
+
+1. **GitHub-Secrets** (Settings → Secrets and variables → Actions):
+   - `ASTRO_KEY`: `bunx astro create-key`. Der einzige Wert, den der Build liest; den bisherigen Wert übernehmen, damit offene Tabs nach dem Umstieg weiter funktionieren.
+   - `DOKPLOY_URL`: URL des Dokploy-Panels (muss aus GitHub erreichbar sein).
+   - `DOKPLOY_API_KEY`: Dokploy → Settings → Profile → API/CLI.
+   - `DOKPLOY_COMPOSE_ID`: ID des Compose-Dienstes (Swagger unter `<DOKPLOY_URL>/swagger` → `project.all`, oder aus der URL des Dienstes).
+   - Ohne die drei Dokploy-Secrets wird nur gebaut, nicht deployt.
+2. **Zugriff auf das private Image:** In GitHub einen Token (classic) mit nur `read:packages` anlegen und in Dokploy unter Settings → Registry eintragen: Registry `ghcr.io`, Nutzer = GitHub-Login, Passwort = Token. Dokploy ab **v0.29.6** (ältere Versionen reichen die Zugangsdaten im Stack-Modus nicht weiter: Dokploy-Issue #4401).
+3. **Compose-Dienst in Dokploy** anlegen:
+   - Quelle: dieses Repository, Branch `main`, Datei `docker-compose.yml`, Typ **Stack**.
+   - **Autodeploy aus**, sonst deployt Dokploy schon beim Push, bevor das neue Image gebaut ist. Deploys löst CI aus.
+   - Environment: alle Variablen aus `.env.example` (Pflichtwerte siehe `env-schema.mjs`). `IMAGE_DIR` und `ASTRO_KEY` werden hier nicht gebraucht (`IMAGE_DIR` ist in `docker-compose.yml` fest `/data/img`). `DATABASE_URL` zeigt auf den Postgres-Dienst im `dokploy-network` (z. B. `prod-db`).
+   - Domains: Domain mit Port `4321` und HTTPS eintragen, Dokploy ergänzt die Traefik-Labels (prüfen unter „Preview Compose“).
+4. **Bilder übernehmen:** Das Volume heißt `speisly-images`. Entweder die Dateien des bisherigen Volumes hineinkopieren oder nach dem ersten Deploy den Backfill im Container laufen lassen (siehe „Bilder“). Bis dahin zeigen die Seiten die Originalbilder.
+5. **Umstellen:** Den Compose-Dienst deployen, prüfen (`curl -sI "$SITE_URL/" -H 'Accept-Encoding: br'` zeigt `content-encoding: br`, nach dem zweiten Aufruf `x-astro-cache: HIT`), dann die Domain von der alten Application nehmen und die Application stoppen. Nicht beide gleichzeitig laufen lassen, sonst laufen Cron-Syncs und Pushes doppelt (oder in einer der beiden `CRON_DISABLED=1` setzen).
+
+Gegen eine Staging-Instanz mit Seed-Daten: `API_BEARER_TOKEN=… bun scripts/e2e/smoke.ts --base https://staging…`. Der Test schreibt Testdaten, also **nicht gegen Produktion** laufen lassen. Der Umstieg von der früheren Next-Version ist in [`migrate-to-astro.md`](migrate-to-astro.md) beschrieben.
 
 ## Beitragen
 

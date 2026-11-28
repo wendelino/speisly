@@ -17,16 +17,10 @@ import http from "node:http";
 import { envSchema } from "../env-schema.mjs";
 import { createCompression } from "./compress.mjs";
 import { startCron, triggerSync } from "./cron.mjs";
-import { invalidEnv } from "./env.mjs";
+import { exitOnInvalidEnv } from "./env.mjs";
 
 // vor allem anderen: ohne gültige Umgebung gar nicht erst starten
-const envErrors = invalidEnv(envSchema, process.env);
-if (envErrors.length > 0) {
-  console.error(
-    `[server] Umgebungsvariablen fehlen oder sind ungültig (siehe .env.example):\n${envErrors.map((e) => `  - ${e}`).join("\n")}`
-  );
-  process.exit(1);
-}
+exitOnInvalidEnv(envSchema, process.env);
 
 // Der Standalone-Server des Adapters soll nicht selbst starten, wir nutzen
 // seinen Handler (statische Dateien + SSR) in unserem Server
