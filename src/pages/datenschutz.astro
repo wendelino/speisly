@@ -1,11 +1,13 @@
 ---
-// Prerendered (Astro-Default)
 import { ShieldCheck } from "@lucide/astro";
 import CookiePreferencesButton from "@/components/consent/cookie-preferences-button.astro";
 import PageHeader from "@/components/layout/page-header.astro";
 import Card from "@/components/ui/card.astro";
 import Prose from "@/components/ui/prose.astro";
 import BackLayout from "@/layouts/back-layout.astro";
+import { staticPolicy } from "@/server/cache-policy";
+
+Astro.cache.set(staticPolicy());
 ---
 
 <BackLayout

@@ -3,7 +3,7 @@
  * Umstieg bzw. nach Verlust des Volumes). Laufende Syncs erzeugen nur die
  * Varianten für heute…+7 Tage.
  *
- *   DATABASE_URL=… IMAGE_DIR=/data/img bun scripts/images/backfill.ts [--since 2026-01-01]
+ *   DATABASE_URL=… IMAGE_SOURCE_URL=… IMAGE_DIR=/data/img bun scripts/images/backfill.ts [--since 2026-01-01]
  *
  * Bereits vorhandene Varianten werden übersprungen, das Skript kann also
  * jederzeit erneut laufen. Danach den Server neu starten (oder warten, bis die
@@ -17,9 +17,16 @@ const { values: args } = parseArgs({
   options: { since: { type: "string" } },
 });
 
+const source = process.env.IMAGE_SOURCE_URL;
+if (!source) {
+  console.error("[backfill] IMAGE_SOURCE_URL fehlt");
+  process.exit(1);
+}
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
 const store = createImageStore({
   dir: process.env.IMAGE_DIR ?? "./data/img",
+  source,
 });
 
 const { rows } = await pool.query<{ img_path: string }>(

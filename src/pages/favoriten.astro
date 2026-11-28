@@ -1,7 +1,7 @@
 ---
 // Lieblingsgerichte (lib/favorites.ts, im Browser gespeichert) mit nächstem
 // Termin und die Push-Benachrichtigung „Favorit morgen auf dem Plan“
-// (lib/push-client.ts). Prerendered; die Liste lädt das Script über die
+// (lib/push-client.ts). Für alle gleich (Route Cache); die Liste lädt das Script über die
 // Action favorites.list.
 import { Bell, Heart } from "@lucide/astro";
 import PageHeader from "@/components/layout/page-header.astro";
@@ -9,8 +9,11 @@ import Card from "@/components/ui/card.astro";
 import { buttonVariants } from "@/components/ui/variants";
 import BackLayout from "@/layouts/back-layout.astro";
 import { cn } from "@/lib/utils";
+import { staticPolicy } from "@/server/cache-policy";
 
 const toggleClass = cn(buttonVariants({ variant: "default", size: "sm" }), "shrink-0");
+
+Astro.cache.set(staticPolicy());
 ---
 
 <BackLayout description="Deine Lieblingsgerichte und wann es sie wieder gibt." title="Favoriten">

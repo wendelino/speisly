@@ -1,5 +1,5 @@
 import { actions } from "astro:actions";
-import { PUBLIC_VAPID_PUBLIC_KEY } from "astro:env/client";
+import { vapidPublicKey } from "./public-config";
 import { base64UrlToBytes, pushSupport } from "./push-client";
 
 /**
@@ -51,7 +51,7 @@ export async function enableAdminPush(): Promise<AdminPushResult> {
       (await reg.pushManager.getSubscription()) ??
       (await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: base64UrlToBytes(PUBLIC_VAPID_PUBLIC_KEY ?? ""),
+        applicationServerKey: base64UrlToBytes(vapidPublicKey() ?? ""),
       }));
     const json = subscription.toJSON();
     const { data, error } = await actions.admin.pushSubscribe({

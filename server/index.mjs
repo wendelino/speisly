@@ -8,17 +8,25 @@
  *   Speicher und ist nach jedem Neustart leer)
  * - registriert die Cron-Jobs für den Daten-Sync (./cron.mjs)
  *
- * Umgebung: PORT (Default 4321), HOST (Default 0.0.0.0), API_BEARER_TOKEN,
- * SITE_URL (Pflicht, öffentliche Basis-URL; ohne sie Exit-Code 1),
- * CRON_DISABLED=1 schaltet Cron und den Start-Sync ab (z. B. für eine zweite
- * Instanz oder lokale Tests).
+ * Umgebung: alle Variablen aus env-schema.mjs werden vor dem Start geprüft
+ * (fehlt eine Pflichtangabe: Exit-Code 1). Dazu PORT (Default 4321), HOST
+ * (Default 0.0.0.0) und CRON_DISABLED=1, das Cron und den Start-Sync
+ * abschaltet (z. B. für eine zweite Instanz oder lokale Tests).
  */
 import http from "node:http";
+import { envSchema } from "../env-schema.mjs";
 import { createCompression } from "./compress.mjs";
 import { startCron, triggerSync } from "./cron.mjs";
+import { invalidEnv } from "./env.mjs";
 
-// Pflicht, siehe requireSiteUrl(); vor allem anderen prüfen
-requireSiteUrl(process.env.SITE_URL);
+// vor allem anderen: ohne gültige Umgebung gar nicht erst starten
+const envErrors = invalidEnv(envSchema, process.env);
+if (envErrors.length > 0) {
+  console.error(
+    `[server] Umgebungsvariablen fehlen oder sind ungültig (siehe .env.example):\n${envErrors.map((e) => `  - ${e}`).join("\n")}`
+  );
+  process.exit(1);
+}
 
 // Der Standalone-Server des Adapters soll nicht selbst starten, wir nutzen
 // seinen Handler (statische Dateien + SSR) in unserem Server
@@ -39,24 +47,6 @@ process.env.PORT = String(port);
 // einen gefälschten Host eigene Einträge anlegen. Wer allowedDomains setzt,
 // muss den Host hier wieder vereinheitlichen (`req.headers.host = …`).
 // Absolute URLs kommen aus SITE_URL, nie aus der Request-URL.
-
-/** Ohne gültige http(s)-URL in SITE_URL startet der Server nicht */
-function requireSiteUrl(/** @type {string | undefined} */ raw) {
-  try {
-    if (raw) {
-      const url = new URL(raw);
-      if (url.protocol === "https:" || url.protocol === "http:") {
-        return;
-      }
-    }
-  } catch {
-    // unten
-  }
-  console.error(
-    `[server] SITE_URL fehlt oder ist keine gültige http(s)-URL: ${raw ?? "(leer)"}`
-  );
-  process.exit(1);
-}
 
 // Dateien aus public/ haben keinen Hash im Namen; der Adapter liefert sie mit
 // `max-age=0` aus, was der Browser bei jedem Seitenaufruf neu prüft. Icons

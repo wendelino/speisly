@@ -1,11 +1,14 @@
 ---
-// Offline-Seite (prerendered): Der Service Worker (src/service-worker/sw.js)
+// Offline-Seite: Der Service Worker (src/service-worker/sw.js)
 // zeigt sie, wenn ohne Netz eine Seite aufgerufen wird, die nicht im Cache
 // liegt. Das Script listet die Speisepläne, die offline verfügbar sind.
 import { House, WifiOff } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
 import EmptyState from "@/components/ui/empty-state.astro";
 import BaseLayout from "@/layouts/base-layout.astro";
+import { staticPolicy } from "@/server/cache-policy";
+
+Astro.cache.set(staticPolicy());
 ---
 
 <BaseLayout title="Offline">

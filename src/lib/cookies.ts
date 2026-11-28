@@ -1,9 +1,11 @@
-import { PUBLIC_COOKIE_CONSENT_NAME } from "astro:env/client";
-
 /**
  * Cookie-Consent, gemeinsam für Browser und Server. Name und Format des
  * Cookies dürfen sich nicht ändern, sonst ist der Consent aller Nutzer weg.
  */
+export const CONSENT_COOKIE = "speisly-cookie-consent";
+
+/** Datenschutzerklärung (Link im Consent-Dialog) */
+export const PRIVACY_POLICY_PATH = "/datenschutz";
 type ConsentCookie = { accepted: boolean; timestamp: string };
 export type ConsentState = "pending" | "accepted" | "rejected";
 
@@ -48,7 +50,7 @@ export function writeCookie(name: string, value: string, days = ONE_YEAR_DAYS) {
 }
 
 export function readConsent(): ConsentState {
-  return parseConsent(readCookie(PUBLIC_COOKIE_CONSENT_NAME));
+  return parseConsent(readCookie(CONSENT_COOKIE));
 }
 
 export function writeConsent(accepted: boolean) {
@@ -56,5 +58,5 @@ export function writeConsent(accepted: boolean) {
     accepted,
     timestamp: new Date().toISOString(),
   };
-  writeCookie(PUBLIC_COOKIE_CONSENT_NAME, JSON.stringify(value));
+  writeCookie(CONSENT_COOKIE, JSON.stringify(value));
 }

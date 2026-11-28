@@ -1,7 +1,7 @@
 ---
 // „Meine Daten“: alles, was Speisly zu diesem Browser gespeichert hat
 // (Bewertungen samt Kommentar-Status, vergebene Likes, Favoriten), mit
-// Export und Löschen. Prerendered und für alle gleich; die persönlichen Daten
+// Export und Löschen. Für alle gleich (Route Cache); die persönlichen Daten
 // lädt das Script über die Action me.data (nie im Cache, src/server/my-data.ts).
 import {
   ChevronRight,
@@ -16,9 +16,12 @@ import Card from "@/components/ui/card.astro";
 import { buttonVariants } from "@/components/ui/variants";
 import BackLayout from "@/layouts/back-layout.astro";
 import { cn } from "@/lib/utils";
+import { staticPolicy } from "@/server/cache-policy";
 
 const outline = buttonVariants({ variant: "outline", size: "sm" });
 const destructive = buttonVariants({ variant: "destructive", size: "sm" });
+
+Astro.cache.set(staticPolicy());
 ---
 
 <BackLayout

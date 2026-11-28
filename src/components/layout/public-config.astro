@@ -1,0 +1,9 @@
+---
+// Öffentliche Einstellungen aus der Umgebung für Scripts im Browser
+// (lib/public-config.ts). Gehört in den <head> jedes Layouts.
+import { VAPID_PUBLIC_KEY } from "astro:env/server";
+import { VAPID_META } from "@/lib/public-config";
+import { pushEnabled } from "@/server/web-push";
+---
+
+{pushEnabled && <meta name={VAPID_META} content={VAPID_PUBLIC_KEY} />}

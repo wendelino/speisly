@@ -1,5 +1,6 @@
 ---
-// Prerendered, wird auch für SSR-404 genutzt
+// Für alle unbekannten Pfade. Nicht im Route Cache, sonst entstünde ein
+// Eintrag je ausgedachter URL
 import { House, UtensilsCrossed } from "@lucide/astro";
 import Button from "@/components/ui/button.astro";
 import EmptyState from "@/components/ui/empty-state.astro";

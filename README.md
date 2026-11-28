@@ -183,33 +183,36 @@ Empfohlen: in Dokploy einen Healthcheck auf `/api/health` eintragen (Advanced �
 
 ### Bilder
 
-Gerichtsbilder werden beim Sync einmal von meine-mensa.de geladen und als WebP (240 und 800 px; kein AVIF, das blockiert der iOS-Blockierungsmodus) in `IMAGE_DIR` abgelegt (Default `./data/img`, in Produktion ein persistentes Volume). Ausgeliefert werden sie unter `/img/…` mit einjährigem Browser-Cache. Solange es für ein Bild keine Varianten gibt, zeigt die Seite das Original.
+Gerichtsbilder werden beim Sync einmal von meine-mensa.de (`IMAGE_SOURCE_URL`) geladen und als WebP (240 und 800 px; kein AVIF, das blockiert der iOS-Blockierungsmodus) in `IMAGE_DIR` abgelegt (Default `./data/img`, in Produktion ein persistentes Volume). Ausgeliefert werden sie unter `/img/…` mit einjährigem Browser-Cache. Solange es für ein Bild keine Varianten gibt, zeigt die Seite das Original.
 
 Der Sync deckt heute bis +7 Tage ab. Für ältere Gerichte (z. B. nach dem Umzug oder dem Verlust des Volumes) einmalig vor dem Serverstart:
 
 ```bash
-IMAGE_DIR=/data/img bun scripts/images/backfill.ts   # optional: --since 2026-01-01
+IMAGE_SOURCE_URL=… IMAGE_DIR=/data/img bun scripts/images/backfill.ts   # optional: --since 2026-01-01
 ```
 
 ### Umgebungsvariablen
 
-Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`--env-file-if-exists`).
+Vorlage: `.env.example`, vollständige Liste mit Regeln: `env-schema.mjs`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`--env-file-if-exists`).
+
+**Alles wird erst zur Laufzeit gelesen, nichts beim Build.** Ein Build (bzw. ein Image) läuft so unverändert in Produktion und Preview, der Build selbst braucht keine Umgebungsvariablen. `server/index.mjs` prüft beim Start alle Werte: Fehlt eine Pflichtangabe oder ist sie ungültig, beendet sich der Server mit Exit-Code 1 und nennt die betroffenen Variablen (nie ihre Werte). Optionale Dienste sind ohne ihre Werte abgeschaltet, die App läuft trotzdem.
 
 | Variable | Pflicht | Bedeutung |
 |---|---|---|
-| `SITE_URL` | ja, **auch beim Build** | Öffentliche Basis-URL, z. B. `https://speisly.de` oder die des Previews. Daraus entstehen absolute URLs (OpenGraph), OIDC-Redirects (`<SITE_URL>/admin/callback`, Post-Logout `<SITE_URL>/`), die Origin-Prüfung und der einheitliche Host für den Seiten-Cache. Fehlt sie, brechen Build, Dev-Server und Start mit Exit-Code 1 ab |
+| `SITE_URL` | ja | Öffentliche Basis-URL (`http(s)://…`), z. B. die der Produktion oder des Previews. Daraus entstehen absolute URLs (OpenGraph), OIDC-Redirects (`<SITE_URL>/admin/callback`, Post-Logout `<SITE_URL>/`), die Origin-Prüfung und die Domain, auf der Umami zählt |
 | `DATABASE_URL` | ja | PostgreSQL |
-| `API_BEARER_TOKEN` | ja | Schutz für `/api/sync`; ohne Token startet kein Cron |
-| `MEINE_MENSA_API_URL` | ja | Basis-URL der Speiseplan-API (meine-mensa.de), privat; ohne sie schlägt der Sync fehl |
-| `JWT_SECRET`, `JWT_ALGORITHM` | ja | Signatur des Nutzer-Cookies |
-| `IMAGE_DIR` | empfohlen | Bildvarianten, persistentes Volume |
-| `ASTRO_KEY` | empfohlen, **beim Build** | Schlüssel für Server-Island-Props (`bunx astro create-key`). Ohne ihn erzeugt jeder Build einen neuen; offene Tabs können nach einem Deploy die Angebotshistorie dann nicht nachladen |
-| `HOST`, `PORT` | nein | Default `0.0.0.0:4321` (Next lief auf 3000: `PORT=3000` setzen, dann bleibt der Proxy gleich) |
-| `PUBLIC_COOKIE_CONSENT_NAME` | nein | **muss** dem bisherigen `NEXT_PUBLIC_COOKIE_CONSENT_NAME` entsprechen, sonst ist der Cookie-Consent aller Nutzer weg |
-| `PUBLIC_PRIVACY_POLICY_PATH`, `PUBLIC_UMAMI_WEBSITE_ID` | nein | |
-| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ADMIN_GROUP` | nein | Login für `/admin`; ohne Client-ID/Secret ist der Admin-Bereich aus. Damit man angemeldet bleibt, muss der Client Refresh-Tokens bekommen (Scope `offline_access`, Grant `refresh_token`); sonst gilt die Session 8 h |
+| `API_BEARER_TOKEN` | ja | Schutz für `/api/sync`, Cron |
+| `MEINE_MENSA_API_URL` | ja | Basis-URL der Speiseplan-API (meine-mensa.de), privat |
+| `IMAGE_SOURCE_URL` | ja | Nur Bilder unter dieser URL lädt der Sync (Origin + Pfad-Präfix der Mediathek, `https://…/mediathek/`) |
+| `ALLERGEN_INFO_URL` | ja | Link „Inhaltsstoffe und Allergene“ auf der Detailseite |
+| `JWT_SECRET`, `JWT_ALGORITHM` | ja (Algorithmus: Default `HS256`) | Signatur des Nutzer-Cookies |
+| `IMAGE_DIR` | nein (Default `./data/img`) | Bildvarianten, in Produktion ein persistentes Volume |
+| `ASTRO_KEY` | empfohlen, **die einzige Angabe beim Build** | Schlüssel für Server-Island-Props (`bunx astro create-key`). Ohne ihn erzeugt jeder Build einen neuen; offene Tabs können nach einem Deploy die Angebotshistorie dann nicht nachladen |
+| `HOST`, `PORT` | nein | Default `0.0.0.0:4321` |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ADMIN_GROUP` | nein | Login für `/admin`; ohne Issuer, Client-ID und Secret ist der Admin-Bereich aus. Damit man angemeldet bleibt, muss der Client Refresh-Tokens bekommen (Scope `offline_access`, Grant `refresh_token`); sonst gilt die Session 8 h |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | nein | Fehler- und Kontaktnachrichten per Telegram |
-| `PUBLIC_VAPID_PUBLIC_KEY` (**beim Build**), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | nein | Web-Push für Favoriten (`bunx web-push generate-vapid-keys`); ohne Schlüssel ist der Bereich „Benachrichtigungen“ ausgeblendet. `VAPID_SUBJECT`: `mailto:` oder `https:`, Default `SITE_URL` |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | nein | Web-Push für Favoriten und Admin-Meldungen (`bunx web-push generate-vapid-keys`); ohne Schlüssel ist der Bereich „Benachrichtigungen“ ausgeblendet. `VAPID_SUBJECT`: `mailto:` oder `https:`, Default `SITE_URL`. Ungültige Angaben schalten Push ab (Log: `[push] VAPID ungültig`) |
+| `UMAMI_SCRIPT_URL`, `UMAMI_WEBSITE_ID` | nein | Analytics (Umami), nur im Production-Build; ohne beide Werte kein Tracking. Gezählt wird nur auf dem Host von `SITE_URL` |
 | `CRON_DISABLED` | nein | `1` = kein Cron, kein Pre-Warm |
 
 ### Deployment (Umstieg von der Next-Version)
@@ -217,14 +220,14 @@ Vorlage: `.env.example`. Bun lädt `.env` automatisch, `start:node` ebenfalls (`
 Ausführliche Schritt-für-Schritt-Anleitung mit allen Änderungen an `.env`, Datenbank, Startbefehl und Proxy: [`migrate-to-astro.md`](migrate-to-astro.md). Kurzfassung:
 
 1. `.env` anpassen:
-   - `NEXT_PUBLIC_*` wird zu `PUBLIC_*` (gleiche Werte, vor allem `PUBLIC_COOKIE_CONSENT_NAME`).
+   - `NEXT_PUBLIC_*` entfällt (Cookie-Name und Datenschutz-Pfad stehen fest im Code, `src/lib/cookies.ts`).
    - `NEXT_PUBLIC_URL` entfällt.
    - `IMAGE_DIR` und `ASTRO_KEY` setzen.
 2. `bun install && bun db:migrate`. Die Migration `0005` legt zwei Indizes an.
-3. `bun run build`. Der Build liest `.env`: `ASTRO_KEY` und die `PUBLIC_*`-Werte werden dabei fest eingebaut. Ändern sie sich, ist ein neuer Build nötig.
+3. `bun run build`. Vom Build hängt nur `ASTRO_KEY` ab, alles andere liest der Server beim Start.
 4. Einmalig: `bun scripts/images/backfill.ts` (lädt alle Gerichtsbilder, dauert einige Minuten).
 5. `bun run start` statt bisher `bun --bun src/_boot.ts`. Ein Reverse Proxy kann davor bleiben, Komprimierung übernimmt der Server.
-6. Prüfen: `curl -sI https://speisly.de/ -H 'Accept-Encoding: br'` zeigt `content-encoding: br` und nach dem zweiten Aufruf `x-astro-cache: HIT`.
+6. Prüfen: `curl -sI "$SITE_URL/" -H 'Accept-Encoding: br'` zeigt `content-encoding: br` und nach dem zweiten Aufruf `x-astro-cache: HIT`.
    - Optional gegen eine Staging-Instanz mit Seed-Daten: `API_BEARER_TOKEN=… bun scripts/e2e/smoke.ts --base https://staging…`. Der Test schreibt Testdaten, also **nicht gegen Produktion** laufen lassen.
 
 ## Beitragen

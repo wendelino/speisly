@@ -2,6 +2,9 @@
 import { MessageSquareHeart } from "@lucide/astro";
 import FormPage from "@/components/forms/form-page.astro";
 import BackLayout from "@/layouts/back-layout.astro";
+import { staticPolicy } from "@/server/cache-policy";
+
+Astro.cache.set(staticPolicy());
 ---
 
 <BackLayout description="Erzähl uns, was dir an Speisly gefällt und was wir besser machen können." title="Feedback">
